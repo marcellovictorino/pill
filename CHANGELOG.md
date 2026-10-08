@@ -6,6 +6,10 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Shell completion offers model names. `pill add`, `pill pull` and `pill bench run` complete catalog and registered names (`add` also local GGUF files); `pill rm` and `pill default` complete registered names. Load it with `source <(pill completion zsh)`.
+
 ## [0.4.1] - 2026-10-08
 
 ### Changed

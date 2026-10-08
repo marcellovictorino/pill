@@ -26,7 +26,8 @@ hf.co/owner/repo:Q4_K_M, or owner/repo/file.gguf.
 Downloads resume after an interruption and are verified against Hugging
 Face's sha256. Gated repos need HF_TOKEN in the environment (it is never
 stored). pull only downloads: register the model with 'pill add'.`,
-		Args: cobra.ExactArgs(1),
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: a.completeModels(modelSources{catalog: true, registered: true}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
 				return err

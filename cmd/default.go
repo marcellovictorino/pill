@@ -15,7 +15,8 @@ func newDefaultCmd(a *App) *cobra.Command {
 passed or unverified (a failed model cannot be the default).
 
 Without an argument, shows the current default.`,
-		Args: cobra.MaximumNArgs(1),
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: a.completeModels(modelSources{registered: true}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
 				return err

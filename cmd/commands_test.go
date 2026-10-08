@@ -363,3 +363,45 @@ func TestDoctorFlagsForeignPortOwner(t *testing.T) {
 	}
 	e.run("stop", "--all").fails(t, 1, "pill will not touch it")
 }
+
+// Shell completion runs through cobra's hidden `__complete` command: each line
+// is "candidate<TAB>description", and a final ":<n>" line is the directive.
+func TestModelNameCompletion(t *testing.T) {
+	e := newEnv(t)
+	e.register()
+	e.gguf("local-Q4_K_M.gguf")
+
+	complete := func(args ...string) string {
+		return e.run(append([]string{"__complete"}, args...)...).ok(t).out
+	}
+	cases := []struct {
+		name string
+		args []string
+		want []string
+		not  []string
+	}{
+		{"bench run offers the catalog and registered models", []string{"bench", "run", ""},
+			[]string{"gemma4-26b-iq4xs-64k\tunverified", "gemma4-26b-q3kxl-64k\tcatalog", "gemma4-26b\tcatalog"}, nil},
+		{"pull offers the catalog", []string{"pull", "gemma4-26b-q"}, []string{"gemma4-26b-q3kxl-64k"}, []string{"gemma4-26b-iq4xs-64k"}},
+		{"add also offers local GGUF files", []string{"add", "local"}, []string{"local-Q4_K_M.gguf"}, nil},
+		{"rm and default offer only registered models", []string{"rm", ""}, []string{"gemma4-26b-iq4xs-64k"}, []string{"gemma4-26b-q3kxl-64k", "local-Q4_K_M.gguf"}},
+		{"default", []string{"default", ""}, []string{"gemma4-26b-iq4xs-64k"}, []string{"gemma4-26b-q3kxl-64k"}},
+		{"only the first argument is completed", []string{"rm", "gemma4-26b-iq4xs-64k", ""}, nil, []string{"gemma4"}},
+	}
+	for _, c := range cases {
+		out := complete(c.args...)
+		for _, w := range c.want {
+			if !strings.Contains(out, w) {
+				t.Errorf("%s: missing %q in:\n%s", c.name, w, out)
+			}
+		}
+		for _, n := range c.not {
+			if strings.Contains(out, n) {
+				t.Errorf("%s: unexpected %q in:\n%s", c.name, n, out)
+			}
+		}
+		if !strings.Contains(out, ":4") { // 4 = ShellCompDirectiveNoFileComp
+			t.Errorf("%s: model names must not fall back to file completion:\n%s", c.name, out)
+		}
+	}
+}

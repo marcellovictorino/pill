@@ -24,7 +24,8 @@ the same file. A downloaded GGUF that was never registered can be removed by
 its name as shown in 'pill ls'.
 
 Removing something that is already gone is a no-op, not an error.`,
-		Args: cobra.ExactArgs(1),
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: a.completeModels(modelSources{registered: true}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
 				return err

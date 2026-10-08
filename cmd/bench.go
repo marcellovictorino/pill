@@ -52,7 +52,8 @@ needs the full score within the time cap. A pass needs every run to pass.
 <name> is a catalog name, a registered model, or a Hugging Face reference; the
 GGUF is downloaded if missing. Results are saved under ~/.pill/benchmark.
 This takes a while (up to ~25 minutes per run).`,
-		Args: cobra.ExactArgs(1),
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: a.completeModels(modelSources{catalog: true, registered: true}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if runs < 1 {
 				return output.Usage([]string{"--runs must be 1 or more"}, "--runs %d is not valid", runs)

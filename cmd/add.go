@@ -24,7 +24,8 @@ models.toml, the generated models.ini, and Pi's "pill" provider.
 or a Hugging Face reference (hf.co/owner/repo:Q4_K_M). The model is marked
 "unverified" everywhere it is shown, because it has not passed 'pill bench run'
 on this machine. --unverified is required so that choice is always explicit.`,
-		Args: cobra.ExactArgs(1),
+		Args:              cobra.ExactArgs(1),
+		ValidArgsFunction: a.completeModels(modelSources{catalog: true, registered: true, files: true}),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !unverified {
 				return output.Usage([]string{
