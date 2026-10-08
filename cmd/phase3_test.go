@@ -207,3 +207,22 @@ func TestSummaryFlagsOlderLlamaBuild(t *testing.T) {
 		t.Errorf("doctor should flag the older build:\n%s", d.out)
 	}
 }
+
+// Declining the demotion keeps the registration, but the benchmark still
+// failed, so `pill bench run x && ...` must stop.
+func TestBenchRunExitsNonZeroWhenDemotionIsDeclined(t *testing.T) {
+	needNode(t)
+	e := newEnv(t)
+	solveTier2(t)
+	e.gguf(gemmaFile)
+	e.run("bench", "run", "gemma4-26b-iq4xs-64k").ok(t)
+
+	t.Setenv("PILL_FAKE_PI_TIER1", "wrong")
+	r := e.invokeAtTerminal("n\n", "bench", "run", "gemma4-26b-iq4xs-64k")
+	if r.code != 1 || !strings.Contains(r.out, "kept as passed") {
+		t.Fatalf("exit %d:\n%s\n%s", r.code, r.out, r.err)
+	}
+	if ls := e.run("ls").ok(t); !strings.Contains(ls.out, "gemma4-26b-iq4xs-64k,passed,") {
+		t.Errorf("a declined demotion keeps the model passed:\n%s", ls.out)
+	}
+}

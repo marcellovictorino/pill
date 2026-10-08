@@ -47,4 +47,5 @@ func (p Paths) ServerLog() string    { return filepath.Join(p.LogsDir(), "server
 func (p Paths) RunDir() string       { return filepath.Join(p.Root, "run") }
 func (p Paths) PidFile() string      { return filepath.Join(p.RunDir(), "server.pid") }
 func (p Paths) RouterState() string  { return filepath.Join(p.RunDir(), "router.json") }
+func (p Paths) StateLock() string    { return filepath.Join(p.RunDir(), "state.lock") }
 func (p Paths) BenchmarkDir() string { return filepath.Join(p.Root, "benchmark") }

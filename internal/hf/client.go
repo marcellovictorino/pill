@@ -140,12 +140,29 @@ var splitShard = regexp.MustCompile(`-\d{5}-of-\d{5}\.gguf$`)
 // file form, or the single non-split GGUF matching the quantisation.
 func FindFile(files []File, ref Ref) (File, error) {
 	if ref.File != "" {
+		// A path (sub/model.gguf) must match exactly. A bare name matches by
+		// base name, and when several folders hold that name the caller has to
+		// say which one, instead of getting whichever came first.
+		var byName []File
 		for _, f := range files {
-			if f.Path == ref.File || f.Name() == ref.File {
+			if f.Path == ref.File {
 				return f, nil
 			}
+			if !strings.Contains(ref.File, "/") && f.Name() == ref.File {
+				byName = append(byName, f)
+			}
 		}
-		return File{}, fmt.Errorf("%s has no file %q", ref.Repo, ref.File)
+		switch len(byName) {
+		case 1:
+			return byName[0], nil
+		case 0:
+			return File{}, fmt.Errorf("%s has no file %q", ref.Repo, ref.File)
+		}
+		paths := make([]string, len(byName))
+		for i, f := range byName {
+			paths[i] = f.Path
+		}
+		return File{}, fmt.Errorf("%s has several files named %q (%s); name one with its folder: pill pull %s/<path>", ref.Repo, ref.File, strings.Join(paths, ", "), ref.Repo)
 	}
 	q := strings.ToLower(ref.Quant)
 	boundary := regexp.MustCompile(`(^|[-._])` + regexp.QuoteMeta(q) + `(\.gguf$|[-.])`)

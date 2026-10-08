@@ -21,8 +21,9 @@ type Hub struct {
 	Repos map[string]map[string][]byte
 
 	mu       sync.Mutex
-	Requests []string // "METHOD path" log
-	Status   int      // when non-zero, every request fails with this status
+	Requests []string      // "METHOD path" log
+	Status   int           // when non-zero, every request fails with this status
+	Delay    time.Duration // sleep before serving a file download (makes races reproducible)
 	LastAuth string
 }
 
@@ -86,6 +87,10 @@ func (h *Hub) serve(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
+		h.mu.Lock()
+		delay := h.Delay
+		h.mu.Unlock()
+		time.Sleep(delay)
 		http.ServeContent(w, r, path, time.Time{}, bytes.NewReader(content))
 	default:
 		http.NotFound(w, r)

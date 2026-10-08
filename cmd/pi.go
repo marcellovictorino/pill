@@ -59,9 +59,9 @@ func launchPi(ctx context.Context, a *App, userArgs []string) error {
 		return output.Fail([]string{"install it: brew install pi-coding-agent"}, "%v", err)
 	}
 
-	applied, err := a.reg.Apply(snap)
+	_, applied, err := a.reg.Refresh(ctx)
 	if err != nil {
-		return output.Fail(nil, "%v", err)
+		return wrapState(err)
 	}
 	startCtx, cancel := context.WithTimeout(ctx, 3*time.Minute)
 	defer cancel()

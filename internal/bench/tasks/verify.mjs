@@ -15,7 +15,22 @@ function check(name, fn) {
     checks.push({ name, pass: false, detail: String((e && e.message) || e) });
   }
 }
-const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// Structural equality: array order matters, object property order does not
+// (a state returned as {turn, board, winner} is as valid as {board, turn, winner}).
+const eq = (a, b) => {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    // An index loop, not .every(): every() skips holes, so [1,,3] would pass for [1,2,3].
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (!eq(a[i], b[i])) return false;
+    return true;
+  }
+  if (a && b && typeof a === "object" && typeof b === "object") {
+    const ka = Object.keys(a), kb = Object.keys(b);
+    return ka.length === kb.length && ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && eq(a[k], b[k]));
+  }
+  return false;
+};
 const expectEq = (got, want) => (eq(got, want) ? true : `got ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
 const throwsInvalid = (fn) => {
   try { fn(); } catch (e) { return e && e.message === "invalid move" ? true : `threw ${JSON.stringify(e && e.message)}`; }

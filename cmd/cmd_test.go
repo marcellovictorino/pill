@@ -83,6 +83,16 @@ func (e *env) invoke(tty bool, args ...string) result {
 	return result{out: e.norm(out.String()), err: e.norm(errOut.String()), code: code}
 }
 
+// invokeAtTerminal runs pill as a person at a terminal who types input at the
+// one question pill can ask (demoting a model).
+func (e *env) invokeAtTerminal(input string, args ...string) result {
+	e.t.Helper()
+	var out, errOut bytes.Buffer
+	deps := Deps{Out: &out, Err: &errOut, In: strings.NewReader(input), StdoutTTY: true, StdinTTY: true, Sys: e.sys}
+	code := Run(context.Background(), deps, args)
+	return result{out: e.norm(out.String()), err: e.norm(errOut.String()), code: code}
+}
+
 // run invokes pill as an agent would: stdout is not a terminal, so output is TOON.
 func (e *env) run(args ...string) result { return e.invoke(false, args...) }
 

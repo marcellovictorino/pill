@@ -6,6 +6,30 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-08
+
+### Changed
+
+- The logo is one ASCII row, `(pi|ll)`: the word as a capsule, left half blue, right half on a red block. It sits on its own line above the output.
+
+### Fixed
+
+- The Tier 2 verifier ignores property order. A correct `newGame` returning `{turn, board, winner}` used to fail the shape and mutation checks and lose its model. The verifier still rejects a `legalMoves` array with a missing element.
+- `pill bench run` exits 1 on any failed result, including when you decline to demote a model that passed before, so `bench run ... && ...` stops. `bench summary` puts only passing runs in the top group.
+- Every change to the model list runs under a cross-process lock, including the regeneration of `models.ini` and Pi's provider. A benchmark that finishes while you `add`, `rm` or `pull` no longer overwrites your change. It records no verdict for a model removed or changed in the meantime. `pill rm` of an unknown name writes nothing.
+- pill tracks each downloaded file by repository and remote path, not by name alone:
+  - Two repositories with the same file name no longer share or overwrite one file, even when pulled at the same moment.
+  - Explicit file references follow the same rule, and a quantisation never picks up another repository's file.
+  - A name that exists in several folders of one repository needs its folder: `owner/repo/sub/model.gguf`.
+  - A registered model keeps its Hugging Face source, so `pill sync` works on another machine.
+  - A catalog model referenced by repository resolves to the same entry before and after download.
+- `pill sync` registers every declared model whose file is present, such as two context sizes sharing one GGUF, and keeps existing benchmark verdicts.
+- A context size that is not a multiple of 1024 gets its own exact name, so `8192` and `9000tok` no longer collide on `8k`. Those names resolve again. A lowercase `ud-` quantisation matches the catalog.
+- `pill default` keeps `config.toml` valid when the file has an indented or quoted `default` key, nested arrays or multi-line strings. It refuses to write a file it cannot read back.
+- `pill stop` and `pill bench` never unload models on, or stop, a llama-server that pill did not start. `pill stop --all` ends the router, or boots the LaunchAgent out, even when `/health` fails or unloading errors. pill reports unload failures and timeouts instead of treating them as success. pill decides ownership of the port from the process, not from `/health`.
+- A pid file left by a router on another `PILL_PORT` no longer lets `pill stop` end the wrong router.
+- A LaunchAgent router notices changed models, presets, removed models and changed settings (port, paths, idle time). `pill serve` refreshes the installed LaunchAgent for them, unless its router has a model loaded or another process holds the new port. `pill stop --all` on a different `PILL_PORT` leaves the service alone. `pill doctor` warns when the service is out of date.
+
 ## [0.4.0] - 2026-10-08
 
 ### Added

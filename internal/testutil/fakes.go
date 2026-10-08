@@ -115,6 +115,14 @@ func runFakeLlama(args []string) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		// While the file named by PILL_FAKE_UNHEALTHY exists the router answers
+		// 503, like a llama-server that is still loading or has hung.
+		if f := os.Getenv("PILL_FAKE_UNHEALTHY"); f != "" {
+			if _, err := os.Stat(f); err == nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+		}
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 	mux.HandleFunc("/v1/models", func(w http.ResponseWriter, r *http.Request) {

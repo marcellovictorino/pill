@@ -179,3 +179,87 @@ func TestStartFailsWhenBinaryExitsEarly(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestUnloadAllFailsWhenTheStatusPollFails(t *testing.T) {
+	var mu sync.Mutex
+	unloaded := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/models", func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		if unloaded { // the first poll saw a loaded model; the confirming poll breaks
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, _ = w.Write([]byte(`{"data":[{"id":"m","status":{"value":"loaded"}}]}`))
+	})
+	mux.HandleFunc("/models/unload", func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		unloaded = true
+		mu.Unlock()
+		_, _ = w.Write([]byte(`{}`))
+	})
+	r := serverFor(t, mux)
+	if _, err := r.UnloadAll(context.Background()); err == nil || !strings.Contains(err.Error(), "cannot confirm") {
+		t.Errorf("a failed confirmation poll must be an error, got %v", err)
+	}
+}
+
+func TestUnloadAllTimesOutWhileAModelStaysLoaded(t *testing.T) {
+	old := unloadTimeout
+	unloadTimeout = 600 * time.Millisecond
+	t.Cleanup(func() { unloadTimeout = old })
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/models", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":[{"id":"stuck","status":{"value":"loaded"}}]}`))
+	})
+	mux.HandleFunc("/models/unload", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{}`)) })
+	r := serverFor(t, mux)
+	if _, err := r.UnloadAll(context.Background()); err == nil || !strings.Contains(err.Error(), "stuck is still loaded") {
+		t.Errorf("a model that never leaves must time out with an error, got %v", err)
+	}
+}
+
+func TestFindIgnoresAPidFileForAnotherPort(t *testing.T) {
+	a := newRealRouter(t)
+	ctx := context.Background()
+	t.Cleanup(func() { _, _ = a.Stop(ctx) })
+	if _, err := a.Start(ctx, "h"); err != nil {
+		t.Fatal(err)
+	}
+	// A second router config sharing the same run directory (and so the same
+	// pid file) but another port, as with PILL_PORT: the pid file now names a
+	// live llama-server that does not serve this port.
+	b := New(a.Paths, config.Settings{Port: testutil.FreePort(t), IdleSeconds: 900, ModelsDir: a.Settings.ModelsDir})
+	if proc, ok := b.Find(); ok {
+		t.Errorf("Find for an unused port returned %+v from the shared pid file", proc)
+	}
+	if stopped, err := b.Stop(ctx); stopped || err != nil {
+		t.Errorf("stopping the other port must not touch the first router: stopped=%v err=%v", stopped, err)
+	}
+	if !a.Healthy(ctx) {
+		t.Error("the first router was stopped through the shared pid file")
+	}
+}
+
+func TestRecordedFingerprintBelongsToTheRunningProcess(t *testing.T) {
+	r := newRealRouter(t)
+	ctx := context.Background()
+	t.Cleanup(func() { _, _ = r.Stop(ctx) })
+	if _, err := r.Start(ctx, "old"); err != nil {
+		t.Fatal(err)
+	}
+	// Rewrite the record as if it described a different (dead) process: a
+	// router restarted by launchd on its own must not inherit the stale hash.
+	st := `{"pid":999999,"ini_hash":"old"}`
+	if err := os.WriteFile(r.Paths.RouterState(), []byte(st), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.ReadIniHash(); got != "" {
+		t.Errorf("hash of another process was accepted: %q", got)
+	}
+	r.RecordStart("new")
+	if got := r.ReadIniHash(); got != "new" {
+		t.Errorf("after RecordStart hash = %q", got)
+	}
+}

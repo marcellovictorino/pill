@@ -85,8 +85,11 @@ func TestLogoShape(t *testing.T) {
 	if strings.Contains(plain, "\x1b") {
 		t.Error("plain logo must not contain escape codes")
 	}
-	if !strings.Contains(Logo(true), ansiBlue) {
-		t.Error("coloured logo should contain the blue escape code")
+	if c := Logo(true); !strings.Contains(c, ansiBlue) || !strings.Contains(c, ansiRedBg) {
+		t.Error("coloured logo should have a blue half and a red block")
+	}
+	if plain != "(pi|ll)\n" {
+		t.Errorf("the logo is one row, as wide as the word plus its capsule ends: %q", plain)
 	}
 }
 

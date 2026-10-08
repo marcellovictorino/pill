@@ -156,7 +156,10 @@ func (r *Router) Unload(ctx context.Context, id string) error {
 }
 
 // UnloadAll unloads every loaded model and waits until the router reports
-// them unloaded (unloading is asynchronous).
+// them unloaded (unloading is asynchronous). It only returns nil once the
+// router has said nothing is loaded: a failed status poll or a timeout is an
+// error, because callers (a benchmark's cold start, `pill stop`) rely on the
+// memory really being free.
 func (r *Router) UnloadAll(ctx context.Context) ([]string, error) {
 	loaded, err := r.Loaded(ctx)
 	if err != nil {
@@ -167,11 +170,17 @@ func (r *Router) UnloadAll(ctx context.Context) ([]string, error) {
 			return loaded, err
 		}
 	}
-	deadline := time.Now().Add(30 * time.Second)
-	for len(loaded) > 0 && time.Now().Before(deadline) {
+	deadline := time.Now().Add(unloadTimeout)
+	for len(loaded) > 0 {
 		still, err := r.Loaded(ctx)
-		if err != nil || len(still) == 0 {
+		if err != nil {
+			return loaded, fmt.Errorf("cannot confirm that %s unloaded: %w", strings.Join(loaded, ", "), err)
+		}
+		if len(still) == 0 {
 			break
+		}
+		if time.Now().After(deadline) {
+			return loaded, fmt.Errorf("%s is still loaded %s after the unload request", strings.Join(still, ", "), unloadTimeout)
 		}
 		select {
 		case <-ctx.Done():
@@ -181,6 +190,9 @@ func (r *Router) UnloadAll(ctx context.Context) ([]string, error) {
 	}
 	return loaded, nil
 }
+
+// unloadTimeout is how long UnloadAll waits for models to leave memory.
+var unloadTimeout = 30 * time.Second
 
 // --- process discovery ---
 
@@ -196,7 +208,10 @@ type Process struct {
 // uses this pill's models.ini.
 func (r *Router) Find() (Process, bool) {
 	if pid, ok := r.pidFromFile(); ok {
-		if cmd := commandOf(pid); strings.Contains(cmd, "llama-server") {
+		// The pid file is shared by every router pill starts. With two ports
+		// (PILL_PORT) it holds whichever started last, so only trust it when
+		// that process really serves this port.
+		if cmd := commandOf(pid); strings.Contains(cmd, "llama-server") && servesPort(cmd, r.Settings.Port) {
 			return Process{PID: pid, Owned: strings.Contains(cmd, r.Paths.ModelsIni())}, true
 		}
 	}
@@ -205,6 +220,18 @@ func (r *Router) Find() (Process, bool) {
 		return Process{PID: pid, Owned: strings.Contains(cmd, r.Paths.ModelsIni())}, true
 	}
 	return Process{}, false
+}
+
+// servesPort reports whether a llama-server command line was started with
+// --port <port>.
+func servesPort(cmd string, port int) bool {
+	f := strings.Fields(cmd)
+	for i := 0; i+1 < len(f); i++ {
+		if f[i] == "--port" && f[i+1] == strconv.Itoa(port) {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *Router) pidFromFile() (int, bool) {
@@ -254,7 +281,9 @@ type state struct {
 }
 
 // ReadIniHash returns the models.ini fingerprint the running router was
-// started with, if pill started it.
+// started with, if pill recorded it. The record only counts while the process
+// it names is still the one serving the port: a router that launchd restarted
+// on its own has no record and is judged by its model list instead.
 func (r *Router) ReadIniHash() string {
 	data, err := os.ReadFile(r.Paths.RouterState())
 	if err != nil {
@@ -264,10 +293,25 @@ func (r *Router) ReadIniHash() string {
 	if json.Unmarshal(data, &s) != nil {
 		return ""
 	}
-	if _, ok := r.pidFromFile(); !ok {
+	if proc, ok := r.Find(); !ok || proc.PID != s.PID {
 		return ""
 	}
 	return s.IniHash
+}
+
+// RecordStart notes that the router now answering on the port was started
+// from this models.ini fingerprint. Start does this for routers it launches;
+// the launchd service path calls it after launchd has started the process.
+func (r *Router) RecordStart(iniHash string) {
+	proc, ok := r.Find()
+	if !ok {
+		return
+	}
+	if err := os.MkdirAll(r.Paths.RunDir(), 0o755); err != nil {
+		return
+	}
+	st, _ := json.Marshal(state{PID: proc.PID, IniHash: iniHash, Started: time.Now().UTC()})
+	_ = os.WriteFile(r.Paths.RouterState(), st, 0o644)
 }
 
 // StartTimeout is how long Start waits for /health (PILL_START_TIMEOUT, seconds).

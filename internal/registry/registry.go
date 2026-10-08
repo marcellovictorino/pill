@@ -5,6 +5,9 @@
 package registry
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -72,6 +75,105 @@ func (r *Registry) Save(s *Snapshot) error {
 	return config.SaveResults(r.Paths, s.Results)
 }
 
+// ErrNoChange is returned by an Update callback that decided not to modify
+// anything; Update then skips the write.
+var ErrNoChange = errors.New("no change")
+
+// ErrNothingToDo is ErrNoChange for UpdateApply callers that also want the
+// generated files left alone (an idempotent no-op such as removing a name that
+// does not exist must not touch models.ini or Pi's configuration).
+var ErrNothingToDo = errors.New("nothing to do")
+
+// Refresh regenerates models.ini and Pi's provider from the current state,
+// reading that state inside the lock so it can never apply an older snapshot
+// over a concurrent add or rm.
+func (r *Registry) Refresh(ctx context.Context) (*Snapshot, Applied, error) {
+	return r.UpdateApply(ctx, func(*Snapshot) error { return ErrNoChange })
+}
+
+// Update changes the model state transactionally: it takes the state lock,
+// reads models.toml and results.json fresh, lets fn modify them, and saves.
+// Reading inside the lock is what stops a slow command (a benchmark that ran
+// for 20 minutes) from writing back a stale copy over what others changed.
+// fn must not call Update itself; the lock is not re-entrant.
+func (r *Registry) Update(ctx context.Context, fn func(*Snapshot) error) (*Snapshot, error) {
+	snap, _, err := r.update(ctx, fn, false)
+	return snap, err
+}
+
+// UpdateApply is Update that also regenerates models.ini and Pi's provider
+// before releasing the lock. Generating the files after unlocking would let
+// two concurrent commands apply their snapshots in the opposite order and
+// leave the generated files without the newer model.
+func (r *Registry) UpdateApply(ctx context.Context, fn func(*Snapshot) error) (*Snapshot, Applied, error) {
+	return r.update(ctx, fn, true)
+}
+
+func (r *Registry) update(ctx context.Context, fn func(*Snapshot) error, apply bool) (*Snapshot, Applied, error) {
+	var applied Applied
+	unlock, err := config.LockState(ctx, r.Paths)
+	if err != nil {
+		return nil, applied, err
+	}
+	defer unlock()
+	snap, err := r.Load()
+	if err != nil {
+		return nil, applied, err
+	}
+	// ErrNothingToDo: leave everything alone, including the generated files.
+	// ErrNoChange: nothing to save, but still regenerate (callers want Applied).
+	// Any other error aborts; success saves whichever file actually changed.
+	beforeModels, beforeResults := fingerprint(snap.Models), fingerprint(snap.Results)
+	if err := fn(snap); errors.Is(err, ErrNothingToDo) {
+		return snap, applied, nil
+	} else if err != nil && !errors.Is(err, ErrNoChange) {
+		return snap, applied, err
+	} else if err == nil {
+		// Write only the file that changed, so a removal that touches the
+		// download manifest never reformats a hand-edited models.toml.
+		if fingerprint(snap.Models) != beforeModels {
+			if err := config.SaveModels(r.Paths, snap.Models); err != nil {
+				return snap, applied, err
+			}
+		}
+		if fingerprint(snap.Results) != beforeResults {
+			if err := config.SaveResults(r.Paths, snap.Results); err != nil {
+				return snap, applied, err
+			}
+		}
+	}
+	if apply {
+		applied, err = r.Apply(snap)
+	}
+	return snap, applied, err
+}
+
+// fingerprint is a comparable form of a state value, used to notice whether a
+// transaction changed it.
+func fingerprint(v any) string {
+	data, _ := json.Marshal(v)
+	return string(data)
+}
+
+// UpdateResults is Update for callers that only change results.json (the
+// download manifest); models.toml is neither read nor written, so a download
+// never creates or rewrites the portable model list.
+func (r *Registry) UpdateResults(ctx context.Context, fn func(*config.Results) error) error {
+	unlock, err := config.LockState(ctx, r.Paths)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	res, err := config.LoadResults(r.Paths)
+	if err != nil {
+		return err
+	}
+	if err := fn(res); err != nil {
+		return err
+	}
+	return config.SaveResults(r.Paths, res)
+}
+
 // GGUFPath is where a model's file lives (or would live).
 func (r *Registry) GGUFPath(m config.Model) string {
 	return filepath.Join(r.Settings.ModelsDir, m.File)
@@ -115,7 +217,7 @@ func (r *Registry) Resolve(s *Snapshot, arg string, ctx int) (config.Model, erro
 	case hf.LooksLikeRef(arg):
 		return r.resolveRef(s, arg, ctx)
 	case strings.HasSuffix(strings.ToLower(arg), ".gguf"):
-		return r.resolveFile(arg, ctx)
+		return r.resolveFile(s, arg, ctx)
 	}
 	if e, ok := r.Catalog.ResolveWithCtx(arg, ctx); ok {
 		return FromCatalog(e), nil
@@ -123,20 +225,37 @@ func (r *Registry) Resolve(s *Snapshot, arg string, ctx int) (config.Model, erro
 	return config.Model{}, fmt.Errorf("unknown model %q", arg)
 }
 
-func (r *Registry) resolveFile(file string, ctx int) (config.Model, error) {
+// fromCatalogEntry builds the models.toml entry for a catalog variant, with
+// an optional context override (which also renames it).
+func fromCatalogEntry(e catalog.Entry, ctx int) config.Model {
+	if ctx > 0 {
+		e.Ctx = ctx
+		e.Name = catalog.NameFor(e.Family.Name, e.Variant.Quant, ctx)
+	}
+	return FromCatalog(e)
+}
+
+// resolveFile turns a GGUF file name into an entry. A catalog file gets the
+// catalog's settings; any other file keeps the Hugging Face source recorded
+// when pill downloaded it, so moving models.toml to another machine still
+// tells `pill sync` where to fetch it from.
+func (r *Registry) resolveFile(s *Snapshot, file string, ctx int) (config.Model, error) {
 	file = filepath.Base(file)
 	if e, ok := r.Catalog.FindByFile(file); ok {
-		if ctx > 0 {
-			e.Ctx = ctx
-			e.Name = catalog.NameFor(e.Family.Name, e.Variant.Quant, ctx)
-		}
-		return FromCatalog(e), nil
+		return fromCatalogEntry(e, ctx), nil
 	}
 	if ctx == 0 {
 		ctx = genericCtx
 	}
 	stem := strings.TrimSuffix(file, filepath.Ext(file))
-	return generic(hf.Ref{File: file}.BaseName()+"-"+catalog.CtxLabel(ctx), "", file, stem, ctx), nil
+	repo, quant := "", stem
+	if info, ok := s.Results.Files[file]; ok && info.Repo != "" {
+		repo = info.Repo
+		if info.Quant != "" {
+			quant = info.Quant
+		}
+	}
+	return generic(hf.Ref{File: file}.BaseName()+"-"+catalog.CtxLabel(ctx), repo, file, quant, ctx), nil
 }
 
 func (r *Registry) resolveRef(s *Snapshot, arg string, ctx int) (config.Model, error) {
@@ -144,20 +263,37 @@ func (r *Registry) resolveRef(s *Snapshot, arg string, ctx int) (config.Model, e
 	if err != nil {
 		return config.Model{}, err
 	}
+	// A reference to a catalog model resolves to the catalog entry whether or
+	// not it has been downloaded yet, so the same reference always names the
+	// same entry (and a benchmark measures the settings that will be used).
+	if ref.Quant != "" {
+		if e, ok := r.Catalog.FindByRepoQuant(ref.Repo, ref.Quant); ok {
+			return fromCatalogEntry(e, ctx), nil
+		}
+	}
 	if ctx == 0 {
 		ctx = genericCtx
 	}
-	file := ref.File
-	if file == "" {
+	// Locally a file is known by its base name: Hugging Face paths such as
+	// sub/model.gguf are downloaded into the models directory as model.gguf.
+	file := ""
+	if ref.File != "" {
+		file = filepath.Base(ref.File)
+	} else {
 		file = r.localFileForQuant(s, ref)
+	}
+	// A file name is shared by every repository, so an explicit reference only
+	// matches a local file that was downloaded from the same repository.
+	if info, ok := s.Results.Files[file]; ok && info.Repo != "" && !strings.EqualFold(info.Repo, ref.Repo) {
+		return config.Model{}, fmt.Errorf("%s in %s is from %s, not %s; pill will not reuse or overwrite it", file, r.Settings.ModelsDir, info.Repo, ref.Repo)
 	}
 	if file == "" {
 		// Not downloaded yet: keep the quant so `pill pull` can look it up.
 		name := ref.BaseName() + "-" + hf.ShortQuant(ref.Quant) + "-" + catalog.CtxLabel(ctx)
 		return generic(name, ref.Repo, "", ref.Quant, ctx), nil
 	}
-	if e, ok := r.Catalog.FindByFile(file); ok && e.Family.Repo == ref.Repo {
-		return r.resolveFile(file, ctx)
+	if e, ok := r.Catalog.FindByFile(file); ok && strings.EqualFold(e.Family.Repo, ref.Repo) {
+		return fromCatalogEntry(e, ctx), nil
 	}
 	name := ref.BaseName()
 	if ref.File == "" {
@@ -173,20 +309,27 @@ func generic(name, repo, file, quant string, ctx int) config.Model {
 	}
 }
 
-// localFileForQuant finds an already-downloaded GGUF for owner/repo:quant,
-// first through the download manifest, then by file-name suffix.
+// localFileForQuant finds an already-downloaded GGUF for owner/repo:quant
+// from the download manifest. Only a recorded download counts: matching file
+// names by quantisation suffix would take repository A's a-Q4_K_M.gguf for
+// repository B's Q4_K_M and register the wrong weights.
 func (r *Registry) localFileForQuant(s *Snapshot, ref hf.Ref) string {
 	for file, info := range s.Results.Files {
-		if info.Repo == ref.Repo && strings.EqualFold(info.Quant, ref.Quant) {
-			return file
+		if !strings.EqualFold(info.Repo, ref.Repo) {
+			continue
 		}
-	}
-	entries, _ := os.ReadDir(r.Settings.ModelsDir)
-	q := strings.ToLower(ref.Quant)
-	for _, e := range entries {
-		n := strings.ToLower(e.Name())
-		if strings.HasSuffix(n, ".gguf") && (strings.HasSuffix(n, "-"+q+".gguf") || strings.HasSuffix(n, "."+q+".gguf")) {
-			return e.Name()
+		// A download made by file name records no quantisation; within the
+		// same repository the file name may still carry it.
+		quantMatches := strings.EqualFold(info.Quant, ref.Quant)
+		if !quantMatches && info.Quant == "" {
+			_, err := hf.FindFile([]hf.File{{Path: file}}, hf.Ref{Repo: ref.Repo, Quant: ref.Quant})
+			quantMatches = err == nil
+		}
+		if !quantMatches {
+			continue
+		}
+		if st, err := os.Stat(filepath.Join(r.Settings.ModelsDir, file)); err == nil && st.Mode().IsRegular() {
+			return file
 		}
 	}
 	return ""

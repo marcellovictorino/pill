@@ -62,20 +62,28 @@ func Load() (*Catalog, error) {
 // ShortQuant turns "UD-IQ4_XS" into "iq4xs": drop the Unsloth "UD-" prefix,
 // lower-case, strip separators. Used in model names.
 func ShortQuant(quant string) string {
-	q := strings.TrimPrefix(quant, "UD-")
-	q = strings.ToLower(q)
+	q := strings.TrimPrefix(strings.ToLower(quant), "ud-")
 	return strings.NewReplacer("_", "", "-", "").Replace(q)
 }
 
-// CtxLabel turns a token count into the "64k" form used in names.
-func CtxLabel(ctx int) string { return strconv.Itoa(ctx/1024) + "k" }
+// CtxLabel turns a token count into the "64k" form used in names. A count
+// that is not a whole multiple of 1024 keeps its exact value ("9000tok"), so
+// 8192 and 9000 never collapse into the same model name.
+func CtxLabel(ctx int) string {
+	if ctx%1024 == 0 {
+		return strconv.Itoa(ctx/1024) + "k"
+	}
+	return strconv.Itoa(ctx) + "tok"
+}
 
 // NameFor builds the canonical pill name: <family>-<quant>-<ctx>.
 func NameFor(family, quant string, ctx int) string {
 	return family + "-" + ShortQuant(quant) + "-" + CtxLabel(ctx)
 }
 
-var ctxSuffix = regexp.MustCompile(`^(.*)-(\d+)k$`)
+// ctxSuffix matches the context part of a name: "-32k" (thousands of
+// 1024 tokens) or "-9000tok" (an exact count, see CtxLabel).
+var ctxSuffix = regexp.MustCompile(`^(.*)-(\d+)(k|tok)$`)
 
 // Resolve maps a user-supplied name to a catalog entry. It accepts the full
 // name (gemma4-26b-iq4xs-64k), a full name with a different context
@@ -96,8 +104,11 @@ func (c *Catalog) Resolve(name string) (Entry, bool) {
 			// Same file, other context: <family>-<quant>-<N>k.
 			if m := ctxSuffix.FindStringSubmatch(name); m != nil && m[1] == f.Name+"-"+ShortQuant(v.Quant) {
 				n, _ := strconv.Atoi(m[2])
+				if m[3] == "k" {
+					n *= 1024
+				}
 				if n > 0 {
-					return Entry{Name: name, Family: f, Variant: v, Ctx: n * 1024}, true
+					return Entry{Name: name, Family: f, Variant: v, Ctx: n}, true
 				}
 			}
 		}
@@ -154,6 +165,20 @@ func (f *Family) Recommended(ramGB int) *Variant {
 		}
 	}
 	return best
+}
+
+// FindByRepoQuant finds the catalog entry for a Hugging Face repository and
+// quantisation ("unsloth/...-GGUF" + "IQ4_XS"), so a reference typed as
+// hf.co/owner/repo:QUANT gets the same name and settings as the catalog name.
+// The quantisation is compared the way names are: case, "UD-" and separators
+// are ignored.
+func (c *Catalog) FindByRepoQuant(repo, quant string) (Entry, bool) {
+	for _, e := range c.Entries() {
+		if strings.EqualFold(e.Family.Repo, repo) && ShortQuant(e.Variant.Quant) == ShortQuant(quant) {
+			return e, true
+		}
+	}
+	return Entry{}, false
 }
 
 // FindByFile returns the entry whose GGUF file name matches.

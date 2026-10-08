@@ -97,6 +97,49 @@ func TestSetDefaultKeepsComments(t *testing.T) {
 	}
 }
 
+// A hand-edited config may indent the key or quote it; SetDefault must update
+// that line instead of adding a second `default` (invalid TOML), and must
+// never touch a `default` key that belongs to some other table.
+func TestSetDefaultHandlesIndentedQuotedAndTableKeys(t *testing.T) {
+	cases := []struct{ name, in, want string }{
+		{"indented", "  default = \"old\"\nport = 1\n", "default = \"new\"\nport = 1\n"},
+		{"tab indented", "\tdefault=\"old\"\n", "default = \"new\"\n"},
+		{"quoted key", "\"default\" = \"old\"\n", "default = \"new\"\n"},
+		{"only inside a table", "port = 1\n[extra]\ndefault = \"theirs\"\n", "default = \"new\"\nport = 1\n[extra]\ndefault = \"theirs\"\n"},
+		{"top level and table", "default = \"old\"\n[extra]\ndefault = \"theirs\"\n", "default = \"new\"\n[extra]\ndefault = \"theirs\"\n"},
+		// A "[" that starts a line inside a multi-line array is not a table header.
+		{"nested array before default", "extra = [\n  [1, 2]\n]\ndefault = \"old\"\n", "extra = [\n  [1, 2]\n]\ndefault = \"new\"\n"},
+		// Text that looks like a default key inside a multi-line string is not one.
+		{"inside a multi-line string", "note = \"\"\"\ndefault = \"fake\"\n[not a table]\n\"\"\"\ndefault = \"old\"\n", "note = \"\"\"\ndefault = \"fake\"\n[not a table]\n\"\"\"\ndefault = \"new\"\n"},
+		// A multi-line value is replaced as a whole, not just its first line.
+		{"multi-line default value", "default = \"\"\"\nold\"\"\"\nport = 1\n", "default = \"new\"\nport = 1\n"},
+		// Closing a multi-line string with extra quote characters ends it correctly.
+		{"extra quotes before the closing delimiter", "extra = [\"\"\"text\"\"\"\"]\ndefault = \"old\"\n", "extra = [\"\"\"text\"\"\"\"]\ndefault = \"new\"\n"},
+		{"comment mentioning a bracket", "# [x]\ndefault = \"old\" # keep\n", "# [x]\ndefault = \"new\"\n"},
+	}
+	for _, c := range cases {
+		p := tempPaths(t)
+		if err := os.MkdirAll(p.ConfigDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p.ConfigFile(), []byte(c.in), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := SetDefault(p, "new"); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		got, _ := os.ReadFile(p.ConfigFile())
+		if string(got) != c.want {
+			t.Errorf("%s:\n got %q\nwant %q", c.name, got, c.want)
+		}
+		// The result must still be loadable TOML with exactly one top-level default.
+		s, err := Load(p)
+		if err != nil || s.Default != "new" {
+			t.Errorf("%s: Load = %+v, %v", c.name, s, err)
+		}
+	}
+}
+
 func TestModelsRoundTrip(t *testing.T) {
 	p := tempPaths(t)
 	mf, err := LoadModels(p)

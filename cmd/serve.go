@@ -58,12 +58,8 @@ func serveForeground(ctx context.Context, a *App) error {
 	if a.rt.Healthy(ctx) {
 		return output.Fail([]string{"run `pill stop --all` first"}, "a router is already running on port %d", a.settings.Port)
 	}
-	snap, err := a.reg.Load()
-	if err != nil {
-		return output.Fail(nil, "%v", err)
-	}
-	if _, err := a.reg.Apply(snap); err != nil {
-		return output.Fail(nil, "%v", err)
+	if _, _, err := a.reg.Refresh(ctx); err != nil {
+		return wrapState(err)
 	}
 	return output.Fail(nil, "cannot start llama-server: %v", a.rt.ExecForeground())
 }

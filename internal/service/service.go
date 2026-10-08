@@ -110,6 +110,47 @@ func (s *Service) Installed() bool {
 	return err == nil
 }
 
+// InstalledCommand returns the command line written in the installed plist
+// (program followed by its arguments), or nil when none is installed or the
+// file cannot be read. It lets pill notice that the saved definition no
+// longer matches the current settings, for example after a port change.
+func (s *Service) InstalledCommand() []string {
+	plist, err := s.PlistPath()
+	if err != nil {
+		return nil
+	}
+	data, err := os.ReadFile(plist)
+	if err != nil {
+		return nil
+	}
+	dec := xml.NewDecoder(bytes.NewReader(data))
+	var cmd []string
+	inKey, inArgs, inString := false, false, false
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return cmd
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			inKey = t.Name.Local == "key"
+			inString = t.Name.Local == "string"
+		case xml.EndElement:
+			if t.Name.Local == "array" && inArgs {
+				return cmd
+			}
+			inKey, inString = false, false
+		case xml.CharData:
+			switch {
+			case inKey:
+				inArgs = string(t) == "ProgramArguments"
+			case inString && inArgs:
+				cmd = append(cmd, string(t))
+			}
+		}
+	}
+}
+
 // Loaded reports whether launchd currently knows the job (it may be installed
 // but booted out, for example after `pill stop --all`).
 func (s *Service) Loaded(ctx context.Context) bool {

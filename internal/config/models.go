@@ -81,6 +81,15 @@ func SaveModels(p Paths, mf *ModelsFile) error {
 	if err := toml.NewEncoder(&buf).Encode(mf); err != nil {
 		return err
 	}
+	// Leave the file alone when nothing changes (it may be a symlink into a
+	// dotfiles repository), and do not create an empty one.
+	cur, err := os.ReadFile(p.ModelsToml())
+	if err == nil && bytes.Equal(cur, buf.Bytes()) {
+		return nil
+	}
+	if errors.Is(err, fs.ErrNotExist) && len(mf.Models) == 0 {
+		return nil
+	}
 	return WriteFileAtomic(p.ModelsToml(), buf.Bytes(), 0o644)
 }
 

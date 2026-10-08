@@ -60,15 +60,22 @@ func runServiceInstall(ctx context.Context, a *App) error {
 	if err != nil {
 		return output.Fail([]string{"install llama.cpp: brew install llama.cpp"}, "%v", err)
 	}
-	snap, err := a.reg.Load()
+	_, applied, err := a.reg.Refresh(ctx) // the agent reads models.ini on every start
 	if err != nil {
-		return output.Fail(nil, "%v", err)
-	}
-	if _, err := a.reg.Apply(snap); err != nil { // the agent reads models.ini on every start
-		return output.Fail(nil, "%v", err)
+		return wrapState(err)
 	}
 
-	owned := a.svc.Installed() && a.svc.Loaded(ctx)
+	owned := a.serviceServesPort(ctx)
+	// Whatever is replaced, check first that nothing is in use and that the
+	// destination port is free, so a refusal leaves the old service and its
+	// plist exactly as they were.
+	if err := a.requireIdleServiceRouter(ctx); err != nil {
+		return err
+	}
+	if !owned && a.rt.PortBusy() && !a.rt.Healthy(ctx) {
+		return output.Fail([]string{"free the port or give pill another one with PILL_PORT"},
+			"port %d is in use by another process that does not answer /health", a.settings.Port)
+	}
 	if a.rt.Healthy(ctx) && !owned {
 		loaded, _ := a.rt.Loaded(ctx)
 		if len(loaded) > 0 {
@@ -86,6 +93,7 @@ func runServiceInstall(ctx context.Context, a *App) error {
 	if err := a.rt.WaitHealthy(ctx); err != nil {
 		return output.Fail([]string{"undo with `pill service uninstall`"}, "%v", err)
 	}
+	a.rt.RecordStart(applied.IniHash) // so a later change to models.ini is noticed
 	a.printer.Emit(output.Obj{}.
 		Set("service", "installed").
 		Set("label", service.Label).

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,6 +37,7 @@ type ModelState struct {
 // `pill sync` can tie a file back to its Hugging Face source.
 type FileInfo struct {
 	Repo   string `json:"repo,omitempty"`
+	Path   string `json:"path,omitempty"` // the file's path inside the repository (it can sit in a folder)
 	Quant  string `json:"quant,omitempty"`
 	Size   int64  `json:"size"`
 	SHA256 string `json:"sha256,omitempty"`
@@ -89,7 +91,11 @@ func SaveResults(p Paths, r *Results) error {
 	if err != nil {
 		return err
 	}
-	return WriteFileAtomic(p.ResultsFile(), append(data, '\n'), 0o644)
+	data = append(data, '\n')
+	if cur, err := os.ReadFile(p.ResultsFile()); err == nil && bytes.Equal(cur, data) {
+		return nil // unchanged: do not rewrite
+	}
+	return WriteFileAtomic(p.ResultsFile(), data, 0o644)
 }
 
 // EffectiveState is the state to show and act on. It starts from the stored

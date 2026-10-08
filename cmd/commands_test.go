@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -31,6 +32,12 @@ func unsetenv(t *testing.T, name string) {
 	}
 }
 
+// plainText removes colour escape sequences so a coloured logo can be matched
+// by its visible characters.
+func plainText(s string) string { return ansiSeq.ReplaceAllString(s, "") }
+
+var ansiSeq = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
 func TestLogoOnlyOnTerminalWithoutAgentEnv(t *testing.T) {
 	e := newEnv(t)
 	// This test suite itself may run inside an agent session, so clear every
@@ -38,31 +45,31 @@ func TestLogoOnlyOnTerminalWithoutAgentEnv(t *testing.T) {
 	for _, kv := range os.Environ() {
 		name, _, _ := strings.Cut(kv, "=")
 		if strings.HasPrefix(name, "CLAUDE") || strings.HasPrefix(name, "PI_") || strings.HasPrefix(name, "CODEX_") ||
-			strings.HasPrefix(name, "OPENCODE") || name == "NO_COLOR" {
+			strings.HasPrefix(name, "OPENCODE") || name == "AI_AGENT" || name == "CURSOR_AGENT" || name == "GEMINI_CLI" || name == "NO_COLOR" {
 			unsetenv(t, name)
 		}
 	}
 	tty := e.invoke(true, "--version").ok(t)
-	if !strings.Contains(tty.out, ".-------") || !strings.Contains(tty.out, "pill "+version.Version) {
+	if !strings.Contains(plainText(tty.out), "(pi|ll)") || !strings.Contains(tty.out, "pill "+version.Version) {
 		t.Errorf("terminal --version should show the logo:\n%s", tty.out)
 	}
 	help := e.invoke(true, "--help").ok(t)
-	if !strings.Contains(help.out, ".-------") {
+	if !strings.Contains(plainText(help.out), "(pi|ll)") {
 		t.Errorf("terminal --help should show the logo:\n%s", help.out)
 	}
 	piped := e.invoke(false, "--help").ok(t)
-	if strings.Contains(piped.out, ".-------") {
+	if strings.Contains(plainText(piped.out), "(pi|ll)") {
 		t.Errorf("piped --help must not show the logo:\n%s", piped.out)
 	}
 
 	t.Setenv("CLAUDECODE", "1")
-	if r := e.invoke(true, "--version").ok(t); strings.Contains(r.out, ".-------") {
+	if r := e.invoke(true, "--version").ok(t); strings.Contains(plainText(r.out), "(pi|ll)") {
 		t.Errorf("agent sessions must not get the logo:\n%s", r.out)
 	}
 	unsetenv(t, "CLAUDECODE")
 
 	t.Setenv("NO_COLOR", "1")
-	if r := e.invoke(true, "--version").ok(t); strings.Contains(r.out, ".-------") {
+	if r := e.invoke(true, "--version").ok(t); strings.Contains(plainText(r.out), "(pi|ll)") {
 		t.Errorf("NO_COLOR must hide the logo:\n%s", r.out)
 	}
 }
@@ -354,5 +361,5 @@ func TestDoctorFlagsForeignPortOwner(t *testing.T) {
 	if r.code != 1 || !strings.Contains(r.out, "port,fail") {
 		t.Errorf("want a failing port check, got %d:\n%s", r.code, r.out)
 	}
-	e.run("stop", "--all").fails(t, 1, "was not started by pill")
+	e.run("stop", "--all").fails(t, 1, "pill will not touch it")
 }

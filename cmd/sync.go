@@ -46,9 +46,12 @@ func runSync(ctx context.Context, a *App, doBench bool, th config.Thresholds) er
 		return nil
 	}
 
+	// Step 1: download what is missing. Each download records its source in
+	// the manifest on its own, under the state lock.
 	var rows []output.Obj
 	var failed []string
-	pulled := 0
+	pulled := map[string]string{}         // model name -> downloaded file
+	declared := map[string]config.Model{} // model name -> the declaration that was downloaded
 	for _, m := range append([]config.Model(nil), snap.Models.Models...) {
 		if a.reg.FileSize(m) > 0 {
 			continue
@@ -58,26 +61,47 @@ func runSync(ctx context.Context, a *App, doBench bool, th config.Thresholds) er
 			failed = append(failed, m.Name)
 			continue
 		}
-		file, status, _, err := a.pullModel(ctx, snap, m)
+		file, status, _, err := a.pullModel(ctx, snap, m, "")
 		if err != nil {
 			return err
 		}
-		m.File = file.Name()
-		snap.Models.Upsert(m)
-		st := snap.Results.Ensure(m.Name)
-		st.InPi = true // usable at once, labelled unverified
-		if a.reg.State(snap, m) == config.StateFailed {
-			st.State = config.StateUnverified
-		}
-		pulled++
+		pulled[m.Name] = file.Name()
+		declared[m.Name] = m
 		rows = append(rows, output.Obj{}.Set("model", m.Name).Set("status", status).Set("size", humanBytes(file.Size)))
 	}
-	if err := a.reg.Save(snap); err != nil {
-		return output.Fail(nil, "%v", err)
-	}
-	applied, err := a.reg.Apply(snap)
+
+	// Step 2: register every declared model whose file is now present, not
+	// only the ones just downloaded. Two declarations can share one GGUF (the
+	// same weights at two context sizes), and a GGUF can have been copied in
+	// by hand; neither has a results.json entry yet. Existing entries keep
+	// their benchmark decisions.
+	snap, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
+		for i := range s.Models.Models {
+			m := &s.Models.Models[i]
+			if file, ok := pulled[m.Name]; ok && sameModel(*m, declared[m.Name]) {
+				m.File = file // the local name, even if the declaration had a nested path
+			} else if ok {
+				delete(pulled, m.Name) // changed while it downloaded: leave the newer entry as it is
+			}
+			if a.reg.FileSize(*m) == 0 {
+				continue
+			}
+			st := s.Results.Get(m.Name)
+			_, justPulled := pulled[m.Name]
+			switch {
+			case st == nil:
+				s.Results.Ensure(m.Name).InPi = true // usable at once, labelled unverified
+			case justPulled:
+				st.InPi = true
+				if a.reg.State(s, *m) == config.StateFailed {
+					st.State = config.StateUnverified // a fresh download is a fresh start
+				}
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		return output.Fail(nil, "%v", err)
+		return wrapState(err)
 	}
 	if a.rt.Healthy(ctx) { // refresh a running router; never start one for sync
 		if _, err := a.ensureRouter(ctx, applied); err != nil {
@@ -111,7 +135,7 @@ func runSync(ctx context.Context, a *App, doBench bool, th config.Thresholds) er
 		doc = doc.Set("benchmarked", benched)
 	}
 	switch {
-	case pulled == 0 && len(failed) == 0 && !doBench:
+	case len(pulled) == 0 && len(failed) == 0 && !doBench:
 		help = append(help, "everything declared is already here; prove unverified models with: pill sync --bench")
 	case !doBench:
 		help = append(help, "prove them on this Mac: pill bench run <name> (or pill sync --bench)")

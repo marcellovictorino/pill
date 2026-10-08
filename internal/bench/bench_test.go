@@ -79,6 +79,20 @@ func TestVerdictNamesAStuckAgent(t *testing.T) {
 	}
 }
 
+// The overall verdict decides the top group: a 22/22 run that failed on memory
+// must not outrank a run that passed.
+func TestSummarizeRanksOverallVerdictFirst(t *testing.T) {
+	day := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	results := []config.Result{
+		result("dipped-then-failed", day, "11429", false, run(true, 22, 300, 9)),
+		result("passed-with-less-headroom", day, "11429", true, run(true, 22, 300, 6)),
+	}
+	rows := Summarize(results, false, "11429", nil)
+	if rows[0].Model != "passed-with-less-headroom" || rows[1].Model != "dipped-then-failed" {
+		t.Errorf("order = %s, %s", rows[0].Model, rows[1].Model)
+	}
+}
+
 func TestSamplerStats(t *testing.T) {
 	sys := &sysinfo.Fake{Samples: []sysinfo.Sample{
 		{FreePct: 50, SwapUsedBytes: 1e9, Pressure: 1, GPUUtilPct: 0},
@@ -215,9 +229,13 @@ func needNode(t *testing.T) {
 	}
 }
 
-func refSolution(t *testing.T) string {
+func refSolution(t *testing.T) string { return solutionFrom(t, "testdata/ttt_ref") }
+
+// solutionFrom is a shell command that copies a reference solution into the
+// workspace, standing in for the model writing it.
+func solutionFrom(t *testing.T, dir string) string {
 	t.Helper()
-	abs, err := filepath.Abs("testdata/ttt_ref")
+	abs, err := filepath.Abs(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,6 +267,60 @@ func TestRunnerFullPass(t *testing.T) {
 	if !strings.Contains(string(data), `"pill"`) || strings.Contains(string(data), "unverified") {
 		t.Errorf("bench agent dir:\n%s", data)
 	}
+}
+
+// A correct engine may return its state with the properties in any order; the
+// verifier must judge structure, not JSON.stringify's key order.
+func TestVerifierIgnoresObjectPropertyOrder(t *testing.T) {
+	needNode(t)
+	r, model, dir := newRunner(t)
+	t.Setenv("PILL_FAKE_PI_TIER2_SCRIPT", solutionFrom(t, "testdata/ttt_ref_reordered"))
+	res, err := r.Run(context.Background(), Plan{Model: model, Runs: 1, Thresholds: DefaultThresholds(), Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rr := res.Runs[0]
+	if !res.Passed || rr.Tier2Score != 22 || rr.Tier2Total != 22 {
+		t.Fatalf("a correct solution with reordered properties scored %d/%d: %+v", rr.Tier2Score, rr.Tier2Total, rr.Tier2Checks)
+	}
+}
+
+func TestVerifierStillRejectsWrongStructure(t *testing.T) {
+	needNode(t)
+	r, model, dir := newRunner(t)
+	// A state with an extra property is not the specified shape.
+	t.Setenv("PILL_FAKE_PI_TIER2_SCRIPT", solutionFrom(t, "testdata/ttt_ref")+` && sed -i.bak 's/turn: "X", winner: null }; }/turn: "X", winner: null, extra: 1 }; }/' engine.mjs`)
+	res, err := r.Run(context.Background(), Plan{Model: model, Runs: 1, Thresholds: DefaultThresholds(), Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Passed || res.Runs[0].Tier2Score == res.Runs[0].Tier2Total {
+		t.Errorf("an extra property must fail the shape check: %+v", res.Runs[0].Tier2Checks)
+	}
+}
+
+func TestVerifierRejectsASparseLegalMoves(t *testing.T) {
+	needNode(t)
+	r, model, dir := newRunner(t)
+	// The "legalMoves" check expects [1,2,3,5,6,7] (X plays 4, O plays 0, X
+	// plays 8). Return it with a hole at index 1: Array.every would skip the
+	// hole, so only an index-by-index comparison rejects it.
+	script := solutionFrom(t, "testdata/ttt_ref") + ` && sed -i.bak 's/export function legalMoves/function legalMovesOrig/' engine.mjs && ` +
+		`printf '%s\n' 'export function legalMoves(s) { const r = legalMovesOrig(s); if (r.length === 6) delete r[1]; return r; }' >> engine.mjs`
+	t.Setenv("PILL_FAKE_PI_TIER2_SCRIPT", script)
+	res, err := r.Run(context.Background(), Plan{Model: model, Runs: 1, Thresholds: DefaultThresholds(), Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range res.Runs[0].Tier2Checks {
+		if c.Name == "legalMoves" {
+			if c.Pass {
+				t.Errorf("a hole in legalMoves must fail the legalMoves check: %+v", res.Runs[0].Tier2Checks)
+			}
+			return
+		}
+	}
+	t.Errorf("no legalMoves check in %+v", res.Runs[0].Tier2Checks)
 }
 
 func TestRunnerFailsTier1WhenPiGivesWrongAnswer(t *testing.T) {

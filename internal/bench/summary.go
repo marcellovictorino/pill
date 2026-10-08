@@ -141,7 +141,7 @@ func summarizeOne(r config.Result, currentBuild string) SummaryRow {
 		row.tier2Score = minScore
 	}
 	switch {
-	case t1 && t2full:
+	case t1 && t2full && r.Passed: // the overall verdict decides, not just the scores (memory can fail a 22/22 run)
 		row.group = 0
 	case t1:
 		row.group = 1

@@ -96,7 +96,7 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		if m.Repo == "" {
 			return nil, output.Fail([]string{"copy the GGUF into " + a.settings.ModelsDir}, "%s is not on disk and has no download source", m.Name)
 		}
-		file, _, _, err := a.pullModel(ctx, snap, m)
+		file, _, _, err := a.pullModel(ctx, snap, m, remotePathOf(arg))
 		if err != nil {
 			return nil, err
 		}
@@ -112,18 +112,33 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 
 	// Write the candidate into models.toml and models.ini as unverified. It
 	// does not reach Pi unless it was already registered there.
-	snap.Models.Upsert(m)
-	snap.Results.Ensure(m.Name)
-	prevState := a.reg.State(snap, m)
-	if err := a.reg.Save(snap); err != nil {
-		return nil, output.Fail(nil, "%v", err)
+	var prevState string
+	loaded, hadEntry := snap.Models.Find(m.Name)
+	var loadedCopy config.Model
+	if hadEntry {
+		loadedCopy = *loaded
 	}
-	applied, err := a.reg.Apply(snap)
+	_, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
+		// Resolving, and maybe downloading, took a while. Register the
+		// candidate only if its entry is still what Resolve saw: otherwise a
+		// concurrent rm would be undone, or an add overwritten.
+		cur, has := s.Models.Find(m.Name)
+		if has != hadEntry || (has && !sameModel(*cur, loadedCopy)) {
+			return output.Fail([]string{"run the benchmark again: pill bench run " + arg}, "%s was changed while the benchmark was being prepared", m.Name)
+		}
+		s.Models.Upsert(m)
+		s.Results.Ensure(m.Name)
+		prevState = a.reg.State(s, m)
+		return nil
+	})
 	if err != nil {
-		return nil, output.Fail(nil, "%v", err)
+		return nil, wrapState(err)
 	}
 	// Benchmark through the main router: free whatever it has loaded, then make
-	// sure it knows the candidate.
+	// sure it knows the candidate. Never unload a server pill did not start.
+	if err := a.requireOwnRouter(ctx); err != nil {
+		return nil, err
+	}
 	if a.rt.Healthy(ctx) {
 		if _, err := a.rt.UnloadAll(ctx); err != nil {
 			return nil, output.Fail([]string{"pill stop --all"}, "cannot unload the router's current model: %v", err)
@@ -152,24 +167,41 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil, output.Fail(nil, "%v", err)
 	}
 
-	// Record the verdict. The latest result decides the state.
-	st := snap.Results.Ensure(m.Name)
-	st.Latest = &res
-	st.PresetHash = preset.SectionHash(m, a.settings.ModelsDir)
-	st.GGUFSize = a.reg.FileSize(m)
-	note := ""
-	if res.Passed {
-		st.State, st.InPi = config.StatePassed, true
-	} else if prevState == config.StatePassed && !a.confirmDemotion(m.Name) {
-		note = "kept as passed: demotion declined"
-	} else {
-		st.State, st.InPi = config.StateFailed, false
+	// Record the verdict. The latest result decides the state. The prompt (if
+	// any) comes first, outside the state lock, because it waits for a person.
+	demote := true
+	if !res.Passed && prevState == config.StatePassed {
+		demote = a.confirmDemotion(m.Name)
 	}
-	if err := a.reg.Save(snap); err != nil {
-		return nil, output.Fail(nil, "%v", err)
-	}
-	if applied, err = a.reg.Apply(snap); err != nil {
-		return nil, output.Fail(nil, "%v", err)
+	var state, note string
+	_, applied, err = a.reg.UpdateApply(ctx, func(s *snapshot) error {
+		// The benchmark ran for minutes. Judge the entry as it is now: if it was
+		// removed or redefined meanwhile (pill rm, pill add --ctx), the verdict
+		// belongs to something that no longer exists, and writing it back would
+		// resurrect or overwrite the other command's change.
+		cur, ok := s.Models.Find(m.Name)
+		switch {
+		case !ok:
+			return output.Fail([]string{"the full result is in " + plan.Dir}, "%s was removed while it was being benchmarked; its verdict was not recorded", m.Name)
+		case !sameModel(*cur, m):
+			return output.Fail([]string{"the full result is in " + plan.Dir, "benchmark it again: pill bench run " + m.Name}, "%s was changed while it was being benchmarked; its verdict was not recorded", m.Name)
+		}
+		st := s.Results.Ensure(m.Name)
+		st.Latest = &res
+		st.PresetHash = preset.SectionHash(m, a.settings.ModelsDir)
+		st.GGUFSize = a.reg.FileSize(m)
+		if res.Passed {
+			st.State, st.InPi = config.StatePassed, true
+		} else if !demote {
+			note = "kept as passed: demotion declined"
+		} else {
+			st.State, st.InPi = config.StateFailed, false
+		}
+		state = st.State
+		return nil
+	})
+	if err != nil {
+		return nil, wrapState(err)
 	}
 	if a.rt.Healthy(ctx) {
 		if _, err := a.ensureRouter(ctx, applied); err != nil {
@@ -177,7 +209,7 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		}
 	}
 
-	return &benchOutcome{Model: m, Res: res, State: st.State, Dir: plan.Dir, Note: note}, nil
+	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
 }
 
 func runBench(ctx context.Context, a *App, arg string, ctxSize, runs int, th config.Thresholds) error {
@@ -196,7 +228,7 @@ func runBench(ctx context.Context, a *App, arg string, ctxSize, runs int, th con
 	}
 	help = append(help, "compare models: pill bench summary")
 	a.printer.Emit(doc.Set("help", help))
-	if !res.Passed && out.State == config.StateFailed {
+	if !res.Passed {
 		return output.ExitWith(output.ExitFailure) // scripts can branch: bench run x && pill default x
 	}
 	return nil

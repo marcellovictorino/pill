@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -46,7 +47,9 @@ func runPull(ctx context.Context, a *App, arg string, ctxSize int) error {
 	if err != nil {
 		return output.Fail([]string{"see the built-in models: pill catalog", "or use a Hugging Face reference: pill pull hf.co/owner/repo:Q4_K_M"}, "%v", err)
 	}
-	file, status, sum, err := a.pullModel(ctx, snap, m)
+	// A reference with a folder (owner/repo/sub/model.gguf) names an exact
+	// remote file; the model entry only keeps the local name.
+	file, status, sum, err := a.pullModel(ctx, snap, m, remotePathOf(arg))
 	if err != nil {
 		return err
 	}
@@ -59,15 +62,32 @@ func runPull(ctx context.Context, a *App, arg string, ctxSize int) error {
 	return nil
 }
 
+// remotePathOf returns the exact path inside the repository that a reference
+// such as owner/repo/sub/model.gguf names ("" for anything else).
+func remotePathOf(arg string) string {
+	if !hf.LooksLikeRef(arg) {
+		return ""
+	}
+	ref, err := hf.ParseRef(arg)
+	if err != nil {
+		return ""
+	}
+	return ref.File
+}
+
 // pullModel downloads the GGUF for m (when it is not already present) and
-// records where it came from. It never registers the model.
-func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model) (hf.File, string, string, error) {
+// records where it came from. It never registers the model. remote, when not
+// empty, is the exact path of the file inside the repository.
+func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model, remote string) (hf.File, string, string, error) {
 	if m.Repo == "" {
 		return hf.File{}, "", "", output.Fail([]string{"use a catalog name or a Hugging Face reference"}, "%s has no known download source", m.Name)
 	}
 	ref := hf.Ref{Repo: m.Repo, Quant: m.Quant}
 	if m.File != "" {
 		ref = hf.Ref{Repo: m.Repo, File: m.File}
+	}
+	if remote != "" {
+		ref.File = remote
 	}
 	client := hf.NewClient()
 	a.printer.Progress("looking up %s on Hugging Face...", m.Repo)
@@ -80,23 +100,93 @@ func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model) (hf
 		return hf.File{}, "", "", output.Fail([]string{"check the name on https://huggingface.co/" + m.Repo}, "%v", err)
 	}
 
+	// Files live in one flat directory under their base name, so two
+	// repositories can offer the same name. Never reuse or overwrite a file
+	// that came from somewhere else: that would register one repository's
+	// bytes as another's, or replace weights an existing model is using.
+	// Hold a per-file lock from the check to the record: otherwise two pulls of
+	// the same name from different repositories could both pass the check and
+	// the second would rename over the first's bytes.
+	unlockFile, err := config.LockFileName(ctx, a.paths, file.Name())
+	if err != nil {
+		return hf.File{}, "", "", output.Fail(nil, "%v", err)
+	}
+	defer unlockFile()
+	// Read what is recorded now, not what was loaded before the lock.
+	current, err := config.LoadResults(a.paths)
+	if err != nil {
+		return hf.File{}, "", "", output.Fail(nil, "%v", err)
+	}
 	dest := filepath.Join(a.settings.ModelsDir, file.Name())
+	rec, recorded := current.Files[file.Name()]
+	if recorded && rec.Repo != "" && !strings.EqualFold(rec.Repo, m.Repo) {
+		return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, rec.Repo)
+	}
+	// The same repository can hold two folders with one file name.
+	if recorded && rec.Path != "" && rec.Path != file.Path {
+		return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, m.Repo+"/"+rec.Path)
+	}
 	status, sum := "downloaded", ""
-	if st, err := os.Stat(dest); err == nil && st.Size() == file.Size {
-		status = "already present" // size matches; pull does not re-hash 13 GB on every run
-		sum = file.SHA256
-	} else {
+	st, statErr := os.Stat(dest)
+	switch {
+	case statErr == nil && st.Size() == file.Size:
+		status, sum = "already present", file.SHA256 // size matches; pull does not re-hash 13 GB on every run
+		if !recorded && file.SHA256 != "" {
+			// A file nobody recorded (copied in by hand): prove it is this one once.
+			a.printer.Progress("checking %s against Hugging Face's sha256...", file.Name())
+			if local, err := hf.HashFile(dest); err != nil {
+				return hf.File{}, "", "", output.Fail(nil, "%v", err)
+			} else if !strings.EqualFold(local, file.SHA256) {
+				return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, "an unknown source")
+			}
+		}
+	case statErr == nil && !recorded:
+		// Same name, different size, and pill never downloaded it: do not guess.
+		return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, "an unknown source")
+	default:
 		a.printer.Progress("downloading %s (%s)", file.Name(), humanBytes(file.Size))
+		var err error
 		sum, err = client.Download(ctx, m.Repo, file, a.settings.ModelsDir, a.downloadProgress(file.Name()))
 		if err != nil {
 			return hf.File{}, "", "", hfFailure(err)
 		}
 	}
-	snap.Results.Files[file.Name()] = config.FileInfo{Repo: m.Repo, Quant: m.Quant, Size: file.Size, SHA256: sum}
-	if err := config.SaveResults(a.paths, snap.Results); err != nil {
-		return hf.File{}, "", "", output.Fail(nil, "%v", err)
+	// Record where the file came from, against the current state on disk.
+	err = a.reg.UpdateResults(ctx, func(res *config.Results) error {
+		cur, ok := res.Files[file.Name()]
+		if ok && cur.Repo != "" && !strings.EqualFold(cur.Repo, m.Repo) {
+			return nameClash(a, file.Name(), m.Repo, cur.Repo)
+		}
+		if ok && cur.Path != "" && cur.Path != file.Path {
+			return nameClash(a, file.Name(), m.Repo, m.Repo+"/"+cur.Path)
+		}
+		// A quantisation is only worth recording when it is one: a model made
+		// from a bare file name carries the file stem in its Quant field.
+		quant := m.Quant
+		if strings.EqualFold(quant, strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))) {
+			quant = ""
+		}
+		if quant == "" && ok && strings.EqualFold(cur.Repo, m.Repo) {
+			quant = cur.Quant // pulling by file name must not forget a known quantisation
+		}
+		res.Files[file.Name()] = config.FileInfo{Repo: m.Repo, Path: file.Path, Quant: quant, Size: file.Size, SHA256: sum}
+		return nil
+	})
+	if err != nil {
+		return hf.File{}, "", "", err
+	}
+	if cur, err := config.LoadResults(a.paths); err == nil {
+		snap.Results.Files[file.Name()] = cur.Files[file.Name()] // keep the caller's snapshot in step
 	}
 	return file, status, sum, nil
+}
+
+// nameClash reports a file-name collision between repositories.
+func nameClash(a *App, name, wantRepo, haveFrom string) error {
+	return output.Fail([]string{
+		"remove the existing file first if you no longer need it: pill rm <name>",
+		"or download it under a different name from the Hugging Face page",
+	}, "%s in %s is from %s, not %s; pill will not reuse or overwrite it", name, a.settings.ModelsDir, haveFrom, wantRepo)
 }
 
 // hfFailure turns download errors into pill errors with a useful next step.

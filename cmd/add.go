@@ -8,6 +8,7 @@ import (
 
 	"github.com/marcellovictorino/pill/internal/config"
 	"github.com/marcellovictorino/pill/internal/output"
+	"github.com/marcellovictorino/pill/internal/registry"
 )
 
 func newAddCmd(a *App) *cobra.Command {
@@ -45,51 +46,51 @@ on this machine. --unverified is required so that choice is always explicit.`,
 }
 
 func runAdd(ctx context.Context, a *App, arg string, ctxSize int) error {
-	snap, err := a.reg.Load()
-	if err != nil {
-		return output.Fail(nil, "%v", err)
-	}
-	m, err := a.reg.Resolve(snap, arg, ctxSize)
-	if err != nil {
-		return output.Fail([]string{"see the built-in models: pill catalog", "or name a GGUF in " + a.settings.ModelsDir}, "%v", err)
-	}
-	if m.File == "" || a.reg.FileSize(m) == 0 {
-		file := m.File
-		if file == "" {
-			file = "a GGUF for " + arg
+	var m config.Model
+	changed := false
+	// Read, change and write under the state lock: a benchmark or another
+	// add running at the same time must not have its changes overwritten.
+	snap, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
+		var err error
+		m, err = a.reg.Resolve(s, arg, ctxSize)
+		if err != nil {
+			return output.Fail([]string{"see the built-in models: pill catalog", "or name a GGUF in " + a.settings.ModelsDir}, "%v", err)
 		}
-		return output.Fail([]string{
-			"download it: pill pull " + arg,
-			"or copy the file into " + a.settings.ModelsDir,
-		}, "%s is not in %s", file, a.settings.ModelsDir)
-	}
-
-	before, existed := snap.Models.Find(m.Name)
-	changed := !existed || !sameModel(*before, m)
-	snap.Models.Upsert(m)
-
-	st := snap.Results.Get(m.Name)
-	switch {
-	case st == nil:
-		st = snap.Results.Ensure(m.Name)
-		changed = true
-	case !st.InPi:
-		changed = true
-	}
-	if a.reg.State(snap, m) == config.StateFailed {
-		st.State = config.StateUnverified // the explicit override of a failed benchmark
-		changed = true
-	}
-	st.InPi = true
-
-	if changed {
-		if err := a.reg.Save(snap); err != nil {
-			return output.Fail(nil, "%v", err)
+		if m.File == "" || a.reg.FileSize(m) == 0 {
+			file := m.File
+			if file == "" {
+				file = "a GGUF for " + arg
+			}
+			return output.Fail([]string{
+				"download it: pill pull " + arg,
+				"or copy the file into " + a.settings.ModelsDir,
+			}, "%s is not in %s", file, a.settings.ModelsDir)
 		}
-	}
-	applied, err := a.reg.Apply(snap)
+
+		before, existed := s.Models.Find(m.Name)
+		changed = !existed || !sameModel(*before, m)
+		s.Models.Upsert(m)
+
+		st := s.Results.Get(m.Name)
+		switch {
+		case st == nil:
+			st = s.Results.Ensure(m.Name)
+			changed = true
+		case !st.InPi:
+			changed = true
+		}
+		if a.reg.State(s, m) == config.StateFailed {
+			st.State = config.StateUnverified // the explicit override of a failed benchmark
+			changed = true
+		}
+		st.InPi = true
+		if !changed {
+			return registry.ErrNoChange // models.toml may live in dotfiles: do not rewrite it for nothing
+		}
+		return nil
+	})
 	if err != nil {
-		return output.Fail(nil, "%v", err)
+		return wrapState(err)
 	}
 	if a.rt.Healthy(ctx) { // refresh a running router; never start one just for add
 		if _, err := a.ensureRouter(ctx, applied); err != nil {
