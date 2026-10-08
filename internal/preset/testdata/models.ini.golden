@@ -1,0 +1,26 @@
+version = 1
+
+[*]
+jinja = true
+ngl = 99
+flash-attn = on
+cache-type-k = q8_0
+cache-type-v = q8_0
+np = 1
+cache-ram = 512
+ctx-checkpoints = 4
+
+[gemma4-26b-iq4xs-64k]
+model = /home/u/.pill/models/gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+c = 65536
+temp = 1.0
+top-p = 0.95
+top-k = 64
+min-p = 0.0
+
+[gemma4-26b-iq4xs-32k]
+model = /home/u/.pill/models/gemma-4-26B-A4B-it-UD-IQ4_XS.gguf
+c = 32768
+temp = 1.0
+alpha = x
+zeta = true

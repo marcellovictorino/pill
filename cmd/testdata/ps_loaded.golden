@@ -1,0 +1,7 @@
+router: up
+port: $PORT
+mode: detached
+default: gemma4-26b-iq4xs-64k
+loaded: gemma4-26b-iq4xs-64k
+rss: 12.0 GB
+gpu_memory: 15.0 GB
