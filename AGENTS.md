@@ -30,6 +30,7 @@ When stdout is not a terminal, output is TOON on stdout: minimal fields, `help[n
 
 ```
 main.go                 calls cmd.Execute()
+skills/                 the agent skill (SKILL.md), embedded in the binary
 cmd/                    one cobra command per file
 internal/config         paths, config.toml, models.toml, results.json (state)
 internal/catalog        embedded catalog.toml
@@ -39,6 +40,8 @@ internal/pi             Pi models.json merge, launching pi
 internal/registry       joins models.toml + results.json, regenerates models.ini and Pi's provider
 internal/sysinfo        memory/GPU/process info (darwin build tag) + fake
 internal/output         TOON encoder, human rendering, logo, errors
+internal/bench          Tier 1 and Tier 2 benchmark, memory sampler, summary; tasks/ embedded
+internal/service        launchd LaunchAgent plist and launchctl calls
 internal/version        version constant
 internal/testutil       fake external programs for tests
 ```

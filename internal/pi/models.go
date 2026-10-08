@@ -320,3 +320,22 @@ func ProviderBaseURL(provider json.RawMessage) string {
 	_ = json.Unmarshal(provider, &p)
 	return p.BaseURL
 }
+
+// WriteBenchAgentDir creates a throwaway Pi config directory containing only
+// the pill provider with one model. Benchmarks run Pi against it (through the
+// PI_CODING_AGENT_DIR variable) so the user's own Pi extensions, skills and
+// defaults cannot skew the result.
+func WriteBenchAgentDir(dir string, port int, m Model) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	m.Unverified = false
+	doc := struct {
+		Providers map[string]json.RawMessage `json:"providers"`
+	}{Providers: map[string]json.RawMessage{ProviderKey: BuildProvider(port, []Model{m})}}
+	data, err := json.MarshalIndent(doc, "", "  ")
+	if err != nil {
+		return err
+	}
+	return config.WriteFileAtomic(ModelsPath(dir), append(data, '\n'), 0o600)
+}

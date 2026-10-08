@@ -343,6 +343,39 @@ func (r *Router) Start(ctx context.Context, iniHash string) (started bool, err e
 	}
 }
 
+// WaitHealthy polls /health until it answers or StartTimeout passes. It is
+// used when something else (launchd) starts the process.
+func (r *Router) WaitHealthy(ctx context.Context) error {
+	deadline := time.NewTimer(StartTimeout())
+	defer deadline.Stop()
+	tick := time.NewTicker(200 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		if r.Healthy(ctx) {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			return fmt.Errorf("llama-server did not answer /health within %s; see %s", StartTimeout(), r.Paths.ServerLog())
+		case <-tick.C:
+		}
+	}
+}
+
+// WaitDown polls until /health stops answering (up to 20 seconds).
+func (r *Router) WaitDown(ctx context.Context) {
+	deadline := time.Now().Add(20 * time.Second)
+	for r.Healthy(ctx) && time.Now().Before(deadline) {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(150 * time.Millisecond):
+		}
+	}
+}
+
 // Stop terminates the router with SIGTERM and waits for the port to free up.
 // It returns false when no router was running.
 func (r *Router) Stop(ctx context.Context) (stopped bool, err error) {

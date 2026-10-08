@@ -35,6 +35,10 @@ type Error struct {
 
 func (e *Error) Error() string { return e.Msg }
 
+// ExitWith returns an error that only sets the exit code, for commands that
+// have already printed their result (a failed benchmark, for example).
+func ExitWith(code int) *Error { return &Error{Code: code} }
+
 // Fail builds a runtime error (exit 1).
 func Fail(help []string, format string, a ...any) *Error {
 	return &Error{Msg: fmt.Sprintf(format, a...), Help: help, Code: ExitFailure}
@@ -98,6 +102,9 @@ func (p *Printer) Emit(doc Obj) {
 // Fail prints an error and its next steps. In TOON mode it goes to stdout
 // (agents read stdout; stderr is often discarded); for people it goes to stderr.
 func (p *Printer) Fail(e *Error) {
+	if e.Msg == "" {
+		return // exit code only: the command already printed its own result
+	}
 	if p.Human {
 		fmt.Fprintf(p.Err, "%s %s\n", p.paint("31;1", "error:"), e.Msg)
 		for _, h := range e.Help {

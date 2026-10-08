@@ -80,18 +80,34 @@ func (a *App) routerStale(ctx context.Context, applied registry.Applied) bool {
 	return false
 }
 
+// startRouterProcess brings the router up: through launchd when the service
+// is installed, otherwise as a detached process.
 func (a *App) startRouterProcess(ctx context.Context, iniHash string) (bool, error) {
+	if a.svc.Installed() {
+		if a.rt.PortBusy() && !a.rt.Healthy(ctx) {
+			return false, fmt.Errorf("port %d is in use by another process that does not answer /health", a.settings.Port)
+		}
+		if err := a.svc.Start(ctx, false); err != nil {
+			return false, err
+		}
+		return true, a.rt.WaitHealthy(ctx)
+	}
 	return a.rt.Start(ctx, iniHash)
 }
 
 func (a *App) stopRouterProcess(ctx context.Context) error {
-	_, err := a.rt.Stop(ctx)
+	_, err := a.stopRouter(ctx)
 	return err
 }
 
 // routerMode says how the router is supervised: "service" (launchd) or
 // "detached" (started by `pill serve`).
-func (a *App) routerMode() string { return "detached" }
+func (a *App) routerMode(ctx context.Context) string {
+	if a.svc.Installed() && a.svc.Loaded(ctx) {
+		return "service"
+	}
+	return "detached"
+}
 
 func joinIDs(ids []string) string {
 	if len(ids) == 0 {

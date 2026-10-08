@@ -24,6 +24,7 @@ or missing (declared in models.toml but the file is not here).`,
 				return output.Fail(nil, "%v", err)
 			}
 			rows := a.reg.Rows(snap)
+			notes := a.olderBuildNotes(snap)
 			table := make([]output.Obj, 0, len(rows))
 			for _, r := range rows {
 				state, size := r.State, humanBytes(r.Size)
@@ -34,7 +35,11 @@ or missing (declared in models.toml but the file is not here).`,
 				if r.Default {
 					def = "yes"
 				}
-				table = append(table, output.Obj{}.Set("name", r.Name).Set("state", state).Set("size", size).Set("default", def))
+				row := output.Obj{}.Set("name", r.Name).Set("state", state).Set("size", size).Set("default", def)
+				if len(notes) > 0 { // the column exists only when something needs flagging
+					row = row.Set("note", orDash(notes[r.Name]))
+				}
+				table = append(table, row)
 			}
 			var help []string
 			if len(rows) == 0 {

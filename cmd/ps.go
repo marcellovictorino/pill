@@ -32,7 +32,7 @@ func runPs(ctx context.Context, a *App) error {
 			Set("help", []string{"start it with `pill serve` or just run `pill`"}))
 		return nil
 	}
-	mode := a.routerMode()
+	mode := a.routerMode(ctx)
 	proc, found := a.rt.Find()
 	if found && !proc.Owned {
 		mode = "external" // answering, but not pill's models.ini

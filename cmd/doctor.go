@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -15,6 +16,7 @@ import (
 	"github.com/marcellovictorino/pill/internal/output"
 	"github.com/marcellovictorino/pill/internal/pi"
 	"github.com/marcellovictorino/pill/internal/router"
+	"github.com/marcellovictorino/pill/internal/service"
 )
 
 // check is one doctor line.
@@ -84,6 +86,16 @@ func runDoctor(ctx context.Context, a *App) error {
 		add("router", "ok", "not running (it starts on demand)")
 	}
 
+	switch {
+	case !a.svc.Installed():
+		add("service", "ok", "not installed (optional: pill service install)")
+	case a.svc.Loaded(ctx):
+		add("service", "ok", "LaunchAgent "+service.Label+" is loaded")
+	default:
+		add("service", "warn", "LaunchAgent is installed but not loaded (stopped with `pill stop --all`)")
+		help = append(help, "load it again: pill serve")
+	}
+
 	snap, err := a.reg.Load()
 	if err != nil {
 		return output.Fail(nil, "%v", err)
@@ -138,6 +150,16 @@ func runDoctor(ctx context.Context, a *App) error {
 		} else {
 			add("pi-provider", "ok", "in sync: "+strings.Join(want, " "))
 		}
+	}
+
+	if notes := a.olderBuildNotes(snap); len(notes) > 0 {
+		var names []string
+		for name := range notes {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		add("bench-freshness", "warn", "benched on a different llama.cpp build: "+strings.Join(names, " "))
+		help = append(help, "re-run: pill bench run <name> (a pass is not invalidated by an upgrade, but may have changed)")
 	}
 
 	// Hint about a leftover local-router provider; never remove it.
@@ -217,4 +239,12 @@ func ggufsIn(dir string) []string {
 		return nil
 	})
 	return found
+}
+
+// lookNode finds node, which Pi depends on and the Tier 2 verifier needs.
+func lookNode() (string, error) {
+	if n := os.Getenv("PILL_NODE"); n != "" {
+		return n, nil
+	}
+	return exec.LookPath("node")
 }

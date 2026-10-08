@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -22,6 +23,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 )
 
 // MaybeRunFake runs a fake program when the binary was invoked under a fake's
@@ -71,6 +73,8 @@ func InstallFakes(t *testing.T) Fakes {
 	t.Setenv("PILL_LAUNCHCTL", f.Launchctl)
 	t.Setenv("PILL_FAKE_PI_LOG", f.PiLog)
 	t.Setenv("PILL_FAKE_LAUNCH_LOG", f.LaunchLog)
+	t.Setenv("PILL_FAKE_LAUNCH_STATE", filepath.Join(dir, "launch.state"))
+	t.Setenv("PILL_LAUNCH_AGENTS_DIR", filepath.Join(dir, "LaunchAgents"))
 	return f
 }
 
@@ -98,7 +102,11 @@ func runFakeLlama(args []string) {
 		}
 	}
 	if len(args) > 0 && args[0] == "--version" {
-		fmt.Fprintln(os.Stderr, "version: 9.9.9 (build 999, commit fakefake)")
+		build := os.Getenv("PILL_FAKE_LLAMA_BUILD") // lets a test "upgrade" llama.cpp
+		if build == "" {
+			build = "999"
+		}
+		fmt.Fprintf(os.Stderr, "version: 9.9.9 (build %s, commit fakefake)\n", build)
 		return
 	}
 	ids := presetSections(preset)
@@ -193,9 +201,14 @@ func presetSections(path string) []string {
 
 // --- fake pi ---
 
-// The fake pi answers --version, and otherwise logs its arguments (one line)
-// to $PILL_FAKE_PI_LOG. With PILL_FAKE_PI_ANSWER set it prints that text, so
-// bench tests can script Pi's reply.
+// The fake pi answers --version and otherwise behaves like `pi -p --mode json`:
+//   - it logs its arguments and PI_CODING_AGENT_DIR to $PILL_FAKE_PI_LOG;
+//   - for the Tier 1 prompt it "reads" facts.txt (one tool call) and answers
+//     with its content; PILL_FAKE_PI_TIER1=wrong answers incorrectly and
+//     PILL_FAKE_PI_TIER1=notool skips the tool call;
+//   - for the Tier 2 prompt it runs the shell command in PILL_FAKE_PI_TIER2_SCRIPT
+//     (which can write files into the workspace, standing in for the model)
+//     after sleeping PILL_FAKE_PI_TIER2_SLEEP seconds (to test the time cap).
 func runFakePi(args []string) {
 	if len(args) > 0 && args[0] == "--version" {
 		fmt.Println("9.9.9")
@@ -208,26 +221,57 @@ func runFakePi(args []string) {
 			_ = f.Close()
 		}
 	}
-	if script := os.Getenv("PILL_FAKE_PI_SCRIPT"); script != "" {
-		runPiScript(script)
-		return
+	prompt := ""
+	if len(args) > 0 {
+		prompt = args[len(args)-1]
 	}
-	fmt.Println(os.Getenv("PILL_FAKE_PI_ANSWER"))
+
+	answer, tools := os.Getenv("PILL_FAKE_PI_ANSWER"), 0
+	switch {
+	case strings.Contains(prompt, "facts.txt"):
+		data, _ := os.ReadFile("facts.txt")
+		answer, tools = strings.TrimSpace(string(data)), 1
+		switch os.Getenv("PILL_FAKE_PI_TIER1") {
+		case "wrong":
+			answer = "PILL-00000000"
+		case "notool":
+			tools = 0
+		}
+	case strings.Contains(prompt, "tic-tac-toe"):
+		if n, _ := strconv.Atoi(os.Getenv("PILL_FAKE_PI_TIER2_SLEEP")); n > 0 {
+			time.Sleep(time.Duration(n) * time.Second)
+		}
+		if script := os.Getenv("PILL_FAKE_PI_TIER2_SCRIPT"); script != "" {
+			runShell(script)
+		}
+		answer, tools = "done", 3
+	}
+
+	for i := 0; i < tools; i++ {
+		fmt.Println(`{"type":"tool_execution_start","toolName":"read"}`)
+	}
+	msg, _ := json.Marshal(map[string]any{"type": "message_end", "message": map[string]any{
+		"role": "assistant", "content": []map[string]string{{"type": "text", "text": answer}},
+	}})
+	fmt.Println(string(msg))
+	fmt.Println(`{"type":"agent_settled"}`)
 }
 
-// runPiScript runs a shell command in the current directory; bench tests use
-// it to make the fake Pi "write code" into the workspace.
-func runPiScript(script string) {
-	sh, _ := os.StartProcess("/bin/sh", []string{"sh", "-c", script}, &os.ProcAttr{
+// runShell runs a shell command in the current directory.
+func runShell(script string) {
+	p, err := os.StartProcess("/bin/sh", []string{"sh", "-c", script}, &os.ProcAttr{
 		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr}, Env: os.Environ(),
 	})
-	if sh != nil {
-		_, _ = sh.Wait()
+	if err == nil {
+		_, _ = p.Wait()
 	}
 }
 
 // --- fake launchctl ---
 
+// The fake models just enough of launchd: bootstrap starts the program named
+// in the plist (the fake llama-server) and remembers its pid; bootout stops
+// it; kickstart -k restarts it; print succeeds while the job is loaded.
 func runFakeLaunchctl(args []string) {
 	if log := os.Getenv("PILL_FAKE_LAUNCH_LOG"); log != "" {
 		f, err := os.OpenFile(log, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
@@ -236,13 +280,80 @@ func runFakeLaunchctl(args []string) {
 			_ = f.Close()
 		}
 	}
-	// "print" fails unless a marker file says the job is loaded.
-	if len(args) > 0 && args[0] == "print" {
-		if m := os.Getenv("PILL_FAKE_LAUNCH_LOADED"); m != "" {
-			if _, err := os.Stat(m); err == nil {
-				return
+	state := os.Getenv("PILL_FAKE_LAUNCH_STATE") // file holding "<pid> <plist>" while loaded
+	if state == "" || len(args) == 0 {
+		return
+	}
+	loaded := func() (pid int, plist string, ok bool) {
+		data, err := os.ReadFile(state)
+		if err != nil {
+			return 0, "", false
+		}
+		f := strings.Fields(string(data))
+		if len(f) != 2 {
+			return 0, "", false
+		}
+		pid, _ = strconv.Atoi(f[0])
+		return pid, f[1], pid > 0 && syscall.Kill(pid, 0) == nil
+	}
+	start := func(plist string) {
+		data, err := os.ReadFile(plist)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Bootstrap failed: 5: Input/output error")
+			os.Exit(5)
+		}
+		var argv []string
+		text := string(data)
+		if i := strings.Index(text, "<key>ProgramArguments</key>"); i >= 0 {
+			text = text[i:]
+			text = text[:strings.Index(text, "</array>")]
+			for _, part := range strings.Split(text, "<string>")[1:] {
+				argv = append(argv, strings.Split(part, "</string>")[0])
 			}
 		}
-		os.Exit(113)
+		if len(argv) == 0 {
+			os.Exit(5)
+		}
+		cmd := exec.Command(argv[0], argv[1:]...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+		if err := cmd.Start(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(5)
+		}
+		_ = os.WriteFile(state, []byte(fmt.Sprintf("%d %s", cmd.Process.Pid, plist)), 0o644)
+	}
+	stop := func() {
+		if pid, _, ok := loaded(); ok {
+			_ = syscall.Kill(pid, syscall.SIGTERM)
+		}
+	}
+	switch args[0] {
+	case "print":
+		if _, _, ok := loaded(); !ok {
+			os.Exit(113)
+		}
+	case "bootstrap": // bootstrap gui/<uid> <plist>
+		if _, _, ok := loaded(); ok {
+			fmt.Fprintln(os.Stderr, "Bootstrap failed: 5: Input/output error")
+			os.Exit(5)
+		}
+		start(args[len(args)-1])
+	case "bootout":
+		if _, _, ok := loaded(); !ok {
+			fmt.Fprintln(os.Stderr, "Boot-out failed: 3: No such process")
+			os.Exit(3)
+		}
+		stop()
+		_ = os.Remove(state)
+	case "kickstart":
+		if _, plist, ok := loaded(); ok {
+			for _, a := range args {
+				if a == "-k" {
+					stop()
+					time.Sleep(300 * time.Millisecond)
+					start(plist)
+				}
+			}
+		}
 	}
 }

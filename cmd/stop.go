@@ -54,11 +54,25 @@ func runStop(ctx context.Context, a *App, all bool) error {
 	if _, err := a.stopRouter(ctx); err != nil {
 		return output.Fail(nil, "%v", err)
 	}
-	a.printer.Emit(doc.Set("router", "stopped").Set("unloaded", unloaded))
+	doc = doc.Set("router", "stopped").Set("unloaded", unloaded)
+	if a.svc.Installed() {
+		doc = doc.Set("help", []string{"the LaunchAgent is unloaded until next login; bring it back with `pill serve`"})
+	}
+	a.printer.Emit(doc)
 	return nil
 }
 
 // stopRouter stops the router process however it is supervised.
+//
+// A router owned by the launchd service must be booted out: sending it
+// SIGTERM would only make KeepAlive start it again.
 func (a *App) stopRouter(ctx context.Context) (bool, error) {
+	if a.svc.Installed() && a.svc.Loaded(ctx) {
+		if err := a.svc.Stop(ctx); err != nil {
+			return false, err
+		}
+		a.rt.WaitDown(ctx)
+		return true, nil
+	}
 	return a.rt.Stop(ctx)
 }

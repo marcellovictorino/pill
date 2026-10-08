@@ -21,6 +21,7 @@ import (
 	"github.com/marcellovictorino/pill/internal/output"
 	"github.com/marcellovictorino/pill/internal/registry"
 	"github.com/marcellovictorino/pill/internal/router"
+	"github.com/marcellovictorino/pill/internal/service"
 	"github.com/marcellovictorino/pill/internal/sysinfo"
 )
 
@@ -28,7 +29,9 @@ import (
 // the platform layer.
 type Deps struct {
 	Out, Err  io.Writer
+	In        io.Reader // stdin, used only for the one interactive question (demoting a model)
 	StdoutTTY bool
+	StdinTTY  bool
 	Sys       sysinfo.Info
 }
 
@@ -44,6 +47,7 @@ type App struct {
 	settings config.Settings
 	reg      *registry.Registry
 	rt       *router.Router
+	svc      *service.Service
 	loaded   bool
 }
 
@@ -72,6 +76,7 @@ func (a *App) load() error {
 	}
 	a.paths, a.settings, a.reg = p, s, reg
 	a.rt = router.New(p, s)
+	a.svc = service.New(p)
 	a.loaded = true
 	return nil
 }
@@ -79,8 +84,9 @@ func (a *App) load() error {
 // Execute runs pill and returns the process exit code.
 func Execute() int {
 	deps := Deps{
-		Out: os.Stdout, Err: os.Stderr,
+		Out: os.Stdout, Err: os.Stderr, In: os.Stdin,
 		StdoutTTY: output.IsTerminal(os.Stdout),
+		StdinTTY:  output.IsTerminal(os.Stdin),
 		Sys:       sysinfo.New(),
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

@@ -46,10 +46,25 @@ func runPull(ctx context.Context, a *App, arg string, ctxSize int) error {
 	if err != nil {
 		return output.Fail([]string{"see the built-in models: pill catalog", "or use a Hugging Face reference: pill pull hf.co/owner/repo:Q4_K_M"}, "%v", err)
 	}
-	if m.Repo == "" {
-		return output.Fail([]string{"use a catalog name or a Hugging Face reference"}, "%s has no known download source", arg)
+	file, status, sum, err := a.pullModel(ctx, snap, m)
+	if err != nil {
+		return err
 	}
+	a.printer.Emit(output.Obj{}.
+		Set("file", file.Name()).
+		Set("status", status).
+		Set("size", humanBytes(file.Size)).
+		Set("sha256", orDash(sum)).
+		Set("help", []string{"register it: pill add " + arg + " --unverified"}))
+	return nil
+}
 
+// pullModel downloads the GGUF for m (when it is not already present) and
+// records where it came from. It never registers the model.
+func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model) (hf.File, string, string, error) {
+	if m.Repo == "" {
+		return hf.File{}, "", "", output.Fail([]string{"use a catalog name or a Hugging Face reference"}, "%s has no known download source", m.Name)
+	}
 	ref := hf.Ref{Repo: m.Repo, Quant: m.Quant}
 	if m.File != "" {
 		ref = hf.Ref{Repo: m.Repo, File: m.File}
@@ -58,11 +73,11 @@ func runPull(ctx context.Context, a *App, arg string, ctxSize int) error {
 	a.printer.Progress("looking up %s on Hugging Face...", m.Repo)
 	files, err := client.ListFiles(ctx, m.Repo)
 	if err != nil {
-		return hfFailure(err)
+		return hf.File{}, "", "", hfFailure(err)
 	}
 	file, err := hf.FindFile(files, ref)
 	if err != nil {
-		return output.Fail([]string{"check the name on https://huggingface.co/" + m.Repo}, "%v", err)
+		return hf.File{}, "", "", output.Fail([]string{"check the name on https://huggingface.co/" + m.Repo}, "%v", err)
 	}
 
 	dest := filepath.Join(a.settings.ModelsDir, file.Name())
@@ -74,21 +89,14 @@ func runPull(ctx context.Context, a *App, arg string, ctxSize int) error {
 		a.printer.Progress("downloading %s (%s)", file.Name(), humanBytes(file.Size))
 		sum, err = client.Download(ctx, m.Repo, file, a.settings.ModelsDir, a.downloadProgress(file.Name()))
 		if err != nil {
-			return hfFailure(err)
+			return hf.File{}, "", "", hfFailure(err)
 		}
 	}
-
 	snap.Results.Files[file.Name()] = config.FileInfo{Repo: m.Repo, Quant: m.Quant, Size: file.Size, SHA256: sum}
 	if err := config.SaveResults(a.paths, snap.Results); err != nil {
-		return output.Fail(nil, "%v", err)
+		return hf.File{}, "", "", output.Fail(nil, "%v", err)
 	}
-	a.printer.Emit(output.Obj{}.
-		Set("file", file.Name()).
-		Set("status", status).
-		Set("size", humanBytes(file.Size)).
-		Set("sha256", orDash(sum)).
-		Set("help", []string{"register it: pill add " + arg + " --unverified"}))
-	return nil
+	return file, status, sum, nil
 }
 
 // hfFailure turns download errors into pill errors with a useful next step.

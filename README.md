@@ -59,6 +59,11 @@ mkdir -p ~/.pill/models && mv ~/models/*.gguf ~/.pill/models/
 | `pill pull <name>` | Download a GGUF (catalog name or Hugging Face reference). Resumes, verifies sha256, never registers. |
 | `pill rm <name>` | Remove the entry and its Pi registration; delete the GGUF when no other entry uses it. |
 | `pill catalog` | Built-in models and the variant recommended for this machine's RAM. |
+| `pill bench run <name> [--runs N]` | Gate a model: cold-start agent-sized request, Pi tool-calling turn, then a Tier 2 coding task scored by a hidden verifier (needs Node). A failure exits 1 and removes the model from Pi. |
+| `pill bench summary [--all]` | Rank benchmarked models by Tier 2 score, speed and memory headroom. |
+| `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the unverified ones. |
+| `pill service install\|uninstall` | Run the router as a launchd LaunchAgent (starts at login, restarts if it dies). |
+| `pill skill install [--dir]` | Install the pill skill for Pi (`~/.pi/agent/skills/pill/SKILL.md`). |
 | `pill add <name> --unverified` | Register a local GGUF (catalog name, `.gguf` file or Hugging Face reference). |
 | `pill default [name]` | Set or show the default model. |
 | `pill doctor` | Check prerequisites, router health and Pi's provider. |
@@ -71,7 +76,7 @@ Add `--format toon|human` to force an output format. On a terminal you get table
 | Path | Purpose |
 |---|---|
 | `~/.config/pill/` (or `$XDG_CONFIG_HOME/pill`) | Portable, small: `config.toml`, `models.toml`. Safe to keep in dotfiles. |
-| `~/.pill/` | Machine-local: `models/` (GGUFs), generated `models.ini`, `results.json`, `logs/`, `run/`. |
+| `~/.pill/` | Machine-local: `models/` (GGUFs), generated `models.ini`, `results.json`, `benchmark/`, `logs/`, `run/`. |
 
 pill only ever writes its own `pill` provider into `~/.pi/agent/models.json` (after backing the file up to `models.json.bak`). Other providers are never touched.
 

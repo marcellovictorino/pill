@@ -37,6 +37,7 @@ type RunResult struct {
 	Tier2Seconds  float64 `json:"tier2_seconds"`
 	Tier2Checks   []Check `json:"tier2_checks,omitempty"`
 	Tier2TimedOut bool    `json:"tier2_timed_out,omitempty"`
+	Tier2Repeats  int     `json:"tier2_repeated_calls,omitempty"` // longest run of identical tool calls
 	MinFreePct    float64 `json:"min_free_pct"`
 	SwapGrowthMB  float64 `json:"swap_growth_mb"`
 	GPUBusyMin    float64 `json:"gpu_busy_min"`
