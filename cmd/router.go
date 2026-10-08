@@ -100,13 +100,17 @@ func joinIDs(ids []string) string {
 	return strings.Join(ids, ", ")
 }
 
+// humanBytes formats a size in decimal units (1 GB = 10^9 bytes), matching
+// Hugging Face and the catalog so the same file never shows two sizes.
 func humanBytes(n int64) string {
-	const gb, mb = 1 << 30, 1 << 20
-	switch {
-	case n >= gb:
-		return fmt.Sprintf("%.1f GB", float64(n)/gb)
-	case n >= mb:
-		return fmt.Sprintf("%d MB", n/mb)
+	const kb, mb, gb = 1e3, 1e6, 1e9
+	switch f := float64(n); {
+	case f >= gb:
+		return fmt.Sprintf("%.1f GB", f/gb)
+	case f >= mb:
+		return fmt.Sprintf("%.0f MB", f/mb)
+	case f >= kb:
+		return fmt.Sprintf("%.0f KB", f/kb)
 	}
-	return fmt.Sprintf("%d KB", n>>10)
+	return fmt.Sprintf("%d B", n)
 }

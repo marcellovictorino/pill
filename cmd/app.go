@@ -47,6 +47,9 @@ type App struct {
 	loaded   bool
 }
 
+// snapshot is the registry's models.toml + results.json view.
+type snapshot = registry.Snapshot
+
 // P is the printer.
 func (a *App) P() *output.Printer { return a.printer }
 

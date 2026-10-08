@@ -1,0 +1,3 @@
+models[2]{name,state,size,default}:
+  gemma4-26b-iq4xs-64k,unverified,43 B,yes
+  gemma4-26b-q3kxl-64k,pulled,44 B,no

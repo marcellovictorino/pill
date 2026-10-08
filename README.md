@@ -28,18 +28,20 @@ While developing, `go install .` from a checkout does the same.
 
 ## Quick start
 
-With a GGUF already in `~/.pill/models`:
-
 ```bash
+pill catalog                                 # what pill knows how to download
+pill pull gemma4-26b                         # download the recommended variant (13.6 GB)
 pill add gemma4-26b-iq4xs-64k --unverified   # register it with the router and Pi
 pill default gemma4-26b-iq4xs-64k            # make it the default
 pill doctor                                  # check prerequisites and configuration
 pill                                         # start the router if needed, open Pi
 ```
 
+Models outside the catalog work too: `pill pull hf.co/owner/repo:Q4_K_M`, then `pill add hf.co/owner/repo:Q4_K_M --unverified --ctx 32768`. Gated repos need `HF_TOKEN` in your environment (it is never stored).
+
 `--unverified` is deliberate: a model that has not passed `pill bench run` on this machine is marked `(unverified)` everywhere it is shown.
 
-If your GGUFs live somewhere else (for example `~/models`), move them into place first:
+If you already have the GGUF files, skip `pill pull` and move them into place:
 
 ```bash
 mkdir -p ~/.pill/models && mv ~/models/*.gguf ~/.pill/models/
@@ -53,6 +55,10 @@ mkdir -p ~/.pill/models && mv ~/models/*.gguf ~/.pill/models/
 | `pill serve [--foreground]` | Start the router (no-op when running). |
 | `pill stop [--all]` | Unload the loaded model; `--all` also stops the router. |
 | `pill ps` | Router state, port, loaded model and its memory. |
+| `pill ls` | Local models: name, state (`pulled`, `unverified`, `passed`, `failed`, `missing`), size, default. |
+| `pill pull <name>` | Download a GGUF (catalog name or Hugging Face reference). Resumes, verifies sha256, never registers. |
+| `pill rm <name>` | Remove the entry and its Pi registration; delete the GGUF when no other entry uses it. |
+| `pill catalog` | Built-in models and the variant recommended for this machine's RAM. |
 | `pill add <name> --unverified` | Register a local GGUF (catalog name, `.gguf` file or Hugging Face reference). |
 | `pill default [name]` | Set or show the default model. |
 | `pill doctor` | Check prerequisites, router health and Pi's provider. |

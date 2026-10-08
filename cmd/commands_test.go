@@ -7,15 +7,16 @@ import (
 	"testing"
 
 	"github.com/marcellovictorino/pill/internal/pi"
+	"github.com/marcellovictorino/pill/internal/version"
 )
 
 func TestVersionToonHasNoLogo(t *testing.T) {
 	e := newEnv(t)
 	r := e.run("version").ok(t)
-	if !strings.HasPrefix(r.out, "version: 0.1.0\ncommit: ") || strings.Contains(r.out, "'-") {
+	if !strings.HasPrefix(r.out, "version: "+version.Version+"\ncommit: ") || strings.Contains(r.out, "'-") {
 		t.Errorf("unexpected output:\n%s", r.out)
 	}
-	if r := e.run("--version").ok(t); !strings.HasPrefix(r.out, "version: 0.1.0") {
+	if r := e.run("--version").ok(t); !strings.HasPrefix(r.out, "version: "+version.Version) {
 		t.Errorf("--version:\n%s", r.out)
 	}
 }
@@ -42,7 +43,7 @@ func TestLogoOnlyOnTerminalWithoutAgentEnv(t *testing.T) {
 		}
 	}
 	tty := e.invoke(true, "--version").ok(t)
-	if !strings.Contains(tty.out, ".-------") || !strings.Contains(tty.out, "pill 0.1.0") {
+	if !strings.Contains(tty.out, ".-------") || !strings.Contains(tty.out, "pill "+version.Version) {
 		t.Errorf("terminal --version should show the logo:\n%s", tty.out)
 	}
 	help := e.invoke(true, "--help").ok(t)
@@ -186,7 +187,7 @@ func TestServePsStopLifecycle(t *testing.T) {
 
 	e.chat("gemma4-26b-iq4xs-64k")
 	busy := e.run("ps").ok(t)
-	if !strings.Contains(busy.out, "loaded: gemma4-26b-iq4xs-64k") || !strings.Contains(busy.out, "rss: 12.0 GB") || !strings.Contains(busy.out, "gpu_memory: 15.0 GB") {
+	if !strings.Contains(busy.out, "loaded: gemma4-26b-iq4xs-64k") || !strings.Contains(busy.out, "rss: 12.9 GB") || !strings.Contains(busy.out, "gpu_memory: 16.1 GB") {
 		t.Errorf("busy ps:\n%s", busy.out)
 	}
 	golden(t, "ps_loaded", strings.Join(dropLines(busy.out, "pid:"), ""))

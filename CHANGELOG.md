@@ -6,6 +6,16 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-08
+
+### Added
+
+- `pill pull <name>`: download a GGUF from Hugging Face (catalog name, `hf.co/owner/repo:QUANT`, or `owner/repo/file.gguf`) with resume and sha256 verification against Hugging Face's checksum. `HF_TOKEN` is read from the environment and never stored. Pull never registers a model.
+- `pill ls`: local models with state (`pulled`, `unverified`, `passed`, `failed`, `missing`), size and default marker.
+- `pill rm <name>`: remove an entry from models.toml, models.ini and Pi; delete the GGUF when no other entry uses it. Removing something already gone is a no-op.
+- `pill catalog`: built-in models with the variant recommended for this machine's RAM.
+- Models outside the catalog work with `--ctx` and generic defaults.
+
 ## [0.1.0] - 2026-10-08
 
 ### Added

@@ -1,0 +1,6 @@
+ram_gb: 24
+catalog[2]{name,size,ctx,recommended,local}:
+  gemma4-26b-iq4xs-64k,13.6 GB,65536,yes,no
+  gemma4-26b-q3kxl-64k,12.9 GB,65536,no,no
+help[1]: download one: pill pull <name>
+help[2]: any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M
