@@ -1,0 +1,29 @@
+name: Model report
+description: Share how a model behaves on your machine
+labels: [model-report]
+body:
+  - type: input
+    id: machine
+    attributes:
+      label: Machine
+      description: Chip and memory, for example "Apple M4, 24 GB".
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Name, quantisation and context size.
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Output of `pill bench summary`
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
