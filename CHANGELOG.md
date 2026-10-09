@@ -8,6 +8,7 @@ All notable changes to pill are documented here. The format follows
 
 ### Added
 
+- README: "Use the models from another agent" explains pointing any OpenAI-compatible tool at `http://127.0.0.1:11435/v1` after `pill serve` (any API key works, no authentication, local only).
 - Shell completion offers model names. `pill add`, `pill pull` and `pill bench run` complete catalog and registered names (`add` also local GGUF files); `pill rm` and `pill default` complete registered names. Load it with `source <(pill completion zsh)`.
 
 ## [0.4.1] - 2026-10-08
