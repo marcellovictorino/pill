@@ -1,0 +1,13 @@
+status: warn
+checks[10]{check,status,detail}:
+  llama-server,ok,"$FAKES/llama-server 9.9.9 (build 999, commit fakefake)"
+  pi,ok,$FAKES/pi 9.9.9
+  port,ok,$PORT is free
+  router,ok,not running (it starts on demand)
+  service,ok,"not installed (optional: pill service install)"
+  models,ok,"1 registered, all files present"
+  default,ok,gemma4-26b-iq4xs-64k
+  pi-provider,ok,"in sync: gemma4-26b-iq4xs-64k"
+  legacy-provider,warn,"Pi provider \"llama-cpp\" points at an old local server (http://127.0.0.1:8080/v1)"
+  config-dir,warn,$TMP/pill/config contains 1 .gguf file(s); keep GGUFs in $TMP/pill/models
+help[1]: remove it from $TMP/piagent/models.json if you no longer use it (pill never edits other providers)

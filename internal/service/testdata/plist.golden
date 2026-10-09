@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.marcellovictorino.pill</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/llama-server</string>
+		<string>--models-dir</string>
+		<string>/h/.pill/models</string>
+		<string>--models-preset</string>
+		<string>/h/.pill/models.ini</string>
+		<string>--port</string>
+		<string>11435</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>/h/.pill</string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/h/.pill/logs/server.log</string>
+	<key>StandardErrorPath</key>
+	<string>/h/.pill/logs/server.log</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/bin</string>
+	</dict>
+	<key>ProcessType</key>
+	<string>Interactive</string>
+</dict>
+</plist>

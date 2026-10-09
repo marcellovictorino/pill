@@ -1,0 +1,6 @@
+model: gemma4-26b-iq4xs-64k
+status: registered
+state: unverified
+ctx: 65536
+pi: pill/gemma4-26b-iq4xs-64k
+help[1]: make it the default: pill default gemma4-26b-iq4xs-64k

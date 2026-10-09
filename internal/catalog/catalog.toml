@@ -1,0 +1,31 @@
+# Models pill knows how to download and serve. Embedded in the binary.
+# A model can have several variants (quantisations); the one marked default
+# is what the short name (for example "gemma4-26b") resolves to.
+# Verified against the Hugging Face repo listing on 2026-10-08.
+
+[[model]]
+name = "gemma4-26b"
+repo = "unsloth/gemma-4-26B-A4B-it-GGUF"
+reasoning = true
+max_tokens = 16384
+
+[model.preset]
+temp = 1.0
+top-p = 0.95
+top-k = 64
+min-p = 0.0
+
+[[model.variant]]
+quant = "UD-IQ4_XS"
+file = "gemma-4-26B-A4B-it-UD-IQ4_XS.gguf"
+size_gb = 13.6
+ctx = 65536
+min_ram_gb = 24
+default = true
+
+[[model.variant]]
+quant = "UD-Q3_K_XL"
+file = "gemma-4-26B-A4B-it-UD-Q3_K_XL.gguf"
+size_gb = 12.9
+ctx = 65536
+min_ram_gb = 24
