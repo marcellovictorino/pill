@@ -2,6 +2,20 @@
 # A model can have several variants (quantisations); the one marked default
 # is what the short name (for example "gemma4-26b") resolves to.
 # Verified against the Hugging Face repo listing on 2026-10-08.
+#
+# Not listed on purpose: 16 GB machines. Benchmarked on an M2 Pro with 16 GB
+# (pill 0.4.1, llama.cpp build 11146, 2026-10-09); nothing passed both tiers.
+# The Metal working set is roughly 10.7 GB, so model plus KV cache must fit
+# under that, not under 16 GB.
+#   gemma4-26b UD-Q3_K_XL (12.9 GB)   Tier 1 fail: Metal out of memory
+#   Qwen3-14B Q3_K_M, 16k ctx         Tier 1 fail: 69 s (limit 60), 1% free
+#   Qwen2.5-Coder-7B Q4_K_M           Tier 1 fail: wrote the tool call as text
+#   Qwen3-8B Q4_K_M, 32k ctx          Tier 1 pass, Tier 2 17/22, 13% free
+#   gemma-4-E4B Q4_K_M, 32k ctx       Tier 1 pass, Tier 2 21/22 then 16/22
+#   Qwen3-4B-Instruct-2507 Q4_K_M     Tier 1 fail then pass, Tier 2 14/22
+# The small models fit with room to spare but cannot build the Tier 2 task
+# reliably, and adding them here would only clutter the catalog for larger
+# machines. Revisit when a new 4-8B model claims strong agentic coding.
 
 [[model]]
 name = "gemma4-26b"
