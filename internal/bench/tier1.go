@@ -39,68 +39,101 @@ type chatResult struct {
 	Seconds      float64
 	PromptTokens int
 	GenTokens    int
-	TokPerSec    float64
 	Reply        string
 	Correct      bool
 	Err          error
 }
 
-// agentRequest sends the agent-sized prompt through the router and times it.
-func (r *Runner) agentRequest(ctx context.Context, model string, timeout time.Duration) chatResult {
-	prompt, want := agentPrompt(r.PromptFunctions)
-	body, _ := json.Marshal(map[string]any{
-		"model":                model,
-		"messages":             []map[string]string{{"role": "user", "content": prompt}},
-		"max_tokens":           64,
-		"stream":               false,
-		"chat_template_kwargs": map[string]any{"enable_thinking": false},
-	})
+// chatResponse is the part of a llama-server chat completion pill reads.
+type chatResponse struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+	Usage struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+	} `json:"usage"`
+	Timings struct {
+		PredictedPerSecond float64 `json:"predicted_per_second"`
+	} `json:"timings"`
+}
+
+// postChat sends one non-streaming chat completion and returns the decoded
+// response and how long it took.
+func (r *Runner) postChat(ctx context.Context, payload map[string]any, timeout time.Duration) (chatResponse, float64, error) {
+	var out chatResponse
+	body, _ := json.Marshal(payload)
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.Router.BaseURL()+"/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return chatResult{Err: err}
+		return out, 0, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	start := time.Now()
 	resp, err := r.HTTP.Do(req)
 	if err != nil {
-		return chatResult{Err: err, Seconds: time.Since(start).Seconds()}
+		return out, time.Since(start).Seconds(), err
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, _ := io.ReadAll(resp.Body)
-	res := chatResult{Seconds: time.Since(start).Seconds()}
+	secs := time.Since(start).Seconds()
 	if resp.StatusCode != http.StatusOK {
-		res.Err = fmt.Errorf("chat completion: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(raw[:min(len(raw), 300)])))
-		return res
-	}
-	var out struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-		Usage struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
-		} `json:"usage"`
-		Timings struct {
-			PredictedPerSecond float64 `json:"predicted_per_second"`
-		} `json:"timings"`
+		return out, secs, fmt.Errorf("chat completion: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(raw[:min(len(raw), 300)])))
 	}
 	if err := json.Unmarshal(raw, &out); err != nil || len(out.Choices) == 0 {
-		res.Err = fmt.Errorf("chat completion: unreadable response")
+		return out, secs, fmt.Errorf("chat completion: unreadable response")
+	}
+	return out, secs, nil
+}
+
+// agentRequest sends the agent-sized prompt through the router and times it.
+func (r *Runner) agentRequest(ctx context.Context, model string, timeout time.Duration) chatResult {
+	prompt, want := agentPrompt(r.PromptFunctions)
+	out, secs, err := r.postChat(ctx, map[string]any{
+		"model":                model,
+		"messages":             []map[string]string{{"role": "user", "content": prompt}},
+		"max_tokens":           64,
+		"stream":               false,
+		"chat_template_kwargs": map[string]any{"enable_thinking": false},
+	}, timeout)
+	res := chatResult{Seconds: secs, Err: err}
+	if err != nil {
 		return res
 	}
 	res.Reply = strings.TrimSpace(out.Choices[0].Message.Content)
 	res.PromptTokens, res.GenTokens = out.Usage.PromptTokens, out.Usage.CompletionTokens
-	res.TokPerSec = out.Timings.PredictedPerSecond
 	res.Correct = strings.Contains(res.Reply, fmt.Sprint(want))
 	if res.Reply == "" {
 		res.Err = fmt.Errorf("the model returned an empty reply")
 	}
 	return res
+}
+
+// decodeTokens is how many tokens the speed probe generates: enough that the
+// rate reflects steady decoding rather than the first token's overhead.
+const decodeTokens = 128
+
+// decodeSpeed measures generation speed on the already-loaded model. The
+// agent-sized request's own rate is useless for this: its reply is a few
+// tokens, so the figure is mostly start-up overhead. ignore_eos (a
+// llama-server extension) forces exactly decodeTokens tokens.
+func (r *Runner) decodeSpeed(ctx context.Context, model string, timeout time.Duration) (tokPerSec float64, tokens int, err error) {
+	out, _, err := r.postChat(ctx, map[string]any{
+		"model":                model,
+		"messages":             []map[string]string{{"role": "user", "content": "Count upwards from 1, one number per line."}},
+		"max_tokens":           decodeTokens,
+		"ignore_eos":           true,
+		"stream":               false,
+		"chat_template_kwargs": map[string]any{"enable_thinking": false},
+	}, timeout)
+	if err != nil {
+		return 0, 0, err
+	}
+	return out.Timings.PredictedPerSecond, out.Usage.CompletionTokens, nil
 }
 
 // randomToken makes a code the model cannot guess, so a correct answer proves

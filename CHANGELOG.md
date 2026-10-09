@@ -11,6 +11,10 @@ All notable changes to pill are documented here. The format follows
 - README: "Use the models from another agent" explains pointing any OpenAI-compatible tool at `http://127.0.0.1:11435/v1` after `pill serve` (any API key works, no authentication, local only).
 - Shell completion offers model names. `pill add`, `pill pull` and `pill bench run` complete catalog and registered names (`add` also local GGUF files); `pill rm` and `pill default` complete registered names. Load it with `source <(pill completion zsh)`.
 
+### Fixed
+
+- `tok_per_s` in `pill bench run` and `bench summary` measures real decoding speed. It used to come from the agent-sized request, whose reply is only a few tokens, so the figure was mostly start-up overhead (5 tok/s for a model that decodes at 28). Tier 1 now times a 128-token generation on the warm model; results recorded before this change keep the old figure.
+
 ## [0.4.1] - 2026-10-08
 
 ### Changed
