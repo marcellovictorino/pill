@@ -1,10 +1,10 @@
 # pill
 
-Simple CLI to run the [Pi](https://github.com/badlogic/pi-mono) coding agent with local models served by [llama.cpp](https://github.com/ggml-org/llama.cpp).
+A CLI that runs the [Pi](https://github.com/badlogic/pi-mono) coding agent with local models served by [llama.cpp](https://github.com/ggml-org/llama.cpp).
 
 > Issues are welcome. Pull requests are not accepted; please open an issue instead.
 
-`pill` keeps a small llama.cpp router running, registers your local GGUF models with it and with Pi, and opens Pi on your default model. Running `pill` is all it takes. The router also works without Pi: see [Use the models from another agent](#use-the-models-from-another-agent).
+`pill` keeps a small llama.cpp router running, registers your local GGUF models with it and with Pi, and opens Pi on your default model. The router also serves other agents: see [Use the models from another agent](#use-the-models-from-another-agent).
 
 Apple Silicon macOS only for now.
 
@@ -39,7 +39,7 @@ pill                                         # start the router if needed, open 
 
 Models outside the catalog work too: `pill pull hf.co/owner/repo:Q4_K_M`, then `pill add hf.co/owner/repo:Q4_K_M --unverified --ctx 32768`. Gated repos need `HF_TOKEN` in your environment (it is never stored).
 
-`--unverified` is deliberate: a model that has not passed `pill bench run` on this machine is marked `(unverified)` everywhere it is shown.
+`--unverified` is explicit on purpose. A model that has not passed `pill bench run` on this machine shows `(unverified)` everywhere.
 
 If you already have the GGUF files, skip `pill pull` and move them into place:
 
@@ -49,7 +49,7 @@ mkdir -p ~/.pill/models && mv ~/models/*.gguf ~/.pill/models/
 
 ## Use the models from another agent
 
-Pi is optional. `pill serve` starts the router and returns; anything that speaks the OpenAI API can then use your registered models.
+`pill serve` starts the router and returns. Any client that speaks the OpenAI API can then use your registered models, with or without Pi.
 
 ```bash
 pill serve     # start the router (no-op when it is already running)

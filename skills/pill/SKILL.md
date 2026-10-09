@@ -8,7 +8,7 @@ description: Manage local LLMs for the Pi coding agent with the pill CLI (llama.
 `pill` runs the Pi coding agent on local models served by a llama.cpp router on
 `127.0.0.1:11435`. Every command is non-interactive when piped and prints
 compact [TOON](https://github.com/toon-format/toon); each result ends with a
-`help[n]:` list of sensible next commands. Exit codes: `0` ok, `1` failure,
+`help[n]:` list of next commands. Exit codes: `0` ok, `1` failure,
 `2` usage error (the valid flags or commands are listed).
 
 ## Common tasks
@@ -26,6 +26,7 @@ compact [TOON](https://github.com/toon-format/toon); each result ends with a
 | Change the default model | `pill default <name>` |
 | Free the model's memory | `pill stop` (`pill stop --all` also stops the router) |
 | Restore a fresh Mac from `~/.config/pill/models.toml` | `pill sync [--bench]` |
+| Let another agent use the models | `pill serve`, then point the client at `http://127.0.0.1:11435/v1` with any API key and a model name from `pill ls` |
 
 ## Rules
 
@@ -38,5 +39,6 @@ compact [TOON](https://github.com/toon-format/toon); each result ends with a
   pill regenerates them. Pill only ever writes its own `pill` provider into Pi.
 - Do not pass `--yes`-style flags to hide a failing gate. `pill add <name>
   --unverified` is the only override, and it keeps the model labelled.
+- The router listens on `127.0.0.1` only and has no authentication. It loads a model on the first request, keeps one loaded at a time and unloads it after 15 idle minutes.
 - Downloads need `HF_TOKEN` in the environment for gated repositories; pill
   never stores it.
