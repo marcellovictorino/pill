@@ -36,6 +36,9 @@ func TestServiceFollowsAPortChange(t *testing.T) {
 	// instead of waiting on a port the saved job never opens.
 	newPort := testutil.FreePort(t)
 	t.Setenv("PILL_PORT", strconv.Itoa(newPort))
+	// Cleanups run last-in first-out: newEnv's stop would run after PILL_PORT
+	// is restored and miss the router on the new port, so stop it here first.
+	t.Cleanup(func() { e.run("stop", "--all") })
 	e.run("serve").ok(t)
 
 	plist, err := os.ReadFile(e.plist())
