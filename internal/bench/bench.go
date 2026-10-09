@@ -138,7 +138,21 @@ func (r *Runner) runOnce(ctx context.Context, p Plan, n int) (config.RunResult, 
 	if ctx.Err() != nil {
 		return rr, ctx.Err()
 	}
-	rr.Tier1Seconds, rr.PromptTokens, rr.GenTokens, rr.GenTokPerSec = chat.Seconds, chat.PromptTokens, chat.GenTokens, chat.TokPerSec
+	rr.Tier1Seconds, rr.PromptTokens, rr.GenTokens = chat.Seconds, chat.PromptTokens, chat.GenTokens
+	// Speed is informational, measured on the warm model only if it answered.
+	decodeErr := ""
+	decodeTok := 0
+	if chat.Err == nil {
+		r.Log("tier 1: decode speed (%d tokens)", decodeTokens)
+		var err error
+		rr.GenTokPerSec, decodeTok, err = r.decodeSpeed(ctx, p.Model.Name, time.Duration(th.Tier1MaxSeconds*float64(time.Second)))
+		if err != nil {
+			decodeErr = err.Error()
+		}
+		if ctx.Err() != nil {
+			return rr, ctx.Err()
+		}
+	}
 	reqOK := chat.Err == nil && chat.Seconds <= th.Tier1MaxSeconds
 	detail := fmt.Sprintf("%.1fs for ~%d prompt tokens (limit %.0fs)", chat.Seconds, chat.PromptTokens, th.Tier1MaxSeconds)
 	if chat.Err != nil {
@@ -152,7 +166,8 @@ func (r *Runner) runOnce(ctx context.Context, p Plan, n int) (config.RunResult, 
 	}
 	saveJSON(filepath.Join(dir, "tier1-chat.json"), map[string]any{
 		"seconds": chat.Seconds, "prompt_tokens": chat.PromptTokens, "gen_tokens": chat.GenTokens,
-		"tok_per_sec": chat.TokPerSec, "reply": chat.Reply, "correct": chat.Correct, "error": chatErr,
+		"reply": chat.Reply, "correct": chat.Correct, "error": chatErr,
+		"decode_tok_per_sec": rr.GenTokPerSec, "decode_tokens": decodeTok, "decode_error": decodeErr,
 	})
 
 	// --- Tier 1b: a real Pi turn that needs a tool call ---

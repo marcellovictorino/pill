@@ -159,7 +159,11 @@ func runFakeLlama(args []string) {
 		_, _ = w.Write([]byte(`{"success":true}`))
 	})
 	mux.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
-		var body struct{ Model string }
+		var body struct {
+			Model     string
+			MaxTokens int  `json:"max_tokens"`
+			IgnoreEOS bool `json:"ignore_eos"`
+		}
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		mu.Lock()
 		loaded[body.Model] = true
@@ -168,10 +172,16 @@ func runFakeLlama(args []string) {
 		if reply == "" {
 			reply = "ok"
 		}
+		// A short reply's rate is mostly start-up overhead, so it reads slow; a
+		// generation forced to max_tokens (ignore_eos) reports the true rate.
+		gen, rate := 3, 3.0
+		if body.IgnoreEOS {
+			gen, rate = body.MaxTokens, 42.5
+		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": reply}}},
-			"usage":   map[string]any{"prompt_tokens": 8000, "completion_tokens": 20},
-			"timings": map[string]any{"predicted_per_second": 42.5},
+			"usage":   map[string]any{"prompt_tokens": 8000, "completion_tokens": gen},
+			"timings": map[string]any{"predicted_per_second": rate},
 		})
 	})
 
