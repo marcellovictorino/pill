@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: #f3f4f6; color: #111827; }
+.app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+h1 { margin: 0 0 12px; font-size: 1.6rem; }
+.filter { width: 100%; max-width: 360px; padding: 8px; margin-bottom: 16px; border: 1px solid #6b7280; border-radius: 6px; }
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 720px) { .board { grid-template-columns: minmax(0, 1fr); } }
+.column { background: #e5e7eb; border-radius: 8px; padding: 12px; min-width: 0; }
+.column h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.count { background: #1f2937; color: #fff; border-radius: 999px; padding: 0 8px; font-size: 0.85rem; }
+.add { display: flex; gap: 6px; margin-bottom: 8px; }
+.add input { flex: 1; min-width: 0; padding: 6px; border: 1px solid #6b7280; border-radius: 6px; }
+button, select { padding: 6px 10px; border: 1px solid #374151; border-radius: 6px; background: #fff; color: #111827; cursor: pointer; }
+.empty { color: #374151; font-style: italic; margin: 4px 0; }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.card { background: #fff; border-radius: 6px; padding: 8px; cursor: grab; overflow-wrap: anywhere; word-break: break-word; }
+.title { display: block; margin-bottom: 6px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.edit { display: flex; gap: 6px; margin-bottom: 6px; }
+.edit input { flex: 1; min-width: 0; padding: 6px; }
