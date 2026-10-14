@@ -107,14 +107,26 @@ def run_cmd(cmd, ws, env, timeout_s, stdout_path, stderr_path, stdin=None):
         return {"exit": p.returncode, "timed_out": timed_out, "seconds": round(time.time() - start, 1)}
 
 
-def pi_agent_dir(outdir):
-    """Throwaway Pi config: a copy of the user's models.json (the pill provider)."""
+def pi_agent_dir(outdir, model):
+    """Throwaway Pi config: a copy of the user's models.json (the pill provider).
+
+    pill drops a model from Pi's config when its benchmark failed, though the router still serves
+    it. Evals compare such models too, so the entry is cloned into this throwaway copy only; the
+    user's real Pi config is never touched.
+    """
     d = Path(outdir) / "pi-agent"
     d.mkdir(parents=True, exist_ok=True)
     src = Path.home() / ".pi" / "agent"
     for f in ("models.json", "models-store.json", "auth.json"):
         if (src / f).exists():
             shutil.copy(src / f, d / f)
+    cfg = json.loads((d / "models.json").read_text())
+    models = cfg["providers"]["pill"]["models"]
+    if not any(m["id"] == model for m in models):
+        entry = dict(models[0])
+        entry["id"] = entry["name"] = model
+        models.append(entry)
+        (d / "models.json").write_text(json.dumps(cfg, indent=2))
     return d
 
 
@@ -122,7 +134,7 @@ def agent_command(spec, prompt, ws, outdir, env):
     kind, _, rest = spec.partition(":")
     if kind == "pi":
         subprocess.run(["pill", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # cold start
-        env["PI_CODING_AGENT_DIR"] = str(pi_agent_dir(outdir))
+        env["PI_CODING_AGENT_DIR"] = str(pi_agent_dir(outdir, rest))
         env["PI_SKIP_VERSION_CHECK"] = "1"
         return ["pi", "-p", "--mode", "json", "--no-session", "--offline", "--no-extensions",
                 "--no-skills", "--no-context-files", "--model", "pill/" + rest,
