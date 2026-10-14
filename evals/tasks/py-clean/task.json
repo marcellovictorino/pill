@@ -1,0 +1,12 @@
+{
+  "id": "py-clean",
+  "title": "3A1 Python + DuckDB: clean, join and aggregate four dirty parquet tables",
+  "timeout_minutes": 30,
+  "setup": "setup.sh",
+  "prepare": "../_pydata/prepare.py",
+  "path_prepend": ["../_pydata/.venv/bin"],
+  "fixture": "fixture",
+  "reference": "reference",
+  "verify": "verify.py",
+  "verify_timeout_s": 600
+}
