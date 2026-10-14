@@ -35,3 +35,9 @@ go.work.sum
 # Built binary and release output
 /pill
 /dist/
+
+# evals: run output and per-task toolchains
+/evals/results/
+/evals/tasks/*/.venv/
+/evals/tasks/*/node_modules/
+/evals/tasks/*/.setup-done

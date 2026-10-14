@@ -19,6 +19,7 @@ Run `go test ./...` and `golangci-lint run ./...` before every commit.
 - **Changelog:** every user-visible change adds a line under `## [Unreleased]` in `CHANGELOG.md` (Keep a Changelog). The version constant in `internal/version` and the top released section move together.
 - **Tests never touch the real home.** Use `t.TempDir()` with `PILL_HOME`, `PI_CODING_AGENT_DIR` and `HOME` (see `newEnv` in `cmd/cmd_test.go`). Fake `llama-server`, `pi` and `launchctl` come from `internal/testutil` (test-binary re-exec); no test needs a real model.
 - **No benchmark-lab references.** pill is self-contained; do not link to or depend on outside local projects or paths.
+- **`evals/` is dev tooling, not part of pill.** It holds tier 3 model-evaluation tasks, their fixtures and a runner (Python, Go and Node fixtures with their own toolchains). The `pill` binary and `internal/` never import, embed or read from it, and it only talks to pill through the public CLI and the router's HTTP API. Go fixtures there are their own modules (own `go.mod`), so `go build ./...`, `go test ./...` and `golangci-lint run ./...` skip them. Changes under `evals/` are not user-visible: no changelog line.
 - **Pi's `models.json`:** pill writes only its own `pill` provider key, backs up first, writes atomically, and preserves every other key.
 - **Idiom:** add a short comment where a Go feature is non-obvious (embedding, build tags, `syscall.Exec`, test-binary re-exec).
 
@@ -44,4 +45,5 @@ internal/bench          Tier 1 and Tier 2 benchmark, memory sampler, summary; ta
 internal/service        launchd LaunchAgent plist and launchctl calls
 internal/version        version constant
 internal/testutil       fake external programs for tests
+evals/                  tier 3 model evaluations (separate tooling, see evals/README.md)
 ```
