@@ -41,3 +41,7 @@ go.work.sum
 /evals/tasks/*/.venv/
 /evals/tasks/*/node_modules/
 /evals/tasks/*/.setup-done
+
+# Python bytecode
+__pycache__/
+*.pyc
