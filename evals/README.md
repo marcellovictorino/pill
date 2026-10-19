@@ -54,3 +54,8 @@ Hidden tests live in `verify.py` and its helpers, outside the workspace: the age
   use at least 3 runs per cell when a conclusion matters.
 - Cloud baselines run with permissions bypassed inside the temp workspace; local models run through Pi.
 - Results (`results/`) are gitignored.
+
+## Reports
+
+`reports/` holds the written results: one report per model, a comparison across models, screenshots of the
+web outputs and a readable HTML page. See `reports/README.md` for how to add a model.
