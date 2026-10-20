@@ -76,5 +76,5 @@ time, not memory. **Recommendation: keep thinking off.** The full table and the 
 
 Six runs per cell is still small. The automated landing score checks structure, accessibility and responsiveness, and overstated
 quality on the first run. The Opus judge is a single sample per report. Local runs used Pi with thinking off in a throwaway config;
-the earlier runs and the pill gate runs were on a quiet machine (22% free memory, no swap), but during the thinking-on versus off
-comparison other apps held swap near 13 GB and pressure sat at "warn". Vision was not tested.
+the pill gate runs were on a quiet machine (22% free memory, no swap), and memory was not sampled during the earlier Tier 3 rounds;
+during the thinking-on versus off comparison other apps held swap near 13 GB and pressure sat at "warn". Vision was not tested.
