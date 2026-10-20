@@ -8,7 +8,9 @@ Standard library only. See README.md for the task layout and agent specs.
   python3 run.py run <task> --agent <spec> [--runs N] [--timeout-min M]
 
 Agent specs:
-  pi:<pill-model-name>             local model through the pill router, driven by Pi
+  pi:<pill-model-name>             local model through the pill router, driven by Pi (thinking off)
+  pi:<pill-model-name>:<level>     same with thinking on (Pi level minimal|low|medium|high; with pill's
+                                   chat-template format this is an on/off switch for the model's reasoning)
   claude:<model>[:<effort>]        Claude Code CLI, e.g. claude:opus:medium
   codex:<model>[:<effort>]         Codex CLI, e.g. codex:gpt-5.6-luna:high
 """
@@ -20,7 +22,9 @@ import shutil
 import signal
 import subprocess
 import sys
+import re
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -107,7 +111,56 @@ def run_cmd(cmd, ws, env, timeout_s, stdout_path, stderr_path, stdin=None):
         return {"exit": p.returncode, "timed_out": timed_out, "seconds": round(time.time() - start, 1)}
 
 
-def pi_agent_dir(outdir, model):
+class MemorySampler:
+    """Samples free memory and swap every few seconds while a local model runs (macOS).
+
+    Same sources as pill's own benchmark: `memory_pressure` for the system-wide free percentage and
+    `sysctl vm.swapusage`. Other apps on the machine count too, so read the numbers as the whole
+    system's state while the run was going, not the model's share alone.
+    """
+
+    def __init__(self, interval=5.0):
+        self.interval, self.free, self.swap, self.level = interval, [], [], []
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._loop, daemon=True)
+
+    @staticmethod
+    def _run(*cmd):
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=20).stdout
+        except Exception:
+            return ""
+
+    def _take(self):
+        m = re.search(r"free percentage: (\d+)%", self._run("memory_pressure"))
+        if m:
+            self.free.append(int(m.group(1)))
+        m = re.search(r"used = ([\d.]+)([MG])", self._run("sysctl", "-n", "vm.swapusage"))
+        if m:
+            self.swap.append(float(m.group(1)) * (1024 if m.group(2) == "G" else 1))
+        m = re.search(r"\d+", self._run("sysctl", "-n", "kern.memorystatus_vm_pressure_level"))
+        if m:
+            self.level.append(int(m.group(0)))
+
+    def _loop(self):
+        while not self._stop.is_set():
+            self._take()
+            self._stop.wait(self.interval)
+
+    def start(self):
+        self._t.start()
+        return self
+
+    def stop(self):
+        self._stop.set()
+        self._t.join(timeout=30)
+        return {"samples": len(self.free), "min_free_pct": min(self.free, default=None),
+                "swap_start_mb": round(self.swap[0]) if self.swap else None,
+                "swap_growth_mb": round(max(self.swap) - self.swap[0]) if self.swap else None,
+                "max_pressure_level": max(self.level, default=None)}
+
+
+def pi_agent_dir(outdir, model, reasoning=False):
     """Throwaway Pi config: a copy of the user's models.json (the pill provider).
 
     pill drops a model from Pi's config when its benchmark failed, though the router still serves
@@ -126,19 +179,26 @@ def pi_agent_dir(outdir, model):
         entry = dict(models[0])
         entry["id"] = entry["name"] = model
         models.append(entry)
-        (d / "models.json").write_text(json.dumps(cfg, indent=2))
+    if reasoning:
+        # Pi only sends the thinking switch for models marked as reasoning models, and pill marks a
+        # model that way only if it was registered with reasoning; the throwaway copy sets it here.
+        for m in models:
+            if m["id"] == model:
+                m["reasoning"] = True
+    (d / "models.json").write_text(json.dumps(cfg, indent=2))
     return d
 
 
 def agent_command(spec, prompt, ws, outdir, env):
     kind, _, rest = spec.partition(":")
     if kind == "pi":
+        model, _, level = rest.partition(":")  # pi:<model>[:<thinking level>]
         subprocess.run(["pill", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # cold start
-        env["PI_CODING_AGENT_DIR"] = str(pi_agent_dir(outdir, rest))
+        env["PI_CODING_AGENT_DIR"] = str(pi_agent_dir(outdir, model, reasoning=bool(level)))
         env["PI_SKIP_VERSION_CHECK"] = "1"
         return ["pi", "-p", "--mode", "json", "--no-session", "--offline", "--no-extensions",
-                "--no-skills", "--no-context-files", "--model", "pill/" + rest,
-                "--thinking", "off", prompt]
+                "--no-skills", "--no-context-files", "--model", "pill/" + model,
+                "--thinking", level or "off", prompt]
     if kind == "claude":
         model, _, effort = rest.partition(":")
         cmd = ["claude", "-p", "--model", model, "--setting-sources", "project",
@@ -220,7 +280,10 @@ def cmd_run(a):
         env = task_env(task)
         cmd = agent_command(a.agent, prompt, ws, out, env)
         print(f"[run] {task['id']} {a.agent} run {i}/{a.runs} (timeout {timeout_min} min)", flush=True)
+        sampler = MemorySampler().start() if a.agent.startswith("pi:") else None
         info = run_cmd(cmd, ws, env, timeout_min * 60, out / "transcript.jsonl", out / "agent.stderr.log")
+        if sampler:
+            info["memory"] = sampler.stop()
         res = verify(task, ws, out / "verify.json")
         keep_workspace(ws, out / "workspace")
         rec = {"task": task["id"], "agent": a.agent, "run": i, "rundir": str(out),
