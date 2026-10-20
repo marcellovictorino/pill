@@ -14,6 +14,7 @@ good at": one capability profile per domain, with objective hidden tests carryin
 python3 evals/run.py list
 python3 evals/run.py selftest go-notes                       # reference solution must score ~100, blank fixture low
 python3 evals/run.py run go-notes --agent pi:minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k --runs 3
+python3 evals/run.py run go-notes --agent pi:minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k:medium   # same with thinking on
 python3 evals/run.py run go-notes --agent claude:opus:medium
 python3 evals/run.py run go-notes --agent codex:gpt-5.6-luna:high
 python3 evals/summary.py                                      # markdown table over results/index.jsonl

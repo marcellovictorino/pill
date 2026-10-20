@@ -58,6 +58,13 @@ Screenshots are the **first** run of each task (the one that was rated); the lat
 | Mars landing page | ![MiniCPM mars](img/web-landing-mars/pi_minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k.webp) | 96 | Ok |
 | Tax landing page | ![MiniCPM tax](img/web-landing-tax/pi_minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k.webp) | 98 | Ok |
 
+## Thinking on or off
+
+Every table above is thinking **off**. Rerunning with thinking on (22 runs, `pi:<model>:medium`) gave no measurable gain: the median is equal or
+lower on six of seven tasks, one Go run hit the 30-minute cap, and the Opus judge scored the insight reports 17, 7 and 15 (thinking off:
+about 20). Memory is the same either way (system-wide minimum free 9% on, 10% off, on a machine already under pressure), because thinking costs
+time, not memory. **Recommendation: keep thinking off.** The full table and the memory comparison are in `summary.md`.
+
 ## Recommended use
 
 - **Good fit:** well-specified, self-contained builds you will review anyway (small front-end pages and apps, adding a feature to a

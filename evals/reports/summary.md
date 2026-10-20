@@ -69,3 +69,43 @@ Rated blind by one person, one page per cell. MiniCPM's rated page is its first 
 - MiniCPM never timed out except twice on Go (2 of 42 runs), but about one run in five outside the insight
   task scored under 70.
 - Gemma is as good as MiniCPM on the web tasks it finished, but timed out on long ones.
+
+## MiniCPM: thinking on or off
+
+The runs above used thinking off. llama.cpp supports reasoning for this model (`enable_thinking` in the chat template);
+Pi turns it on with `--thinking medium` (`--agent pi:<model>:medium` in `run.py`). The same tasks were rerun with thinking on,
+interleaved with a fresh thinking-off round, so drift in machine load affects both. Thinking on: 22 runs (3 per task, 4 for Kanban).
+Thinking off: the 7 runs per task of this model (the six above plus one taken with the memory sampler).
+
+| Task | Thinking on: runs | median | range | timeouts | mean min | Thinking off: runs | median | range | timeouts | mean min |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `go-notes` | 3 | 82 | 15–86 | 1 | 24.4 | 7 | 89 | 67–94 | 2 | 20.7 |
+| `py-clean` | 3 | 91 | 80–91 | 0 | 11.2 | 7 | 92 | 57–99 | 0 | 17.0 |
+| `py-insight` (automated) | 3 | 48 | 45–54 | 0 | 11.5 | 7 | 40 | 35–60 | 0 | 13.2 |
+| `web-kanban` | 4 | 88 | 34–90 | 0 | 3.8 | 7 | 90 | 40–92 | 0 | 3.5 |
+| `web-landing-nursery` | 3 | 90 | 31–96 | 0 | 5.5 | 7 | 94 | 18–96 | 0 | 6.0 |
+| `web-landing-mars` | 3 | 91 | 38–100 | 0 | 5.2 | 7 | 96 | 87–100 | 0 | 6.3 |
+| `web-landing-tax` | 3 | 94 | 48–94 | 0 | 6.5 | 7 | 98 | 54–100 | 0 | 6.3 |
+Runs under 70 outside the insight task: 5 of 19 with thinking on, 8 of 42 with it off. Opus judge on the insight reports: thinking on 17, 7, 15;
+thinking off about 20 on average (7 reports).
+
+**Result: no measurable gain from thinking.** The thinking-on median is equal or lower on six of seven tasks, one Go run hit the
+30-minute cap, and times were otherwise about the same. With three runs per cell a large effect is ruled out but a small one is not.
+**Recommendation: keep thinking off.**
+
+### Memory pressure
+
+Sampled system-wide every 5 seconds during each local run (`memory_pressure`, `sysctl vm.swapusage`):
+
+| | Thinking on (22 runs) | Thinking off (7 runs) |
+|---|---|---|
+| Lowest free memory seen | 9% | 10% |
+| Average of each run's minimum | 12.4% | 12.9% |
+| Swap growth during a run (mean, max) | 0.6 GB, 2.4 GB | 0.9 GB, 2.2 GB |
+| Swap in use at the start of a run (mean) | 12.5 GB | 11.8 GB |
+| Highest pressure level | 2 (warn) | 2 (warn) |
+
+Thinking does not change the memory the model needs: the weights are the same and llama.cpp reserves the cache for the full context
+at load time, so extra reasoning tokens cost time, not memory. These readings cover the **whole machine**: during all of these runs other
+apps already held swap near the 13 GB limit and pressure at "warn", so they describe a loaded machine, not the model alone. The earlier pill
+gate runs on a quiet machine saw 22% free memory and no swap with thinking off.
