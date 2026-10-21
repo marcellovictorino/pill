@@ -1,0 +1,19 @@
+{
+  "name": "evals-web-toolchain",
+  "private": true,
+  "type": "module",
+  "description": "Shared installed dependencies for the web-* eval tasks. Workspaces symlink node_modules to this directory's node_modules.",
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "playwright": "1.64.1",
+    "@axe-core/playwright": "4.13.0"
+  }
+}

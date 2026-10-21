@@ -1,0 +1,11 @@
+{
+  "id": "go-notes",
+  "title": "3B Go CLI: add stats and rm, fix a bug, follow repo conventions",
+  "timeout_minutes": 30,
+  "verify_timeout_s": 600,
+  "fixture": "fixture",
+  "reference": "_reference",
+  "verify": "verify.py",
+  "prompt_file": "spec.md",
+  "setup": null
+}

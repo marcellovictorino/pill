@@ -1,0 +1,10 @@
+{
+  "id": "web-kanban",
+  "title": "3C React + TS: Trello-style kanban board (hidden Playwright tests)",
+  "timeout_minutes": 40,
+  "setup": "setup.sh",
+  "prepare": "../_web/prepare.py",
+  "verify": "verify.py",
+  "reference": "reference",
+  "verify_timeout_s": 600
+}

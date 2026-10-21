@@ -1,0 +1,12 @@
+{
+  "id": "py-insight",
+  "title": "3A2 Python + scikit-learn: EDA, features, churn model and written insights",
+  "timeout_minutes": 40,
+  "setup": "setup.sh",
+  "prepare": "../_pydata/prepare.py",
+  "path_prepend": ["../_pydata/.venv/bin"],
+  "fixture": "fixture",
+  "reference": "reference",
+  "verify": "verify.py",
+  "verify_timeout_s": 600
+}
