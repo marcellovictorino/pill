@@ -3,7 +3,7 @@
 Six models on the seven Tier 3 tasks. Scores are hidden-test scores out of 100 unless noted. **Read the
 run counts:** every cloud model and Gemma has a **single run** per task (one run can land well away from
 the typical result); MiniCPM has **six runs** per task, so it is shown as median with range. Task
-descriptions are in `../README.md`. Flint (bartowski IQ2_XXS) was retested with llama.cpp b11804 `--reasoning-budget 0` after its template left the default 64-token reply in reasoning. The corrected Pill Tier 1 gate passed 3/3; Tier 2 scored 0/22, 13/22 and 19/22 versus MiniCPM's 22/22, so Flint did not reach Tier 3 and has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for raw-response diagnosis, per-run memory and gate details.
+descriptions are in `../README.md`. Both Flint IQ2_XXS variants were retested with llama.cpp b11804 `--reasoning-budget 0` after the template left the default 64-token reply in reasoning. Both passed the corrected Pill Tier 1 gate 3/3, but neither met the stable Tier 2 bar: Bartowski scored 0/22, 13/22, 19/22; Unsloth scored 22/22, 17/22, 19/22 versus MiniCPM's 22/22. Neither reached Tier 3, so Flint has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for diagnosis, per-run memory and recommendations.
 
 ## Scores
 
@@ -55,14 +55,15 @@ Rated blind by one person, one page per cell. MiniCPM's rated page is its first 
 
 | Model | Result | Runs | Tier 2 | Min free memory | Swap | tok/s |
 |---|---|---|---|---|---|---|
-| MiniCPM IQ2 11.3 GB | pass | 5 of 5 | 22/22 | 22% | 0 | 25 |
-| MiniCPM IQ3_XXS 13.7 GB | fail (20/22, swap) | 5 | 20/22 | 11% | 7.2 GB | 24 |
-| Gemma 4 UD-IQ3_S 11.3 GB | fail (two runs over the 15-minute cap) | 3 | 22/22 | 19% | 0 | 24 |
-| Gemma 4 Q3_K_XL | passed once, then failed | 1, 3 | 22/22 | 11%, 6% | 4.8–7.7 GB | 22 |
-| Gemma 4 IQ4_XS | fail | 5 | 21/22 | 9% | 765 MB | 21 |
-| Flint IQ2_XXS 12.0 GB (b11804, reasoning budget 0) | fail (Tier 2 below champion) | 3 | 0/22, 13/22, 19/22 | 11% full-run (11–13% Tier 1) | 172–638 MB per run | 34.7–36.3 |
+| MiniCPM IQ2 11.3 GB | pass | 5 of 5 | 22/22 ×5 | 22% | 0 | 25 |
+| MiniCPM IQ3_XXS 13.7 GB | fail (20/22, swap) | 5 | 22/22 ×4, 20/22 ×1 (r5) | 11% | 7.2 GB | 24 |
+| Gemma 4 UD-IQ3_S 11.3 GB | fail (two runs over the 15-minute cap) | 3 | 22/22 ×3 (two over cap) | 19% | 0 | 24 |
+| Gemma 4 Q3_K_XL | passed once, then failed | 1, 3 | single: 22/22; 3-run: 22/22, skipped, skipped | 11%, 6% | 4.8–7.7 GB | 22 |
+| Gemma 4 IQ4_XS | fail | 5 | 22/22 ×4, 21/22 ×1 (r5) | 9% | 765 MB | 21 |
+| Flint Bartowski IQ2_XXS 12.0 GB (b11804, reasoning budget 0) | fail (Tier 2 below champion) | 3 | 0/22, 13/22, 19/22 | 11% full-run | 172–638 MB per run | 34.7–36.3 |
+| Flint Unsloth UD-IQ2_XXS 11.9 GB (b11804, reasoning budget 0) | fail (unstable Tier 2) | 3 | 22/22, 17/22, 19/22 | 11–12% full-run | 67–1,663 MB per run | 34.0–37.6 |
 
-The installed llama.cpp b11669 could not load Flint. Under b11804, the template ignored `enable_thinking:false`, placing the initial 64-token output in `reasoning_content`; `--reasoning-budget 0` returned visible text. In the corrected 3-run test Pill Tier 1 passed 3/3, though the informational direct answer was correct only once. Sampled router-tree RSS peaks were 8.36, 13.31 and 13.27 GB; sampled GPU/unified-memory peaks were 15.25, 15.35 and 15.25 GB. Whole-machine free memory reached 11% and swap grew 172–638 MB per run. Tier 2 scores were 0/22, 13/22 and 19/22 (MiniCPM champion: 22/22), so Tier 3 was gated off. Flint has no Tier 3 scores, screenshots, judge score or blind ratings; see the report for all run details.
+Tier 2 score sequences are from the saved original `result.json` files. For Gemma Q3_K_XL, the standalone run and run 1 of the later three-run series scored 22/22; series runs 2–3 failed Tier 1 on memory and did not run Tier 2. Gemma IQ4_XS's five-run series scored 22/22 in runs 1–4 and 21/22 in run 5. The old summary's final-column 22 and 21 were throughput tok/s, not Tier 2 scores. The installed llama.cpp b11669 could not load Flint. Under b11804, the template ignored `enable_thinking:false`, placing the initial 64-token output in `reasoning_content`; `--reasoning-budget 0` returned visible text. Both corrected Flint quantisations passed Pill Tier 1 3/3, but their informational direct answers were correct only once each. Bartowski Tier 2 was 0/22, 13/22, 19/22; Unsloth was 22/22, 17/22, 19/22. Sampled router-tree RSS peaks were 8.36, 13.31, 13.27 GB for Bartowski and 8.00, 13.10, 13.16 GB for Unsloth; sampled GPU/unified-memory peaks were 15.25, 15.35, 15.25 GB and 14.82, 14.93, 15.46 GB, respectively. Whole-machine free memory reached 11%; swap grew 172–638 MB per Bartowski run and 67–1,663 MB per Unsloth run. Neither was stable at MiniCPM's 22/22, so Tier 3 was gated off for both. Flint has no Tier 3 scores, screenshots, judge score or blind ratings; see the report for all run details.
 
 ## Reading the table
 

@@ -1,10 +1,10 @@
-# RecursiveSI Flint 39.8B MoE, IQ2_XXS (12.03 GB)
+# RecursiveSI Flint 39.8B MoE: Bartowski IQ2_XXS and Unsloth UD-IQ2_XXS
 
-**Setup:** `bartowski/RecursiveSI_flint-GGUF` IQ2_XXS GGUF, 64k context, Pi 1.3.0 with thinking off, pill 0.4.1, 24 GB Apple Silicon Mac. The corrected three-run gate used upstream llama.cpp b11804 in an isolated pill root and port, with `--reasoning-budget 0`; the owner's router/default were not changed. **Runs:** three cold Tier 1 and Tier 2 runs on 2026-10-23 UTC. Tier 3 was not run because Tier 2 did not reach the MiniCPM champion's 22/22 score.
+**Setup:** Two 64k GGUF variants from `bartowski/RecursiveSI_flint-GGUF` and `unsloth/flint-GGUF`; Pi 1.3.0 with thinking off; pill 0.4.1; 24 GB Apple Silicon Mac. Each was pulled and registered only in an isolated pill root, then tested sequentially with upstream llama.cpp b11804 and `--reasoning-budget 0`; only one model was loaded at a time. **Runs:** three cold Tier 1 and Tier 2 runs per quant on 2026-10-23 UTC. Tier 3 was not run for either: neither quant achieved a stable 22/22 Tier 2 result to match MiniCPM.
 
 ## In one paragraph
 
-The serving/template issue behind Flint's initial empty reply was confirmed and corrected, but Flint still is not a champion candidate in this test. With llama.cpp b11804's `--reasoning-budget 0`, Pill's Tier 1 gate passed 3/3 runs (17.4–28.9 s, working Pi tool turns, and at least 11% free memory); the informational agent-sized answer was correct in only 1/3. Tier 2 scored 0/22, 13/22 and 19/22, versus MiniCPM's 22/22 champion result, and the machine added 172–638 MB of swap in each full run. Tier 3 was therefore not run. There is no Flint Tier 3 evidence to compare, and the recommendation is to keep MiniCPM as default.
+The initial empty visible reply was traced to Flint's chat template ignoring `enable_thinking:false`; b11804's `--reasoning-budget 0` returned visible text in a raw probe. With that correction, both variants passed Pill's Tier 1 gate 3/3, but their informational agent-sized answers were correct only once in three runs. Bartowski IQ2_XXS scored 0/22, 13/22 and 19/22 in Tier 2; Unsloth UD-IQ2_XXS scored 22/22, 17/22 and 19/22, with the last run hitting the 15-minute cap after repeating a tool call 181 times. Unsloth had the better single Tier 2 result, but passed the champion score in only one run; neither met the stable gate. Keep MiniCPM as default. No Tier 3 result exists for either Flint quant.
 
 ## Model discovery and fit
 
@@ -15,7 +15,7 @@ Hugging Face API metadata and repository file trees were checked on 2026-10-23 U
 | RecursiveSI source | [RecursiveSI/flint](https://huggingface.co/RecursiveSI/flint) | 2026-10-21 14:20:58 / 14:24:03 | BF16, 79,587,116,933 bytes; too large for this machine. |
 | ggml-org conversions | [ggml-org/Flint-GGUF](https://huggingface.co/ggml-org/Flint-GGUF) | 2026-10-22 12:16:33 / 12:19:07 | BF16 ~79.6 GB, Q8_0 ~42.4 GB, Q4_K_M ~23.4 GB; none leaves room for cache/runtime. |
 | bartowski conversions | [bartowski/RecursiveSI_flint-GGUF](https://huggingface.co/bartowski/RecursiveSI_flint-GGUF) | 2026-10-22 06:13:36 / 07:41:08 | IQ2_XXS 12,029,007,072 bytes; IQ2_XS 12,742,325,472; IQ2_S 13,394,982,112; IQ2_M 14,883,566,816. README describes IQ2_XXS as very low quality but usable and reports model-specific imatrix/layout work. No projector in file list. |
-| Unsloth conversions | [unsloth/flint-GGUF](https://huggingface.co/unsloth/flint-GGUF) | 2026-10-20 03:26:14 / 2026-10-21 23:54:26 | UD-IQ1_M 11,352,241,600 bytes; UD-IQ2_XXS 11,855,541,696; UD-IQ3_XXS 14,535,427,520; UD-Q4_K_XL 25,054,688,704. No projector listed. |
+| Unsloth conversions | [unsloth/flint-GGUF](https://huggingface.co/unsloth/flint-GGUF) | 2026-10-20 03:26:14 / 2026-10-21 23:54:26 | UD-IQ1_M 11,352,241,600 bytes; UD-IQ2_XXS 11,855,541,696; UD-IQ3_XXS 14,535,427,520; UD-Q4_K_XL 25,054,688,704. No projector listed. The tested file was `flint-UD-IQ2_XXS.gguf`; SHA-256 `c1fa4a6d5ec67fbeff460c68829984e4aa3eea95dc9d2067691f19e5406deeee`. |
 | LM Studio Community conversions | [lmstudio-community/flint-GGUF](https://huggingface.co/lmstudio-community/flint-GGUF) | 2026-10-20 23:43:57 / 2026-10-21 15:47:03 | Q4_K_M/Q6_K/Q8_0; Q4_K_M alone is 24,166,841,184 bytes, so it does not fit with context/runtime. |
 | RecursiveSI INT4 | [RecursiveSI/flint-int4-gguf](https://huggingface.co/RecursiveSI/flint-int4-gguf) | created date not returned by API / 2026-10-21 15:54:08 | Official Q4_1 is 25,992,966,976 bytes; card says Apple Silicon 48 GB+; too large here. |
 | RecursiveSI NVFP4 | [RecursiveSI/flint-nvfp4-gguf](https://huggingface.co/RecursiveSI/flint-nvfp4-gguf) | 2026-10-21 13:51:14 / 15:44:41 | 22,863,084,160 bytes and NVIDIA-focused; too large for safe 24 GB Apple Silicon use. |
@@ -25,21 +25,21 @@ At 64k, an approximate fp16 KV cache is 1.79 GiB: about 1.75 GiB for full-attent
 
 | Best-first shortlist | File size | Approx. weights + 64k fp16 KV | Rationale / test status |
 |---|---:|---:|---|
-| bartowski IQ2_XXS | 12.03 GB | 13.0 GiB | Model-specific imatrix/layout; selected first and tested. |
-| Unsloth UD-IQ2_XXS | 11.86 GB | 12.8 GiB | Smaller dynamic alternative; not tested. |
+| bartowski IQ2_XXS | 12.03 GB | 13.0 GiB | Model-specific imatrix/layout; tested first. |
+| Unsloth UD-IQ2_XXS | 11.86 GB | 12.8 GiB | Smaller dynamic alternative; tested second. |
 | Unsloth UD-IQ1_M | 11.35 GB | 12.4 GiB | Smallest plausible file found, with higher quality risk; not tested. |
 
-These are estimates, not safe-fit guarantees. The tested machine was already under other-app memory pressure: system swap was about 10.7 GB at the start of the corrected series. The measured results below are the fit evidence.
+These are estimates, not safe-fit guarantees. The machine was already under other-app memory pressure during testing; swap readings are system-wide deltas, not attributable to the model alone.
 
 ## Tier 1 and 2 results
 
-The installed `/opt/homebrew/bin/llama-server` was build 11669. Its first attempt failed to load the architecture (`unknown model architecture: 'flint'`), so no inference ran. Upstream llama.cpp PR [#30928](https://github.com/ggml-org/llama.cpp/pull/30928) added `FlintForCausalLM` and merged at 2026-10-21 21:26:22 UTC; the official [b11804 macOS arm64 release](https://github.com/ggml-org/llama.cpp/releases/tag/b11804), published at 2026-10-22 01:26:20 UTC, loaded the model. The compatibility build was downloaded and SHA-256 checked against the release digest, then used only in an isolated pill root/port.
+The installed `/opt/homebrew/bin/llama-server` was build 11669. Its first attempt failed to load the architecture (`unknown model architecture: 'flint'`), so no inference ran. Upstream llama.cpp PR [#30928](https://github.com/ggml-org/llama.cpp/pull/30928) added `FlintForCausalLM` and merged at 2026-10-21 21:26:22 UTC; the official [b11804 macOS arm64 release](https://github.com/ggml-org/llama.cpp/releases/tag/b11804), published at 2026-10-22 01:26:20 UTC, loaded both variants. The compatibility build was downloaded and SHA-256 checked against the release digest, then used only in an isolated pill root/port.
 
 ### Raw-response diagnosis and corrected setting
 
-Before the corrected benchmark, three b11804 attempts using the normal `enable_thinking:false` request setting returned an empty visible `message.content`. A raw chat-completions response showed the model had spent the 64-token output budget in `reasoning_content`, with `finish_reason="length"` and only a partial answer; the loaded chat template did not consume the `enable_thinking` kwarg. Repeating the same probe with the upstream server option `--reasoning-budget 0` returned the answer in visible content and stopped after 27 tokens. This identified a serving/template configuration issue, not a missing model or unsupported API. No pill Go source was changed.
+Before the corrected benchmark, three b11804 Bartowski attempts using the normal `enable_thinking:false` request setting returned an empty visible `message.content`. A raw chat-completions response showed the model had spent the 64-token output budget in `reasoning_content`, with `finish_reason="length"` and only a partial answer; the loaded chat template did not consume the `enable_thinking` kwarg. Repeating the same probe with the upstream server option `--reasoning-budget 0` returned the answer in visible content and stopped after 27 tokens. This identified a serving/template configuration issue, not a missing model or unsupported API. No pill Go source was changed.
 
-The superseded pre-correction outcomes are retained here for completeness; Tier 2 was skipped for all three because the visible-reply check failed:
+The superseded pre-correction Bartowski outcomes are retained here for completeness; Tier 2 was skipped for all three because the visible-reply check failed:
 
 | Baseline run (b11804, no reasoning-budget option) | Tier 1 wall time | Direct visible reply | Pi tool-call check | Minimum free | Swap growth | Throughput probe | Tier 2 |
 |---|---:|---|---|---:|---:|---:|---|
@@ -47,21 +47,43 @@ The superseded pre-correction outcomes are retained here for completeness; Tier 
 | 2 | 19.4 s | Empty after 64 generated tokens | Passed (1 tool call) | 12% | 51.84 MB | 35.60 tok/s | Skipped |
 | 3 | 19.3 s | Empty after 64 generated tokens | Passed (1 tool call) | 12% | 59.57 MB | 36.21 tok/s | Skipped |
 
-The corrected three-run `pill bench run recursivesi-flint-iq2xxs-64k --runs 3` used that server option. Pill marks the informational direct-answer correctness check separately from the Tier 1 pass boolean; all 3 runs passed Pill's Tier 1 gate, but only run 1 returned the correct agent-sized answer. Run 2's informational answer was just `2`; run 3 used the output budget on an unfinished response. All three completed within 60 seconds, passed the Pi tool-call check, and met the 10% memory threshold in the Tier 1 gate reading. The table's min-free and swap figures are from the full per-run memory samples; those samples saw 11% minimum free in every run, while the Tier 1 checks recorded 12%, 11% and 13% respectively.
+The corrected three-run Bartowski `pill bench run recursivesi-flint-iq2xxs-64k --runs 3` used that server option. Pill marks informational direct-answer correctness separately from the Tier 1 pass boolean: all 3 runs passed the Tier 1 gate, but only run 1 returned the correct agent-sized answer. Run 2's informational answer was just `2`; run 3 was unfinished within the output budget. All three completed within 60 seconds, passed the Pi tool-call check, and met the 10% memory threshold. Full-run samples saw 11% minimum free in each run; the Tier 1 checks recorded 12%, 11% and 13% respectively.
 
-| Corrected run (b11804, reasoning budget 0) | Tier 1 wall time | Informational direct answer | Pi tool-call check | Full-run min free | Full-run swap growth | Sampled peak router-tree RSS / GPU memory | Tier 1 throughput probe | Tier 2 |
+| Bartowski corrected run (b11804, reasoning budget 0) | Tier 1 wall time | Informational direct answer | Pi tool-call check | Full-run min free | Full-run swap growth | Sampled peak router-tree RSS / GPU memory | Tier 1 throughput probe | Tier 2 |
 |---|---:|---|---|---:|---:|---:|---:|---|
 | 1 | 28.9 s | Correct (`68`) | Passed | 11% (Tier 1 check: 12%) | 638.26 MB | 8.36 / 15.25 GB | 34.73 tok/s | 0/22 in 15:00; workspace incomplete (`engine.mjs` and `cli.mjs` absent), hit cap |
 | 2 | 17.4 s | Incorrect (`2`) | Passed | 11% (Tier 1 check: 11%) | 171.89 MB | 13.31 / 15.35 GB | 34.69 tok/s | 13/22 in 15:00; failed verifier checks and hit cap |
 | 3 | 19.0 s | Incorrect / unfinished within output budget | Passed | 11% (Tier 1 check: 13%) | 318.12 MB | 13.27 / 15.25 GB | 36.29 tok/s | 19/22 in 11:32; completed with verifier failures |
 
-Memory uses decimal GB. Router-tree RSS peaks were sampled about once per second; `pill ps` GPU/unified-memory readings were sampled about once per five seconds. Free-memory and swap figures are system-wide (including other apps), not attributable to Flint alone. The maximum sampled pressure level was 2. The corrected runs used about 41.5 minutes in Tier 2 total, in addition to about 65 seconds of Tier 1 elapsed time and model startup; this is three gate attempts, not a Tier 3 cost estimate.
+Memory uses decimal GB. Router-tree RSS peaks were sampled about once per second; `pill ps` GPU/unified-memory readings were sampled about once per five seconds. Free-memory and swap figures are system-wide. Tier 2 took about 41.5 minutes in total, in addition to about 65 seconds of Tier 1 time and model startup. The first cold run added 7.13 GB system-wide swap; later baseline runs added about 52–60 MB each.
 
-The initial b11804 runs without the reasoning-budget setting were superseded by the corrected run above: their empty visible reply was traced to the template/reasoning-budget behavior, not a valid final gate verdict. Their first cold run grew swap by 7.13 GB; later runs grew it by about 52–60 MB. The corrected configuration fixes empty visible content only on the first of its three agent-sized attempts and does not fix the Tier 2 quality/reliability shortfall.
+### Unsloth UD-IQ2_XXS corrected run
+
+The Unsloth file was downloaded by exact reference `unsloth/flint-GGUF:UD-IQ2_XXS` (11,855,541,696 bytes), SHA-256 verified, and registered as `flint-iq2xxs-64k` only in the isolated benchmark root. It used the same 64k context, Pi settings, b11804 server, `--reasoning-budget 0`, and `pill bench run flint-iq2xxs-64k --runs 3`.
+
+| Unsloth corrected run (b11804, reasoning budget 0) | Tier 1 wall time | Informational direct answer | Pi tool-call check | Full-run min free | Full-run swap growth | Sampled peak router-tree RSS / GPU memory | Tier 1 throughput probe | Tier 2 |
+|---|---:|---|---|---:|---:|---:|---:|---|
+| 1 | 34.3 s | Correct (`68`) | Passed | 12% | 1,662.84 MB | 8.00 / 14.82 GB | 33.98 tok/s | 22/22 in 46.19 s |
+| 2 | 19.0 s | Incorrect / unfinished after 64 tokens | Passed | 12% | 78.97 MB | 13.10 / 14.93 GB | 37.64 tok/s | 17/22 in 46.23 s; five checks failed |
+| 3 | 19.2 s | Incorrect / unfinished within output budget | Passed | 11% | 66.86 MB | 13.16 / 15.46 GB | 36.41 tok/s | 19/22 in 15:00; hit cap after 181 repeated identical tool calls |
+
+The Unsloth Tier 1 gate passed 3/3 (11–12% free, over the 10% floor), while its informational direct answer was correct only in run 1. The three full-run memory samples recorded maximum pressure level 2. Tier 2 used about 16.5 minutes total, plus about 72 seconds of Tier 1 time and startup. RSS and GPU memory are sampled peaks; free memory and swap growth are system-wide readings.
+
+The run-3 Tier 2 result is 19/22, not a zero: the verifier completed with 19 checks passing, but the agent repeated the same tool call 181 times and reached the 15-minute cap. The model's Tier 2 result was therefore not stable across cold starts even though run 1 scored a perfect 22/22.
+
+## Side-by-side gate comparison
+
+| Quantisation | Tier 1 gate | Informational answer correct | Tier 2 scores by run | Full-run min free | Swap growth | Throughput probe |
+|---|---|---:|---|---:|---:|---:|
+| Bartowski IQ2_XXS (12.03 GB) | 3/3 pass | 1/3 | 0/22, 13/22, 19/22 | 11% each | 172–638 MB | 34.69–36.29 tok/s |
+| Unsloth UD-IQ2_XXS (11.86 GB) | 3/3 pass | 1/3 | 22/22, 17/22, 19/22 | 11–12% | 67–1,663 MB | 33.98–37.64 tok/s |
+| MiniCPM champion (11.3 GB) | 5/5 pass | not a comparable sample here | 22/22 in its gate runs | 22% | 0 | 25 tok/s |
+
+The champion's score and memory values are the existing local gate results, not a new Flint-session measurement. Flint's two variants were run one at a time on the same isolated router port; the corrected Unsloth run began after the Bartowski server had been stopped.
 
 ## Tier 3 scores per task
 
-**Not run. Gate 2 decision: do not proceed.** The current MiniCPM champion passed 5/5 Tier 1/2 gate runs and scores 22/22 in Tier 2. Corrected Flint Tier 2 scores were 0/22, 13/22 and 19/22: none reached the champion's 22/22, so the candidate did not satisfy the required promising-result gate. The corrected memory samples also showed 172–638 MB of swap growth and only 11% minimum free memory per full run. No Tier 3 run, screenshot, blind rating or Opus judge result exists.
+**Not run for either Flint quantisation. Gate 2 decision: stop before Tier 3.** Bartowski scored 0/22, 13/22 and 19/22; Unsloth scored 22/22, 17/22 and 19/22. The MiniCPM champion is 22/22 and passed its five-run gate. Unsloth matched that score once, but missed it twice; Bartowski missed it in all three runs. Neither candidate demonstrated the stable Tier 2 performance required to proceed. There are no Flint Tier 3 task scores, screenshots, blind ratings or Opus-judge results.
 
 | Task | Runs | Median | Range | Timeouts | Mean minutes |
 |---|---:|---:|---:|---:|---:|
@@ -75,13 +97,13 @@ The initial b11804 runs without the reasoning-budget setting were superseded by 
 
 ## Gate decision and recommendation
 
-**Tier 1:** Pill gate passed 3/3 in the corrected configuration (17.4–28.9 s; all Pi tool checks passed; Tier 1 minimum-free readings 11–13%, above the 10% floor). The direct-answer correctness check is informational and succeeded in only 1/3 runs. The 34.7–36.3 tok/s field is Pill's throughput probe, not the speed of each complete agent task.
+**Tier 1:** Both quantisations passed the Pill gate 3/3 (18–34 seconds; all Pi tool-call checks passed; full-run minimum free memory 11–12%). Their informational direct-answer checks were correct only once in three runs each.
 
-**Tier 2 / Gate 2:** failed to match the champion: 0/22 in 15:00, 13/22 in 15:00 and 19/22 in 11:32, versus MiniCPM's 22/22. Whole-run minimum free memory was 11% in all three samples, with 172–638 MB swap growth. Consequently, Tier 3 was not run. This is an explicit stop at the Tier 2 gate, not a Tier 3 score of zero.
+**Tier 2 / Gate 2:** Neither met the stable champion bar. Bartowski's scores were 0/22, 13/22 and 19/22. Unsloth's were 22/22, 17/22 and 19/22; its third run hit the cap after a 181-call loop. Full-run minimum free memory was 11–12%; swap grew by 67–1,663 MB across Unsloth's runs and by 172–638 MB across corrected Bartowski runs. Throughput probes were 34–38 tok/s, above MiniCPM's 25 tok/s, but did not offset the Tier 2 inconsistency. Tier 3 was not run for either quant.
 
-**Recommendation:** keep `minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k` as the default; do not switch to Flint. Flint's measured token throughput is higher than MiniCPM's 25 tok/s, but the three Tier 2 runs did not equal the champion and Tier 1's informational answer was inconsistent. Whether another Flint quant or additional context/runtime tuning could change its quality or memory behavior is unverified. The report cannot say how Flint compares on the seven Tier 3 task domains because that stage was gated off.
+**Recommendation:** keep `minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k` as the default; do not switch to Flint. Unsloth's best result (22/22) is stronger than Bartowski's best (19/22), but its other two runs scored below the champion and one reached the time cap. That is a promising single run, not stable evidence that Unsloth is better than MiniCPM. Both Flint quantisations lack Tier 3 task-quality evidence.
 
-The existing default was not changed. The new model registration is `recursivesi-flint-iq2xxs-64k` (`bartowski/RecursiveSI_flint-GGUF:IQ2_XXS`, 64k; marked failed by the benchmark, not default). The retained model file is `/Users/marcellovictorino/.pill/models/RecursiveSI_flint-IQ2_XXS.gguf` (12,029,007,072 bytes); other shortlisted GGUFs were not downloaded. The ten pre-existing registrations were unchanged. Registry names at handoff:
+The owner subsequently removed the original Bartowski registration with `pill rm recursivesi-flint-iq2xxs-64k`; pill reported the IQ2_XXS GGUF deleted and 12.0 GB freed. It was not re-registered, and its completed benchmark results remain documented above. The Unsloth GGUF remains at `/Users/marcellovictorino/.pill/models/flint-UD-IQ2_XXS.gguf` (11,855,541,696 bytes; SHA-256 above). It is registered only in the isolated task benchmark root as `flint-iq2xxs-64k` (failed; not default); it was not added to the owner's actual `pill ls` registry. At final check the owner's actual registry had these ten entries, with MiniCPM still the default:
 
 - `devstral-small-2-24b-instruct-2512-q3-k-m-32k`
 - `devstral-small-2-24b-instruct-2512-q3-k-m-64k`
@@ -93,10 +115,9 @@ The existing default was not changed. The new model registration is `recursivesi
 - `ornith-1-5-35b-a3b-ad-iq3-xxs-iq2-s-64k`
 - `qwen3-6-35b-a3b-ud-iq2-m-64k`
 - `qwen3-8-27b-ud-iq3-xxs-64k`
-- `recursivesi-flint-iq2xxs-64k` (failed; not default)
 
-The isolated b11804 router was stopped after benchmarking. The downloaded compatibility runtime and diagnostic scripts remain in the authorized task scratch directory; no Tier 3 screenshots were produced.
+The isolated b11804 router was stopped after benchmarking. The compatibility runtime, diagnostic scripts, and benchmark outputs remain in the authorized task scratch directory. No Tier 3 screenshots were produced.
 
 ## Caveats
 
-The gate evidence is three cold runs of one quant, not a multi-run Tier 3 comparison. The per-run memory samples describe whole-machine pressure and swap, while the router-tree RSS is an external one-second sample; GPU memory is `pill ps` sampled about every five seconds. The 12.03 GB file is bartowski IQ2_XXS only. Other shortlisted quants were not tested. The HF API did not return a created date for the official INT4 repo. Exact conversion quality beyond the README's claims was not independently evaluated. Tier 3 scores, visual outputs, blind ratings and Opus-judge scores are unverified because Tier 3 was not run.
+The evidence is three cold Tier 1/2 runs per quant, not a multi-run Tier 3 comparison. One Unsloth run reached 22/22; this alone is not evidence of stable task performance. Memory pressure and swap samples describe the whole machine, including other apps; router-tree RSS was sampled externally about once per second and GPU memory via `pill ps` about once per five seconds. Only the listed two IQ2 variants were tested; UD-IQ1_M and other conversions remain untested. The HF API did not return a created date for the official INT4 repo. Exact conversion quality beyond the README claims was not independently evaluated. Tier 3 scores, screenshots, human ratings and Opus-judge results are unverified because Tier 3 was not run.
