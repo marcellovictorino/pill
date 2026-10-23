@@ -8,6 +8,7 @@ One focused report per model, plus a comparison across models. These are written
 | `summary.md` | Scores per task for every model that has been run, with run counts, timings and blind ratings |
 | `minicpm-v-4-7-35b-a3b.md` | MiniCPM-V 4.7 (IQ2): strong points, weak points, recommended use |
 | `gemma-4-26b-a4b.md` | Gemma 4 26B-A4B (UD-IQ3_S), the local comparison |
+| `recursive-flint-iq2xxs.md` | RecursiveSI Flint IQ2_XXS discovery and Tier 1/2 gate (Tier 3 not run) |
 | `benchmark-report.html` | The same findings as one readable page (images in `img/`) |
 | `img/<task>/<agent>.webp` | Screenshots of each model's saved web output |
 | `TEMPLATE.md` | Skeleton for a new model report |
