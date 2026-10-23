@@ -3,7 +3,7 @@
 Six models on the seven Tier 3 tasks. Scores are hidden-test scores out of 100 unless noted. **Read the
 run counts:** every cloud model and Gemma has a **single run** per task (one run can land well away from
 the typical result); MiniCPM has **six runs** per task, so it is shown as median with range. Task
-descriptions are in `../README.md`. Flint (bartowski IQ2_XXS) failed its Tier 1 gate in all three attempts, so Tier 2 and Tier 3 were not run; it has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for the discovery, memory readings and gate details.
+descriptions are in `../README.md`. Flint (bartowski IQ2_XXS) was retested with llama.cpp b11804 `--reasoning-budget 0` after its template left the default 64-token reply in reasoning. The corrected Pill Tier 1 gate passed 3/3; Tier 2 scored 0/22, 13/22 and 19/22 versus MiniCPM's 22/22, so Flint did not reach Tier 3 and has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for raw-response diagnosis, per-run memory and gate details.
 
 ## Scores
 
@@ -53,16 +53,16 @@ Rated blind by one person, one page per cell. MiniCPM's rated page is its first 
 
 ## Local models: pill gate results (Tier 1 and 2, 64k context)
 
-| Model | Result | Runs | Min free memory | Swap | tok/s |
-|---|---|---|---|---|---|
-| MiniCPM IQ2 11.3 GB | pass | 5 of 5 | 22% | 0 | 25 |
-| MiniCPM IQ3_XXS 13.7 GB | fail (20/22, swap) | 5 | 11% | 7.2 GB | 24 |
-| Gemma 4 UD-IQ3_S 11.3 GB | fail (two runs over the 15-minute cap) | 3 | 19% | 0 | 24 |
-| Gemma 4 Q3_K_XL | passed once, then failed | 1, 3 | 11%, 6% | 4.8–7.7 GB | 22 |
-| Gemma 4 IQ4_XS | fail | 5 | 9% | 765 MB | 21 |
-| Flint IQ2_XXS 12.0 GB (llama.cpp b11804) | fail (empty Tier 1 reply; Tier 2 skipped) | 3 Tier 1 | 12% | 7.13 GB first run; 52–60 MB later | 32.7–36.2 |
+| Model | Result | Runs | Tier 2 | Min free memory | Swap | tok/s |
+|---|---|---|---|---|---|---|
+| MiniCPM IQ2 11.3 GB | pass | 5 of 5 | 22/22 | 22% | 0 | 25 |
+| MiniCPM IQ3_XXS 13.7 GB | fail (20/22, swap) | 5 | 20/22 | 11% | 7.2 GB | 24 |
+| Gemma 4 UD-IQ3_S 11.3 GB | fail (two runs over the 15-minute cap) | 3 | 22/22 | 19% | 0 | 24 |
+| Gemma 4 Q3_K_XL | passed once, then failed | 1, 3 | 22/22 | 11%, 6% | 4.8–7.7 GB | 22 |
+| Gemma 4 IQ4_XS | fail | 5 | 21/22 | 9% | 765 MB | 21 |
+| Flint IQ2_XXS 12.0 GB (b11804, reasoning budget 0) | fail (Tier 2 below champion) | 3 | 0/22, 13/22, 19/22 | 11% full-run (11–13% Tier 1) | 172–638 MB per run | 34.7–36.3 |
 
-Flint's observed live footprint was about 12.9 GB resident / 13.8 GB GPU-unified memory. The 12% minimum free and swap deltas are system-wide sampled values; its Tier 1 tool calls passed, but the agent-sized text request returned empty in 3/3 attempts. The installed build 11669 could not load it. See the Flint report for run-by-run details. Flint has no Tier 3 scores, screenshots, judge score or blind ratings because it did not pass the Tier 1 gate.
+The installed llama.cpp b11669 could not load Flint. Under b11804, the template ignored `enable_thinking:false`, placing the initial 64-token output in `reasoning_content`; `--reasoning-budget 0` returned visible text. In the corrected 3-run test Pill Tier 1 passed 3/3, though the informational direct answer was correct only once. Sampled router-tree RSS peaks were 8.36, 13.31 and 13.27 GB; sampled GPU/unified-memory peaks were 15.25, 15.35 and 15.25 GB. Whole-machine free memory reached 11% and swap grew 172–638 MB per run. Tier 2 scores were 0/22, 13/22 and 19/22 (MiniCPM champion: 22/22), so Tier 3 was gated off. Flint has no Tier 3 scores, screenshots, judge score or blind ratings; see the report for all run details.
 
 ## Reading the table
 
