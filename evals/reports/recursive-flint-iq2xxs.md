@@ -1,10 +1,10 @@
 # RecursiveSI Flint 39.8B MoE, IQ2_XXS (12.03 GB)
 
-**Setup:** `bartowski/RecursiveSI_flint-GGUF` IQ2_XXS GGUF, 64k context, Pi 1.3.0 with thinking off, pill 0.4.1, 24 GB Apple Silicon Mac. The installed llama.cpp build 11669 could not load Flint, so the three measured runs used upstream llama.cpp b11804 in an isolated pill root and port; the owner's service and default were not changed. **Runs:** three cold Tier 1 attempts on 2026-10-23 UTC. Tier 2 was skipped after Tier 1 failed. No Tier 3 runs.
+**Setup:** `bartowski/RecursiveSI_flint-GGUF` IQ2_XXS GGUF, 64k context, Pi 1.3.0 with thinking off, pill 0.4.1, 24 GB Apple Silicon Mac. The corrected three-run gate used upstream llama.cpp b11804 in an isolated pill root and port, with `--reasoning-budget 0`; the owner's router/default were not changed. **Runs:** three cold Tier 1 and Tier 2 runs on 2026-10-23 UTC. Tier 3 was not run because Tier 2 did not reach the MiniCPM champion's 22/22 score.
 
 ## In one paragraph
 
-Flint is not a champion candidate on this machine in the tested configuration. The model loaded and Pi tool calls returned the requested token in all three runs, but all three Tier 1 attempts failed because the separate 64-token agent-sized chat request returned an empty visible reply. Minimum free memory was 12% (above pill's 10% threshold), but the first cold run grew swap by 7.13 GB. Tier 2 and Tier 3 were therefore not run; there are no task-quality scores to compare with MiniCPM.
+The serving/template issue behind Flint's initial empty reply was confirmed and corrected, but Flint still is not a champion candidate in this test. With llama.cpp b11804's `--reasoning-budget 0`, Pill's Tier 1 gate passed 3/3 runs (17.4–28.9 s, working Pi tool turns, and at least 11% free memory); the informational agent-sized answer was correct in only 1/3. Tier 2 scored 0/22, 13/22 and 19/22, versus MiniCPM's 22/22 champion result, and the machine added 172–638 MB of swap in each full run. Tier 3 was therefore not run. There is no Flint Tier 3 evidence to compare, and the recommendation is to keep MiniCPM as default.
 
 ## Model discovery and fit
 
@@ -29,23 +29,39 @@ At 64k, an approximate fp16 KV cache is 1.79 GiB: about 1.75 GiB for full-attent
 | Unsloth UD-IQ2_XXS | 11.86 GB | 12.8 GiB | Smaller dynamic alternative; not tested. |
 | Unsloth UD-IQ1_M | 11.35 GB | 12.4 GiB | Smallest plausible file found, with higher quality risk; not tested. |
 
-These are estimates, not safe-fit guarantees. At discovery the machine had 45% free memory and 4.30 GiB swap in use; the benchmark below is the observed fit evidence.
+These are estimates, not safe-fit guarantees. The tested machine was already under other-app memory pressure: system swap was about 10.7 GB at the start of the corrected series. The measured results below are the fit evidence.
 
 ## Tier 1 and 2 results
 
-The installed `/opt/homebrew/bin/llama-server` was build 11669. Its first `pill bench run` attempt failed at model load with `unknown model architecture: 'flint'`; no inference ran, Tier 2 was skipped, minimum free memory was 43%, swap growth 0, and speed was 0. Upstream llama.cpp PR [#30928](https://github.com/ggml-org/llama.cpp/pull/30928) added `FlintForCausalLM` and merged at 2026-10-21 21:26:22 UTC; the official [b11804 macOS arm64 release](https://github.com/ggml-org/llama.cpp/releases/tag/b11804), published at 2026-10-22 01:26:20 UTC, was then tested in an isolated pill root/port. It loaded the same model successfully. The compatibility build was downloaded and SHA-256 checked against the release digest.
+The installed `/opt/homebrew/bin/llama-server` was build 11669. Its first attempt failed to load the architecture (`unknown model architecture: 'flint'`), so no inference ran. Upstream llama.cpp PR [#30928](https://github.com/ggml-org/llama.cpp/pull/30928) added `FlintForCausalLM` and merged at 2026-10-21 21:26:22 UTC; the official [b11804 macOS arm64 release](https://github.com/ggml-org/llama.cpp/releases/tag/b11804), published at 2026-10-22 01:26:20 UTC, loaded the model. The compatibility build was downloaded and SHA-256 checked against the release digest, then used only in an isolated pill root/port.
 
-| Run (b11804) | Tier 1 wall time | Agent-sized request | Pi tool-call check | Minimum free memory | Swap growth | Generation speed | Tier 2 |
+### Raw-response diagnosis and corrected setting
+
+Before the corrected benchmark, three b11804 attempts using the normal `enable_thinking:false` request setting returned an empty visible `message.content`. A raw chat-completions response showed the model had spent the 64-token output budget in `reasoning_content`, with `finish_reason="length"` and only a partial answer; the loaded chat template did not consume the `enable_thinking` kwarg. Repeating the same probe with the upstream server option `--reasoning-budget 0` returned the answer in visible content and stopped after 27 tokens. This identified a serving/template configuration issue, not a missing model or unsupported API. No pill Go source was changed.
+
+The superseded pre-correction outcomes are retained here for completeness; Tier 2 was skipped for all three because the visible-reply check failed:
+
+| Baseline run (b11804, no reasoning-budget option) | Tier 1 wall time | Direct visible reply | Pi tool-call check | Minimum free | Swap growth | Throughput probe | Tier 2 |
 |---|---:|---|---|---:|---:|---:|---|
-| 1 | 43.7 s | Failed: empty reply after 64 generated tokens | Passed, 1 tool call | 12% | 7,129.98 MB | 32.65 tok/s | Skipped |
-| 2 | 19.4 s | Failed: empty reply after 64 generated tokens | Passed, 1 tool call | 12% | 51.84 MB | 35.60 tok/s | Skipped |
-| 3 | 19.3 s | Failed: empty reply after 64 generated tokens | Passed, 1 tool call | 12% | 59.57 MB | 36.21 tok/s | Skipped |
+| 1 | 43.7 s | Empty after 64 generated tokens | Passed (1 tool call) | 12% | 7,129.98 MB | 32.65 tok/s | Skipped |
+| 2 | 19.4 s | Empty after 64 generated tokens | Passed (1 tool call) | 12% | 51.84 MB | 35.60 tok/s | Skipped |
+| 3 | 19.3 s | Empty after 64 generated tokens | Passed (1 tool call) | 12% | 59.57 MB | 36.21 tok/s | Skipped |
 
-The model's live footprint observed during the b11804 run was approximately 12.9 GB resident, with about 13.8 GB reported as GPU/unified-memory use. System-wide sampled pressure peaked at level 2. The first-run swap jump is a measured whole-machine delta; later cold runs added about 52–60 MB each. All three requests completed under the 60-second wall-time cap, but the empty reply made the Tier 1 check fail every time. The Pi tool result was correct in all three attempts; that does not compensate for the failed direct reply check.
+The corrected three-run `pill bench run recursivesi-flint-iq2xxs-64k --runs 3` used that server option. Pill marks the informational direct-answer correctness check separately from the Tier 1 pass boolean; all 3 runs passed Pill's Tier 1 gate, but only run 1 returned the correct agent-sized answer. Run 2's informational answer was just `2`; run 3 used the output budget on an unfinished response. All three completed within 60 seconds, passed the Pi tool-call check, and met the 10% memory threshold in the Tier 1 gate reading. The table's min-free and swap figures are from the full per-run memory samples; those samples saw 11% minimum free in every run, while the Tier 1 checks recorded 12%, 11% and 13% respectively.
+
+| Corrected run (b11804, reasoning budget 0) | Tier 1 wall time | Informational direct answer | Pi tool-call check | Full-run min free | Full-run swap growth | Sampled peak router-tree RSS / GPU memory | Tier 1 throughput probe | Tier 2 |
+|---|---:|---|---|---:|---:|---:|---:|---|
+| 1 | 28.9 s | Correct (`68`) | Passed | 11% (Tier 1 check: 12%) | 638.26 MB | 8.36 / 15.25 GB | 34.73 tok/s | 0/22 in 15:00; workspace incomplete (`engine.mjs` and `cli.mjs` absent), hit cap |
+| 2 | 17.4 s | Incorrect (`2`) | Passed | 11% (Tier 1 check: 11%) | 171.89 MB | 13.31 / 15.35 GB | 34.69 tok/s | 13/22 in 15:00; failed verifier checks and hit cap |
+| 3 | 19.0 s | Incorrect / unfinished within output budget | Passed | 11% (Tier 1 check: 13%) | 318.12 MB | 13.27 / 15.25 GB | 36.29 tok/s | 19/22 in 11:32; completed with verifier failures |
+
+Memory uses decimal GB. Router-tree RSS peaks were sampled about once per second; `pill ps` GPU/unified-memory readings were sampled about once per five seconds. Free-memory and swap figures are system-wide (including other apps), not attributable to Flint alone. The maximum sampled pressure level was 2. The corrected runs used about 41.5 minutes in Tier 2 total, in addition to about 65 seconds of Tier 1 elapsed time and model startup; this is three gate attempts, not a Tier 3 cost estimate.
+
+The initial b11804 runs without the reasoning-budget setting were superseded by the corrected run above: their empty visible reply was traced to the template/reasoning-budget behavior, not a valid final gate verdict. Their first cold run grew swap by 7.13 GB; later runs grew it by about 52–60 MB. The corrected configuration fixes empty visible content only on the first of its three agent-sized attempts and does not fix the Tier 2 quality/reliability shortfall.
 
 ## Tier 3 scores per task
 
-Not run: the candidate failed Tier 1, so the Tier 2 and Tier 3 gates were not entered. There are no automated scores, Opus-judge score, screenshots, or blind ratings to report.
+**Not run. Gate 2 decision: do not proceed.** The current MiniCPM champion passed 5/5 Tier 1/2 gate runs and scores 22/22 in Tier 2. Corrected Flint Tier 2 scores were 0/22, 13/22 and 19/22: none reached the champion's 22/22, so the candidate did not satisfy the required promising-result gate. The corrected memory samples also showed 172–638 MB of swap growth and only 11% minimum free memory per full run. No Tier 3 run, screenshot, blind rating or Opus judge result exists.
 
 | Task | Runs | Median | Range | Timeouts | Mean minutes |
 |---|---:|---:|---:|---:|---:|
@@ -59,12 +75,28 @@ Not run: the candidate failed Tier 1, so the Tier 2 and Tier 3 gates were not en
 
 ## Gate decision and recommendation
 
-**Gate 2: do not proceed to Tier 3.** Flint failed Tier 1 in 3/3 attempts. It did meet the memory floor (12% free versus the 10% minimum) and decoded at 32.7–36.2 tok/s, but had empty direct replies in every run and 7.13 GB swap growth on the first run. Tier 2 has no Flint score to compare: the current MiniCPM champion passed 5/5 gate runs with Tier 2 at 22/22, 22% minimum free memory, no swap growth, and 25 tok/s. Flint therefore has no evidence of matching the champion and is not better on the available gate evidence.
+**Tier 1:** Pill gate passed 3/3 in the corrected configuration (17.4–28.9 s; all Pi tool checks passed; Tier 1 minimum-free readings 11–13%, above the 10% floor). The direct-answer correctness check is informational and succeeded in only 1/3 runs. The 34.7–36.3 tok/s field is Pill's throughput probe, not the speed of each complete agent task.
 
-**Recommendation:** keep MiniCPM as the default; do not switch to Flint. The Tier 3 task-level comparison and visual quality remain untested, not negative scores. The installed server cannot load Flint; b11804 can load it but did not pass the direct-reply check. Whether a smaller quant would reduce memory pressure or fix the empty reply is unverified. A later retest should first establish a serving/configuration path that returns visible text on the Tier 1 agent-sized prompt, then rerun the pill gate before considering Tier 3.
+**Tier 2 / Gate 2:** failed to match the champion: 0/22 in 15:00, 13/22 in 15:00 and 19/22 in 11:32, versus MiniCPM's 22/22. Whole-run minimum free memory was 11% in all three samples, with 172–638 MB swap growth. Consequently, Tier 3 was not run. This is an explicit stop at the Tier 2 gate, not a Tier 3 score of zero.
 
-The existing default was not changed. The only new model left registered is `recursivesi-flint-iq2xxs-64k` (`bartowski/RecursiveSI_flint-GGUF:IQ2_XXS`, 64k, unverified; state `failed`, not default). The downloaded GGUF remains in place. The ten pre-existing model registrations were left unchanged.
+**Recommendation:** keep `minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k` as the default; do not switch to Flint. Flint's measured token throughput is higher than MiniCPM's 25 tok/s, but the three Tier 2 runs did not equal the champion and Tier 1's informational answer was inconsistent. Whether another Flint quant or additional context/runtime tuning could change its quality or memory behavior is unverified. The report cannot say how Flint compares on the seven Tier 3 task domains because that stage was gated off.
+
+The existing default was not changed. The new model registration is `recursivesi-flint-iq2xxs-64k` (`bartowski/RecursiveSI_flint-GGUF:IQ2_XXS`, 64k; marked failed by the benchmark, not default). The retained model file is `/Users/marcellovictorino/.pill/models/RecursiveSI_flint-IQ2_XXS.gguf` (12,029,007,072 bytes); other shortlisted GGUFs were not downloaded. The ten pre-existing registrations were unchanged. Registry names at handoff:
+
+- `devstral-small-2-24b-instruct-2512-q3-k-m-32k`
+- `devstral-small-2-24b-instruct-2512-q3-k-m-64k`
+- `devstral-small-2-24b-instruct-2512-ud-q3-k-xl-64k`
+- `gemma-4-26b-a4b-it-ud-iq3-s-64k`
+- `gemma4-26b-q3kxl-64k`
+- `glm-4-7-flash-ud-iq2-m-64k`
+- `minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k` (default)
+- `ornith-1-5-35b-a3b-ad-iq3-xxs-iq2-s-64k`
+- `qwen3-6-35b-a3b-ud-iq2-m-64k`
+- `qwen3-8-27b-ud-iq3-xxs-64k`
+- `recursivesi-flint-iq2xxs-64k` (failed; not default)
+
+The isolated b11804 router was stopped after benchmarking. The downloaded compatibility runtime and diagnostic scripts remain in the authorized task scratch directory; no Tier 3 screenshots were produced.
 
 ## Caveats
 
-Three cold attempts are enough to establish a repeatable Tier 1 failure in this setup, not a general quality judgement. Tier 2 and Tier 3 were not run; no task scores, five-run Tier 3 statistics, Opus judge result, screenshots, or blind ratings exist. The candidate was evaluated only in IQ2_XXS; the other shortlisted quants were not tested. Memory readings are system-wide and reflect the machine's other usage as well as the model. The 12.9 GB resident / 13.8 GB GPU-unified readings are live observations, not per-run peak fields in the saved benchmark JSON. The HF API did not return a created date for the official INT4 repo. Exact conversion quality beyond the README's claims was not independently evaluated.
+The gate evidence is three cold runs of one quant, not a multi-run Tier 3 comparison. The per-run memory samples describe whole-machine pressure and swap, while the router-tree RSS is an external one-second sample; GPU memory is `pill ps` sampled about every five seconds. The 12.03 GB file is bartowski IQ2_XXS only. Other shortlisted quants were not tested. The HF API did not return a created date for the official INT4 repo. Exact conversion quality beyond the README's claims was not independently evaluated. Tier 3 scores, visual outputs, blind ratings and Opus-judge scores are unverified because Tier 3 was not run.
