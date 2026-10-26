@@ -22,6 +22,7 @@ Run `go test ./...` and `golangci-lint run ./...` before every commit.
 - **`evals/` is dev tooling, not part of pill.** It holds tier 3 model-evaluation tasks, their fixtures and a runner (Python, Go and Node fixtures with their own toolchains). The `pill` binary and `internal/` never import, embed or read from it, and it only talks to pill through the public CLI and the router's HTTP API. Go fixtures there are their own modules (own `go.mod`), so `go build ./...`, `go test ./...` and `golangci-lint run ./...` skip them. Changes under `evals/` are not user-visible: no changelog line.
 - **Pi's `models.json`:** pill writes only its own `pill` provider key, backs up first, writes atomically, and preserves every other key.
 - **Idiom:** add a short comment where a Go feature is non-obvious (embedding, build tags, `syscall.Exec`, test-binary re-exec).
+- **Model reports and PR summaries:** start with a TLDR (verdict, tiers passed, quality, time, memory pressure), then trimmed details. Follow `evals/reports/summary-template.md`.
 
 ## Agent-facing output (axi)
 
