@@ -13,6 +13,7 @@ One focused report per model, plus a comparison across models. These are written
 | `benchmark-report.html` | The same findings as one readable page (images in `img/`) |
 | `img/<task>/<agent>.webp` | Screenshots of each model's saved web output |
 | `TEMPLATE.md` | Skeleton for a new model report |
+| `summary-template.md` | TLDR-first layout for model reports and PR summaries; required by `AGENTS.md` |
 | `render_shots.py` | Rebuilds saved web workspaces and writes the screenshots |
 
 ## Adding a model
@@ -27,7 +28,7 @@ One focused report per model, plus a comparison across models. These are written
    run per task and writes small WebP files (width 800, cropped to 2400 px). Commit only those images.
 4. Rate the landing pages by eye if you want a taste score: `python3 evals/blind.py` builds anonymised
    pages; open them, rate, download the JSON, and only then open `key.json`.
-5. Copy `TEMPLATE.md` to `<model>.md` and fill it in. Add a row to `summary.md`.
+5. Copy `summary-template.md` to `<model>.md` and fill it in, TLDR first. Add a row to `summary.md`.
 
 ## Rules for the numbers
 
