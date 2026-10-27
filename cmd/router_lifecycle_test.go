@@ -26,6 +26,45 @@ func (e *env) unhealthy(t *testing.T) (on func()) {
 	}
 }
 
+func TestScratchHomeLeavesAnotherHomesServiceAlone(t *testing.T) {
+	e := newEnv(t)
+	e.register()
+	e.run("service", "install").ok(t)
+	servicePort := e.port
+	plist := readFile(t, e.plist())
+
+	scratchHome := filepath.Join(e.dir, "scratch")
+	scratchPort := testutil.FreePort(t)
+	t.Setenv("PILL_HOME", scratchHome)
+	t.Setenv("PILL_PORT", strconv.Itoa(scratchPort))
+	// Keep the detached scratch router contained before the test restores the
+	// original home and its service cleanup runs.
+	t.Cleanup(func() { e.run("stop", "--all") })
+
+	e.run("serve").ok(t)
+	if got := readFile(t, e.plist()); got != plist {
+		t.Errorf("scratch serve rewrote another home's plist:\n%s", got)
+	}
+	if strings.Contains(e.launchLog(), "bootout") {
+		t.Errorf("scratch serve booted out another home's service:\n%s", e.launchLog())
+	}
+	if !portAnswers(servicePort) {
+		t.Error("the original service router should keep running")
+	}
+	if !portAnswers(scratchPort) {
+		t.Error("the scratch home should start its detached router")
+	}
+	if ps := e.run("ps").ok(t); !strings.Contains(ps.out, "mode: detached") {
+		t.Errorf("scratch ps:\n%s", ps.out)
+	}
+	// Explicit service commands must be just as safe as serve.
+	e.run("service", "install").fails(t, 1, "belongs to another pill home")
+	e.run("service", "uninstall").fails(t, 1, "belongs to another pill home")
+	if got := readFile(t, e.plist()); got != plist || !portAnswers(servicePort) {
+		t.Error("a scratch service command disturbed the original service")
+	}
+}
+
 func TestServiceFollowsAPortChange(t *testing.T) {
 	e := newEnv(t)
 	e.register()

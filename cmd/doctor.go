@@ -87,8 +87,8 @@ func runDoctor(ctx context.Context, a *App) error {
 	}
 
 	switch {
-	case !a.svc.Installed():
-		add("service", "ok", "not installed (optional: pill service install)")
+	case !a.svc.Installed() || !a.serviceBelongsToCurrentHome():
+		add("service", "ok", "not installed for this pill home (optional: pill service install)")
 	case a.serviceCommandStale():
 		add("service", "warn", "LaunchAgent was installed with different settings (port, paths) than the current ones")
 		help = append(help, "refresh it: pill service install")

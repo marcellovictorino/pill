@@ -147,12 +147,26 @@ func (a *App) installedPort() int {
 	return 0
 }
 
-// serviceServesPort reports whether the loaded LaunchAgent is the router for
-// the configured port. With PILL_PORT pointing elsewhere the service is
-// somebody else's business: stopping or replacing it would disrupt the router
-// on the other port.
+// serviceBelongsToCurrentHome reports whether the installed LaunchAgent uses
+// this pill home's generated models.ini. The label and plist path are shared
+// by every home, so this check prevents PILL_HOME from taking over another
+// home's service.
+func (a *App) serviceBelongsToCurrentHome() bool {
+	cmd := a.svc.InstalledCommand()
+	for i := 0; i+1 < len(cmd); i++ {
+		if cmd[i] == "--models-preset" {
+			return cmd[i+1] == a.paths.ModelsIni()
+		}
+	}
+	return false
+}
+
+// serviceServesPort reports whether the loaded LaunchAgent belongs to this
+// pill home and serves the configured port. A service for another home is
+// somebody else's business: stopping or replacing it would disrupt that
+// router, even if its port happens to match.
 func (a *App) serviceServesPort(ctx context.Context) bool {
-	return a.svc.Installed() && a.svc.Loaded(ctx) && a.installedPort() == a.settings.Port
+	return a.serviceBelongsToCurrentHome() && a.svc.Loaded(ctx) && a.installedPort() == a.settings.Port
 }
 
 // serviceOutdated reports whether the router on this port is the service and
@@ -160,6 +174,17 @@ func (a *App) serviceServesPort(ctx context.Context) bool {
 // directory), so it needs the plist rewritten even if models.ini is current.
 func (a *App) serviceOutdated(ctx context.Context) bool {
 	return a.serviceServesPort(ctx) && a.serviceCommandStale()
+}
+
+// requireCurrentHomeService refuses an explicit service command when the
+// shared LaunchAgent belongs to another pill home. Ordinary commands ignore
+// it and use a detached router instead.
+func (a *App) requireCurrentHomeService() error {
+	if a.svc.Installed() && !a.serviceBelongsToCurrentHome() {
+		return output.Fail([]string{"use the pill home that installed it, or leave it running while this home uses a detached router"},
+			"the installed LaunchAgent belongs to another pill home; pill will not replace or remove it")
+	}
+	return nil
 }
 
 // serviceCommandStale reports whether the installed plist's command differs
@@ -171,7 +196,7 @@ func (a *App) serviceCommandStale() bool {
 // startRouterProcess brings the router up: through launchd when the service
 // is installed, otherwise as a detached process.
 func (a *App) startRouterProcess(ctx context.Context, iniHash string) (bool, error) {
-	if !a.svc.Installed() {
+	if !a.serviceBelongsToCurrentHome() {
 		return a.rt.Start(ctx, iniHash)
 	}
 	bin, err := router.LlamaServer()

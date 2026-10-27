@@ -77,7 +77,7 @@ func runStop(ctx context.Context, a *App, all bool) error {
 	}
 	doc = doc.Set("router", state).Set("unloaded", unloaded)
 	var help []string
-	if a.svc.Installed() {
+	if a.serviceBelongsToCurrentHome() {
 		help = append(help, "the LaunchAgent is unloaded until next login; bring it back with `pill serve`")
 	} else if state == "down" {
 		help = append(help, "start it with `pill serve` or just run `pill`")

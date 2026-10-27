@@ -13,6 +13,7 @@ All notable changes to pill are documented here. The format follows
 
 ### Fixed
 
+- A scratch `PILL_HOME` now ignores a LaunchAgent installed for another pill home and starts a detached router. It cannot replace or remove that LaunchAgent through `pill serve` or `pill service`.
 - `tok_per_s` in `pill bench run` and `bench summary` measures real decoding speed. It used to come from the agent-sized request, whose reply is only a few tokens, so the figure was mostly start-up overhead (5 tok/s for a model that decodes at 28). Tier 1 now times a 128-token generation on the warm model; results recorded before this change keep the old figure.
 
 ## [0.4.1] - 2026-10-08
