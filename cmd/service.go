@@ -56,6 +56,9 @@ every other pill command keeps working unchanged. A detached router started by
 }
 
 func runServiceInstall(ctx context.Context, a *App) error {
+	if err := a.requireCurrentHomeService(); err != nil {
+		return err
+	}
 	bin, err := router.LlamaServer()
 	if err != nil {
 		return output.Fail([]string{"install llama.cpp: brew install llama.cpp"}, "%v", err)
@@ -106,6 +109,9 @@ func runServiceInstall(ctx context.Context, a *App) error {
 }
 
 func runServiceUninstall(ctx context.Context, a *App) error {
+	if err := a.requireCurrentHomeService(); err != nil {
+		return err
+	}
 	wasLoaded := a.svc.Loaded(ctx)
 	was, err := a.svc.Uninstall(ctx)
 	if err != nil {

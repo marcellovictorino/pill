@@ -4,7 +4,7 @@ checks[10]{check,status,detail}:
   pi,ok,$FAKES/pi 9.9.9
   port,ok,$PORT is free
   router,ok,not running (it starts on demand)
-  service,ok,"not installed (optional: pill service install)"
+  service,ok,"not installed for this pill home (optional: pill service install)"
   models,ok,"1 registered, all files present"
   default,ok,gemma4-26b-iq4xs-64k
   pi-provider,ok,"in sync: gemma4-26b-iq4xs-64k"
