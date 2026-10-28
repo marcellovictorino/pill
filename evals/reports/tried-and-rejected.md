@@ -27,6 +27,8 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off | Relaxed gate, 3 runs, scratch home, 25 Oct (PILL-8) | 133–142 s (limit 300 s) | 22/22 in 4.3 min; 22/22 and 20/22 at the 30-min cap | 6.7 | 12% | Latency; Tier 1 answer wrong in every run (informational) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off, MTP, 32k | Failed gate, 3 runs, 25 Oct (PILL-10) | 151–159 s (limit 300 s) | 20/22; 22/22 in 11.4 min; 20/22; two runs repeated one shell command 90–105 times | 6.7 without MTP; 14.8 with MTP | 8–10% | Latency; loops; swap up 4.5 GB in run 1 |
 | flint (RecursiveSI) IQ2_XXS, 64k | Failed, 3 runs, build 11669, 23 Oct; build 11804 runs in the [Flint report](recursive-flint-iq2xxs.md) | Load failed in 0.2–0.3 s on 11669 | Not run on 11669 | Not measured on 11669 | 43–44% | Load on 11669: `unknown model architecture: 'flint'`, so no timing limit applies |
+| LiquidAI LFM2.5-24B-A2B UD-Q3_K_XL (unsloth, 10.9 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–28 s | 17/22 at the cap; 21/22 in 7.4 min; 16/22 at the cap; two runs repeated one tool call 154 and 320 times | 36 | 17–18% | Accuracy and loops; Tier 1 answer wrong in every run (informational) |
+| LiquidAI LFM2.5-24B-A2B Q4_K_M (LiquidAI, 14.5 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–30 s | Not run on run 1 (Tier 1 memory gate); 19/22 and 21/22, both at the cap, repeating one tool call 105 and 182 times | 48 | 8–9% | Memory (below the 10% limit; swap up to 1.0 GB); accuracy and loops |
 
 ## Qwen3.8-27B: thinking and MTP
 
@@ -40,6 +42,20 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
   is not proven to cause the loops.
 - Memory: MTP cut the lowest free memory from about 30% to 7% at 16k (PILL-8), and it was 8–10% at 32k.
 - Not tried: MTP with the thinking leak fixed (PILL-9), or MTP at 16k context through a full gate run.
+
+## LiquidAI LFM2.5-24B-A2B: Q3_K_XL and Q4_K_M
+
+- Both ran with `temp 0.1`, `top-k 50`, `repeat-penalty 1.05` (model card) and `reasoning-budget 0`, set under `[model.preset]` in
+  `models.toml`; the chat template always opens `<think>` and ignores `enable_thinking:false`. Neither is adopted: MiniCPM scores
+  22/22 every run; LFM2.5 never did.
+- It is fast: 36 tok/s (Q3) and 48 tok/s (Q4) against MiniCPM's 25, and Tier 1 takes 13–30 s. The loss is accuracy, not speed.
+- Tier 2 scores were 17, 21, 16 (Q3) and 19, 21 (Q4; run 1 failed Tier 1 on memory before Tier 2). Four of the five scored runs
+  ended at the 15-minute cap with the agent repeating one tool call 105–320 times in a row.
+- Q4_K_M (14.5 GB) does not fit with 64k context and q8_0 KV: lowest free memory 8–9% and swap up 0.3–1.0 GB. Q3 fit (17–18%).
+- Not tried: a run with thinking on; the unsloth UD-Q4_K_XL (14.9 GB) and LiquidAI QAD-Q4_0 (13.6 GB) files; a smaller context.
+  Tier 3 was not run, as Tier 2 never reached 22/22.
+- Both GGUFs were deleted on 28 October; re-pull with `pill pull hf.co/unsloth/LFM2.5-24B-A2B-GGUF:UD-Q3_K_XL` or
+  `pill pull hf.co/LiquidAI/LFM2.5-24B-A2B-GGUF:Q4_K_M`.
 
 ## flint (RecursiveSI) IQ2_XXS
 
