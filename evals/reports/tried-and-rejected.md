@@ -29,6 +29,8 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | flint (RecursiveSI) IQ2_XXS, 64k | Failed, 3 runs, build 11669, 23 Oct; build 11804 runs in the [Flint report](recursive-flint-iq2xxs.md) | Load failed in 0.2–0.3 s on 11669 | Not run on 11669 | Not measured on 11669 | 43–44% | Load on 11669: `unknown model architecture: 'flint'`, so no timing limit applies |
 | LiquidAI LFM2.5-24B-A2B UD-Q3_K_XL (unsloth, 10.9 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–28 s | 17/22 at the cap; 21/22 in 7.4 min; 16/22 at the cap; two runs repeated one tool call 154 and 320 times | 36 | 17–18% | Accuracy and loops; Tier 1 answer wrong in every run (informational) |
 | LiquidAI LFM2.5-24B-A2B Q4_K_M (LiquidAI, 14.5 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–30 s | Not run on run 1 (Tier 1 memory gate); 19/22 and 21/22, both at the cap, repeating one tool call 105 and 182 times | 48 | 8–9% | Memory (below the 10% limit; swap up to 1.0 GB); accuracy and loops |
+| NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL (unsloth, 8.2 GB), 64k | Failed, 3 runs, build 11960, 29 Oct | 26–30 s | 16/22 in 4.1 min; 19/22 in 7.4 min; 21/22 in 6.6 min | 16–17 | 32–40% | Accuracy: never 22/22; no cap, no loops |
+| Meta Muse Glimmer 30B UD-IQ2_XXS (unsloth, 10.7 GB), 64k, dense | Failed, 9 runs, build 11960, 29 Oct (3 standard, 6 relaxed at 300 s / 30 min) | 113–140 s | Not run in 8 of 9; one relaxed run 22/22 in 11.1 min | 5–7 | 14–17% | Latency; thinking: empty visible reply in 8 of 9 runs |
 
 ## Qwen3.8-27B: thinking and MTP
 
@@ -56,6 +58,42 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
   Tier 3 was not run, as Tier 2 never reached 22/22.
 - Both GGUFs were deleted on 28 October; re-pull with `pill pull hf.co/unsloth/LFM2.5-24B-A2B-GGUF:UD-Q3_K_XL` or
   `pill pull hf.co/LiquidAI/LFM2.5-24B-A2B-GGUF:Q4_K_M`.
+
+## Nemotron 3.5 Bolt E4B and Muse Glimmer 30B, 2026-10-29
+
+Neither is adopted. Bolt E4B fits easily but never scores 22/22; Muse Glimmer reaches 22/22 once but decodes four to five
+times slower than the default, and its chat template cannot turn thinking off.
+
+| | MiniCPM (default), rerun today | Bolt E4B UD-Q8_K_XL | Muse Glimmer 30B UD-IQ2_XXS |
+|---|---|---|---|
+| Gate | Passed, 1 of 1 | Failed, 0 of 3 | Failed, 0 of 3 standard and 0 of 6 relaxed |
+| Tier 1 time (limit 60 s) | 36 s | 26–30 s | 113–140 s |
+| Tier 1 answer (informational) | Wrong (`58`) | Right in 3 of 3 | Empty in 8 of 9; right in 1 |
+| Tier 2 (22) | 22/22 in 3.6 min | 16, 19, 21; 4.1–7.4 min | 22/22 in 11.1 min, in its one relaxed run that reached Tier 2 |
+| Decoding speed | 25.8 tok/s | 16–17 tok/s | 5–7 tok/s |
+| Lowest free memory | 14% | 32–40% | 14–17% |
+| Swap growth | 3.4 GB | 0 | 0–1.8 GB per run |
+
+- **Comparability:** all runs on 29 October, same machine, llama.cpp build 11960, Pi 1.4.0, pill 0.4.1, 64k
+  context, q8_0 KV, thinking off in Pi. MiniCPM was rerun once as the reference: it still scores 22/22 at 25.8 tok/s,
+  but with 14% free memory and 3.4 GB swap growth against 22% and 0 on 13 October, so other apps held about
+  8 points more memory today. Swap readings are system-wide; swap was already 5.4 GB used before the first run.
+- **Bolt E4B** (Gemma 4 E4B post-trained by NVIDIA, 7.5B total): every Tier 2 run finished inside 7.4 minutes
+  with no repeated tool calls, but missed checks each time: `bestMove`, `render` and CLI checks on run 1
+  (16/22), `render` and CLI on run 2 (19/22), draw detection on run 3 (21/22). It is slower to decode than
+  MiniCPM (16–17 against 25.8 tok/s) despite the smaller file.
+- **Muse Glimmer** (Meta, 29.6B dense): its chat template ignores `enable_thinking:false` and has no off switch;
+  it always reasons, at `reasoning_strength` `high` by default. `--reasoning-budget 0` did not change that
+  (3 relaxed runs, all empty). With `chat-template-kwargs = '{"reasoning_strength":"low"}'` under
+  `[model.preset]` in `models.toml`, a short probe answered in 42 tokens, but two of three relaxed runs still
+  spent Tier 1's 64-token reply on reasoning. Its 64 generated tokens take about 10 s of the 113–140 s;
+  the rest is load and prefill of the 5,800-token prompt on a dense model, as with the dense 27B models above,
+  so a lower reasoning setting would not bring Tier 1 under 60 s.
+- **Not tried:** Bolt E4B UD-Q4_K_XL (5.1 GB; a smaller quant would not fix accuracy); Muse with thinking left
+  at `high` through a relaxed Tier 2; Muse's DFlash drafter; Tier 3 for either.
+- Both GGUFs are still in `~/.pill/models` and registered as failed; remove with `pill rm <name>`, or re-pull with
+  `pill pull hf.co/unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF:UD-Q8_K_XL` or
+  `pill pull hf.co/unsloth/Muse-Glimmer-30B-GGUF:UD-IQ2_XXS`.
 
 ## flint (RecursiveSI) IQ2_XXS
 
