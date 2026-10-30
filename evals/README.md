@@ -56,6 +56,13 @@ Hidden tests live in `verify.py` and its helpers, outside the workspace: the age
 - Cloud baselines run with permissions bypassed inside the temp workspace; local models run through Pi.
 - Results (`results/`) are gitignored.
 
+## Image generation
+
+`imagegen/` is a separate benchmark for text-to-image models (FLUX 3 Image Klein and Qwen-Image 2.1 Turbo
+through `draw-things-cli`): three fixed prompts, three seeds, Opus 5.5 rubric scoring, a blind human sheet and
+self-validation of the judge. See the docstring in `imagegen/imagegen.py` and `reports/image-generation.md`.
+`python3 evals/imagegen/imagegen.py selftest` checks the pipeline with a fake generator.
+
 ## Reports
 
 `reports/` holds the written results: one report per model, a comparison across models, screenshots of the

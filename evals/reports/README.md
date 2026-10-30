@@ -10,6 +10,7 @@ One focused report per model, plus a comparison across models. These are written
 | `gemma-4-26b-a4b.md` | Gemma 4 26B-A4B (UD-IQ3_S), the local comparison |
 | `tried-and-rejected.md` | Models benchmarked and not adopted, with dates, numbers and what would justify a re-test |
 | `recursive-flint-iq2xxs.md` | RecursiveSI Flint Bartowski and Unsloth IQ2 variants, Tier 1/2 comparison (Tier 3 not run) |
+| `image-generation.md` | FLUX 3 Image Klein against Qwen-Image 2.1 Turbo on three prompts, Opus 5.5 scores and timings |
 | `benchmark-report.html` | The same findings as one readable page (images in `img/`) |
 | `img/<task>/<agent>.webp` | Screenshots of each model's saved web output |
 | `TEMPLATE.md` | Skeleton for a new model report |
