@@ -32,6 +32,7 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL (unsloth, 8.2 GB), 64k | Failed, 3 runs, build 11960, 29 Oct | 26–30 s | 16/22 in 4.1 min; 19/22 in 7.4 min; 21/22 in 6.6 min | 16–17 | 32–40% | Accuracy: never 22/22; no cap, no loops |
 | Meta Muse Glimmer 30B UD-IQ2_XXS (unsloth, 10.7 GB), 64k, dense | Failed, 9 runs, build 11960, 29 Oct (3 standard, 6 relaxed at 300 s / 30 min) | 113–140 s | Not run in 8 of 9; one relaxed run 22/22 in 11.1 min | 5–7 | 14–17% | Latency; thinking: empty visible reply in 8 of 9 runs |
 | Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template | Failed relaxed gate, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 108–127 s | 22/22, 20/22, 22/22 in 17.7–18.2 min | 7 | 14–16% | Latency (about double the default limits); accuracy on run 2 |
+| Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template, DFlash drafter | Passed relaxed gate only, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 107–111 s | 22/22 in 5.9, 6.3 and 13.2 min | 12.8 in a 300-token probe (6.8 without) | 11% | Latency: Tier 1 still about twice the 60 s limit; memory close to the 10% floor; Tier 1 answer wrong in every run (informational) |
 
 ## Qwen3.8-27B: thinking and MTP
 
@@ -62,8 +63,9 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 
 ## Nemotron 3.5 Bolt E4B and Muse Glimmer 30B, 2026-10-29
 
-Neither is adopted. Bolt E4B fits easily but never scores 22/22; Muse Glimmer decodes four to five times slower than
-the default, and its chat template cannot turn thinking off (a template change, below, mostly does).
+Neither is adopted. Bolt E4B fits easily but never scores 22/22. Muse Glimmer's chat template cannot turn thinking off
+(a template change, below, mostly does); with its DFlash drafter it passes a relaxed gate 3 of 3, but Tier 1 still
+takes about twice the default limit.
 
 | | MiniCPM (default), rerun today | Bolt E4B UD-Q8_K_XL | Muse Glimmer 30B UD-IQ2_XXS |
 |---|---|---|---|
@@ -100,6 +102,14 @@ the default, and its chat template cannot turn thinking off (a template change, 
   visible reply every run (correct in 2 of 3); Tier 2 22/22, 20/22 (missed both `bestMove` checks), 22/22, each in
   17.7–18.2 minutes; 7 tok/s; lowest free 14–16%; swap up 3.5 GB in run 1. It is accurate, but needs about twice
   the 60 s and 15-minute limits, and MiniCPM does the same task in 3.6 minutes.
+- **Muse with the DFlash drafter (30 October):** the GGUF has no MTP layers, so `draft-mtp` does not apply. Meta ships
+  a DFlash block-diffusion drafter; Unsloth's `dflash-kquant.gguf` (1.6 GB) loads in build 11960 with
+  `spec-type = "draft-dflash"`, `spec-draft-model = "<path>"` and `spec-draft-ngl = 99` under `[model.preset]`. On a
+  300-token coding prompt, decoding rose from 6.8 to 12.8 tok/s with 151 of 216 drafted tokens accepted and the
+  same output. Three clean relaxed runs all passed: Tier 2 22/22 in 5.9, 6.3 and 13.2 minutes (inside the default
+  15-minute cap); Tier 1 107–111 s, because drafting does not speed up prefill; lowest free memory 11%, with both
+  models loaded; swap up to 0.8 GB. Not adopted: Tier 1 still fails the default 60 s limit, and MiniCPM is faster on
+  both tiers (36 s and 3.6 minutes) with the same score.
 - **Not tried:** Bolt E4B UD-Q4_K_XL (5.1 GB; a smaller quant would not fix accuracy); Muse with thinking left
   at `high` through a relaxed Tier 2; Muse's DFlash drafter; Tier 3 for either.
 - Both GGUFs are still in `~/.pill/models` and registered as failed; remove with `pill rm <name>`, or re-pull with
