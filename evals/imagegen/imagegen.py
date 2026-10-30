@@ -10,7 +10,7 @@
   python3 evals/imagegen/imagegen.py validate agreement <ratings.json> <key.json> <run-dir>...
   python3 evals/imagegen/imagegen.py selftest                         # whole pipeline with a fake generator, no model
 
-Models are the captain's: FLUX 3 Image Klein (mflux, 4-bit) and Qwen-Image 2.1 Turbo (Draw Things CLI,
+Models are the captain's: FLUX 3 Image Klein 5.6B (Draw Things, 4-bit S) and Qwen-Image 2.1 Turbo (Draw Things CLI,
 4-bit S, 8 steps). Every model gets the three prompts in prompts.json verbatim, no style words added,
 seeds 7/42/1234, 1024x1024. Only one local model can run on this machine at a time: run() refuses while
 another model server is up (stop pill first: `pill stop`). Results go to evals/results/imagegen/ (gitignored).
@@ -46,9 +46,10 @@ MIN_FREE_PCT = 20  # personal rule for this machine: below this, raise it instea
 
 def backend_cmd(model, prompt, seed, out):
     if model == "flux3":
-        # 16 distilled steps (model default); -q 4 is the only variant that plausibly fits 24 GB.
-        return ["mflux-generate-flux3", "--model", "flux3-image-klein", "-q", "4", "--prompt", prompt,
-                "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE), "--no-exif", "--output", str(out)]
+        # FLUX 3 Image Klein 5.6B, 4-bit S, through Draw Things at its recommended (distilled) step count.
+        # The mflux route needs the gated Hugging Face weights, which the captain chose not to unlock.
+        return ["draw-things-cli", "generate", "--local", "--model", "flux_3_klein_i4x.ckpt",
+                "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE), "--output", str(out)]
     if model == "qwen-turbo":
         return ["draw-things-cli", "generate", "--local", "--model", "qwen_image_2.1_turbo_i4x.ckpt",
                 "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE),
@@ -128,7 +129,7 @@ def ask_judge(prompt, images, timeout=600):
            "--allowedTools", "Read"]
     for d in dirs:
         cmd += ["--add-dir", d]
-    r = subprocess.run(cmd + [prompt], capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)  # stdin: --add-dir is variadic
     text = r.stdout.strip()
     s, e = text.find("{"), text.rfind("}")
     if r.returncode != 0 or s < 0:
