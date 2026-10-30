@@ -31,6 +31,7 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | LiquidAI LFM2.5-24B-A2B Q4_K_M (LiquidAI, 14.5 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–30 s | Not run on run 1 (Tier 1 memory gate); 19/22 and 21/22, both at the cap, repeating one tool call 105 and 182 times | 48 | 8–9% | Memory (below the 10% limit; swap up to 1.0 GB); accuracy and loops |
 | NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL (unsloth, 8.2 GB), 64k | Failed, 3 runs, build 11960, 29 Oct | 26–30 s | 16/22 in 4.1 min; 19/22 in 7.4 min; 21/22 in 6.6 min | 16–17 | 32–40% | Accuracy: never 22/22; no cap, no loops |
 | Meta Muse Glimmer 30B UD-IQ2_XXS (unsloth, 10.7 GB), 64k, dense | Failed, 9 runs, build 11960, 29 Oct (3 standard, 6 relaxed at 300 s / 30 min) | 113–140 s | Not run in 8 of 9; one relaxed run 22/22 in 11.1 min | 5–7 | 14–17% | Latency; thinking: empty visible reply in 8 of 9 runs |
+| Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template | Failed relaxed gate, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 108–127 s | 22/22, 20/22, 22/22 in 17.7–18.2 min | 7 | 14–16% | Latency (about double the default limits); accuracy on run 2 |
 
 ## Qwen3.8-27B: thinking and MTP
 
@@ -61,8 +62,8 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 
 ## Nemotron 3.5 Bolt E4B and Muse Glimmer 30B, 2026-10-29
 
-Neither is adopted. Bolt E4B fits easily but never scores 22/22; Muse Glimmer reaches 22/22 once but decodes four to five
-times slower than the default, and its chat template cannot turn thinking off.
+Neither is adopted. Bolt E4B fits easily but never scores 22/22; Muse Glimmer decodes four to five times slower than
+the default, and its chat template cannot turn thinking off (a template change, below, mostly does).
 
 | | MiniCPM (default), rerun today | Bolt E4B UD-Q8_K_XL | Muse Glimmer 30B UD-IQ2_XXS |
 |---|---|---|---|
@@ -89,6 +90,16 @@ times slower than the default, and its chat template cannot turn thinking off.
   spent Tier 1's 64-token reply on reasoning. Its 64 generated tokens take about 10 s of the 113–140 s;
   the rest is load and prefill of the 5,800-token prompt on a dense model, as with the dense 27B models above,
   so a lower reasoning setting would not bring Tier 1 under 60 s.
+- **Muse with thinking off (30 October):** the template writes reasoning as an assistant message addressed
+  `to=self`, and its generation prompt (`<|start|>assistant`) lets the model choose it. A copy of the template
+  that appends an empty reasoning message when `enable_thinking` is false,
+  `{%- if enable_thinking is defined and enable_thinking is false -%}{{- ' to=self<|message|><|eom|><|start|>assistant' -}}{%- endif -%}`,
+  set as `chat-template-file` under `[model.preset]`, answered a probe in 5 tokens instead of 42 and kept tool calls
+  working; thinking on still reasons. In multi-turn Tier 2 the model still writes short `to=self` notes between
+  tool calls (23–43 per run), so thinking is reduced, not off. Three clean relaxed runs: Tier 1 108–127 s with a
+  visible reply every run (correct in 2 of 3); Tier 2 22/22, 20/22 (missed both `bestMove` checks), 22/22, each in
+  17.7–18.2 minutes; 7 tok/s; lowest free 14–16%; swap up 3.5 GB in run 1. It is accurate, but needs about twice
+  the 60 s and 15-minute limits, and MiniCPM does the same task in 3.6 minutes.
 - **Not tried:** Bolt E4B UD-Q4_K_XL (5.1 GB; a smaller quant would not fix accuracy); Muse with thinking left
   at `high` through a relaxed Tier 2; Muse's DFlash drafter; Tier 3 for either.
 - Both GGUFs are still in `~/.pill/models` and registered as failed; remove with `pill rm <name>`, or re-pull with
