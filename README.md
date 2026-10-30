@@ -102,6 +102,15 @@ Things to know:
 
 Add `--format toon|human` to force an output format. On a terminal you get tables and colour; when piped, or run by an agent, you get compact [TOON](https://github.com/toon-format/toon) with `help[n]:` next steps, and exit codes `0` (ok), `1` (failure), `2` (usage error).
 
+## Benchmarks
+
+`pill bench` gates chat models (Tier 1 and 2). Deeper, separate evaluations live in [`evals/`](evals/README.md) and are
+dev tooling, not part of the binary:
+
+- Tier 3 coding and web tasks: [`evals/README.md`](evals/README.md).
+- Local image-generation models (prompts, Opus 5.5 scoring, blind human sheet, how to add a model, best samples; the
+  models have non-commercial licences): [`evals/imagegen/README.md`](evals/imagegen/README.md).
+
 ## Where things live
 
 | Path | Purpose |
