@@ -42,6 +42,7 @@ type Runner struct {
 	Node   string // node executable, "node" by default
 	HTTP   *http.Client
 	Env    config.Environment
+	Lock   *Lock // when set, records each agent's process group for crash cleanup
 
 	SampleInterval  time.Duration // how often memory/GPU is sampled (5s)
 	PromptFunctions int           // size of the agent-sized prompt (number of functions listed)

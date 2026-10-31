@@ -89,7 +89,7 @@ func Execute() int {
 		StdinTTY:  output.IsTerminal(os.Stdin),
 		Sys:       sysinfo.New(),
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer stop()
 	return Run(ctx, deps, os.Args[1:])
 }

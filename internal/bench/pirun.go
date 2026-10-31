@@ -67,7 +67,12 @@ func (r *Runner) runPi(ctx context.Context, timeout time.Duration, workspace, ag
 	cmd.WaitDelay = 5 * time.Second
 
 	start := time.Now()
-	err = cmd.Run()
+	err = cmd.Start()
+	if err == nil {
+		r.Lock.record(cmd.Process.Pid) // Setpgid: the group id is the pid
+		err = cmd.Wait()
+		r.Lock.record(0)
+	}
 	out.Duration = time.Since(start)
 	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
 		out.TimedOut = true
