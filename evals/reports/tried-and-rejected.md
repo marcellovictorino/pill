@@ -110,9 +110,12 @@ takes about twice the default limit.
   15-minute cap); Tier 1 107–111 s, because drafting does not speed up prefill; lowest free memory 11%, with both
   models loaded; swap up to 0.8 GB. Not adopted: Tier 1 still fails the default 60 s limit, and MiniCPM is faster on
   both tiers (36 s and 3.6 minutes) with the same score.
+- **Muse Tier 3 (30–31 October), with the DFlash drafter:** one run per task: Go 77 and cleaning 53 (both timed out),
+  insight 35, Kanban 84, nursery 99, Mars 100, tax 90. Ahead of MiniCPM's median on two landing pages, behind on the
+  rest and two to three times slower, so it is not adopted. Details in [the Muse report](muse-glimmer-30b.md).
 - **Not tried:** Bolt E4B UD-Q4_K_XL (5.1 GB; a smaller quant would not fix accuracy); Muse with thinking left
-  at `high` through a relaxed Tier 2; Muse's DFlash drafter; Tier 3 for either.
-- Both GGUFs are still in `~/.pill/models` and registered as failed; remove with `pill rm <name>`, or re-pull with
+  at `high` through a relaxed Tier 2; Tier 3 for Bolt E4B.
+- The Bolt E4B GGUF was deleted on 30 October. The Muse GGUF and its drafter are still in `~/.pill`; re-pull with
   `pill pull hf.co/unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF:UD-Q8_K_XL` or
   `pill pull hf.co/unsloth/Muse-Glimmer-30B-GGUF:UD-IQ2_XXS`.
 

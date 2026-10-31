@@ -1,23 +1,23 @@
 # Model comparison: Tier 3
 
-Six models on the seven Tier 3 tasks. Scores are hidden-test scores out of 100 unless noted. **Read the
-run counts:** every cloud model and Gemma has a **single run** per task (one run can land well away from
+Seven models on the seven Tier 3 tasks. Scores are hidden-test scores out of 100 unless noted. **Read the
+run counts:** every cloud model, Gemma and Muse has a **single run** per task (one run can land well away from
 the typical result); MiniCPM has **six runs** per task, so it is shown as median with range. Task
 descriptions are in `../README.md`. Both Flint IQ2_XXS variants were retested with llama.cpp b11804 `--reasoning-budget 0` after the template left the default 64-token reply in reasoning. Both passed the corrected Pill Tier 1 gate 3/3, but neither met the stable Tier 2 bar: Bartowski scored 0/22, 13/22, 19/22; Unsloth scored 22/22, 17/22, 19/22 versus MiniCPM's 22/22. Neither reached Tier 3, so Flint has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for diagnosis, per-run memory and recommendations.
 
 ## Scores
 
-| Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | MiniCPM-V 4.7 IQ2 |
-|---|---|---|---|---|---|---|
-| Runs per cell | 1 | 1 | 1 | 1 | 1 | **6** |
-| `go-notes` (Go CLI feature) | 100 | 100 | 100 | 100 | 13 (timeout) | 88 median (67–94) |
-| `py-clean` (data cleaning) | 100 | 100 | 100 | 100 | 68 | 90.5 median (57–96) |
-| `py-insight` (automated) | 100 | 92 | 95 | 90 | 0 (timeout) | 40 median (40–60) |
-| `py-insight` (Opus judge) | 96 | 87 | 91 | 64 | 0 (no report) | 17 mean (9–30) |
-| `web-kanban` | 100 | 100 | 100 | 98 | 100 | 90 median (40–92) |
-| `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 93 median (18–96) |
-| `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 95 median (87–100) |
-| `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 98 median (54–100) |
+| Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | Muse Glimmer 30B IQ2 (DFlash) | MiniCPM-V 4.7 IQ2 |
+|---|---|---|---|---|---|---|---|
+| Runs per cell | 1 | 1 | 1 | 1 | 1 | 1 | **6** |
+| `go-notes` (Go CLI feature) | 100 | 100 | 100 | 100 | 13 (timeout) | 77 (timeout) | 88 median (67–94) |
+| `py-clean` (data cleaning) | 100 | 100 | 100 | 100 | 68 | 53 (timeout) | 90.5 median (57–96) |
+| `py-insight` (automated) | 100 | 92 | 95 | 90 | 0 (timeout) | 35 | 40 median (40–60) |
+| `py-insight` (Opus judge) | 96 | 87 | 91 | 64 | 0 (no report) | not judged | 17 mean (9–30) |
+| `web-kanban` | 100 | 100 | 100 | 98 | 100 | 84 | 90 median (40–92) |
+| `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 99 | 93 median (18–96) |
+| `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 100 | 95 median (87–100) |
+| `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 90 | 98 median (54–100) |
 
 Agent settings: Claude models through Claude Code with the effort shown, GPT-5.6 Luna through Codex, local models
 through Pi with thinking off and a throwaway Pi config. Cloud agents ran with permissions bypassed in temporary
@@ -26,17 +26,17 @@ workspaces. The model versions behind the Claude aliases were not independently 
 
 ## Time per run (minutes, mean)
 
-| Task | Opus | Sonnet | Haiku | GPT-5.6 Luna | MiniCPM (6 runs) |
-|---|---|---|---|---|---|
-| `go-notes` | 1.1 | 0.7 | 2.0 | 1.8 | 21.8 |
-| `py-clean` | 1.0 | 0.7 | 2.4 | 1.6 | 17.4 |
-| `py-insight` | 5.3 | 1.9 | 10.5 | 3.1 | 13.7 |
-| `web-kanban` | 0.9 | 0.4 | 1.4 | 2.2 | 3.5 |
-| `web-landing-nursery` | 2.9 | 1.0 | 4.3 | 1.5 | 6.1 |
-| `web-landing-mars` | 3.3 | 0.8 | 4.8 | 2.6 | 6.3 |
-| `web-landing-tax` | 3.0 | 0.8 | 4.2 | 2.9 | 5.9 |
+| Task | Opus | Sonnet | Haiku | GPT-5.6 Luna | Muse (1 run) | MiniCPM (6 runs) |
+|---|---|---|---|---|---|---|
+| `go-notes` | 1.1 | 0.7 | 2.0 | 1.8 | 30.0 | 21.8 |
+| `py-clean` | 1.0 | 0.7 | 2.4 | 1.6 | 30.0 | 17.4 |
+| `py-insight` | 5.3 | 1.9 | 10.5 | 3.1 | 21.5 | 13.7 |
+| `web-kanban` | 0.9 | 0.4 | 1.4 | 2.2 | 7.3 | 3.5 |
+| `web-landing-nursery` | 2.9 | 1.0 | 4.3 | 1.5 | 14.6 | 6.1 |
+| `web-landing-mars` | 3.3 | 0.8 | 4.8 | 2.6 | 17.4 | 6.3 |
+| `web-landing-tax` | 3.0 | 0.8 | 4.2 | 2.9 | 9.7 | 5.9 |
 
-Gemma timed out on 4 of 7 tasks (30 or 40 minute caps); on the three it finished it took 3.6 to 7.5 minutes.
+Gemma timed out on 4 of 7 tasks (30 or 40 minute caps); on the three it finished it took 3.6 to 7.5 minutes. Muse timed out on Go and cleaning (30-minute caps) and took 7.3 to 21.5 minutes on the rest; see [the Muse report](muse-glimmer-30b.md).
 
 ## Blind human ratings of the landing pages
 
@@ -60,6 +60,7 @@ Rated blind by one person, one page per cell. MiniCPM's rated page is its first 
 | Gemma 4 UD-IQ3_S 11.3 GB | fail (two runs over the 15-minute cap) | 3 | 22/22 ×3 (two over cap) | 19% | 0 | 24 |
 | Gemma 4 Q3_K_XL | passed once, then failed | 1, 3 | single: 22/22; 3-run: 22/22, skipped, skipped | 11%, 6% | 4.8–7.7 GB | 22 |
 | Gemma 4 IQ4_XS | fail | 5 | 22/22 ×4, 21/22 ×1 (r5) | 9% | 765 MB | 21 |
+| Muse Glimmer 30B UD-IQ2_XXS 10.7 GB (thinking-off template, DFlash drafter) | fail at default limits (Tier 1 107–111 s); pass relaxed 300 s / 30 min | 3 | 22/22 ×3 (5.9–13.2 min) | 11% | up to 0.8 GB | 12.8 |
 | Flint Bartowski IQ2_XXS 12.0 GB (b11804, reasoning budget 0) | fail (Tier 2 below champion) | 3 | 0/22, 13/22, 19/22 | 11% full-run | 172–638 MB per run | 34.7–36.3 |
 | Flint Unsloth UD-IQ2_XXS 11.9 GB (b11804, reasoning budget 0) | fail (unstable Tier 2) | 3 | 22/22, 17/22, 19/22 | 11–12% full-run | 67–1,663 MB per run | 34.0–37.6 |
 
@@ -73,6 +74,8 @@ Tier 2 score sequences are from the saved original `result.json` files. For Gemm
 - MiniCPM never timed out except twice on Go (2 of 42 runs), but about one run in five outside the insight
   task scored under 70.
 - Gemma is as good as MiniCPM on the web tasks it finished, but timed out on long ones.
+- Muse (one run) scored 99 and 100 on two landing pages, above MiniCPM's medians, but timed out on Go and cleaning and
+  was two to three times slower; it also fails the default gate, so MiniCPM stays the default.
 
 ## MiniCPM: thinking on or off
 
