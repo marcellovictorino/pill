@@ -5,6 +5,26 @@ run counts:** every cloud model, Gemma and Muse has a **single run** per task (o
 the typical result); MiniCPM has **six runs** per task, so it is shown as median with range. Task
 descriptions are in `../README.md`. Both Flint IQ2_XXS variants were retested with llama.cpp b11804 `--reasoning-budget 0` after the template left the default 64-token reply in reasoning. Both passed the corrected Pill Tier 1 gate 3/3, but neither met the stable Tier 2 bar: Bartowski scored 0/22, 13/22, 19/22; Unsloth scored 22/22, 17/22, 19/22 versus MiniCPM's 22/22. Neither reached Tier 3, so Flint has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for diagnosis, per-run memory and recommendations.
 
+## Local models that pass, and where each is strong
+
+Only models that pass Tier 1 and Tier 2 reach Tier 3. Tier 3 has no pass mark; it shows where a model is strong.
+Every other local model tried is in [tried-and-rejected.md](tried-and-rejected.md).
+
+| Model | Tier 1 (60 s first reply) | Tier 2 (22/22, 15 min) | Tier 3 | Best at | Weakest at |
+|---|---|---|---|---|---|
+| MiniCPM-V 4.7 IQ2 (default) | Pass | Pass, 5 of 5 | 6 runs per task | All-rounder: medians 88 to 98 on Go, cleaning, Kanban and all three landing pages | Open-ended analysis (insight 40, judge 17); about one run in five under 70 |
+| Muse Glimmer 30B IQ2 (DFlash drafter) | Relaxed limit only (107–111 s) | Pass, 3 of 3 | 1 run per task | Landing pages: nursery 99 and Mars 100, above MiniCPM's medians | Go 77 and cleaning 53 (both timed out); Kanban 84; two to three times slower |
+
+Muse against MiniCPM's medians, task by task, from Muse's single run:
+
+- **Ahead on two landing pages:** nursery 99 against 93, Mars 100 against 95. Behind on the third: tax 90 against 98.
+- **Behind on the single-page app:** Kanban 84 against 90, though inside MiniCPM's own range (40–92).
+- **Behind on Go and Python:** Go 77 against 88 and cleaning 53 against 90.5, both at the 30-minute cap; insight 35 against 40.
+
+Gemma 4 UD-IQ3_S also has Tier 3 scores (Kanban 100, nursery 92) but failed Tier 2 on the 15-minute cap, so it is not
+listed as passing. Muse would fail the default Tier 1 limit, so MiniCPM stays the default; use Muse only where a
+landing page is worth a slower run.
+
 ## Scores
 
 | Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | Muse Glimmer 30B IQ2 (DFlash) | MiniCPM-V 4.7 IQ2 |
