@@ -21,6 +21,9 @@ var update = flag.Bool("update", false, "rewrite golden files")
 
 func TestMain(m *testing.M) {
 	testutil.MaybeRunFake() // acts as fake llama-server / pi / launchctl when invoked under those names
+	if os.Getenv("PILL_TEST_AS_PILL") != "" {
+		os.Exit(Execute()) // lets a test run pill as a real process, to send it signals
+	}
 	os.Exit(m.Run())
 }
 

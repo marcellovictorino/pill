@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -85,6 +86,15 @@ type benchOutcome struct {
 // records the verdict. It prints nothing: runBench and `pill sync --bench`
 // decide how to report.
 func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th config.Thresholds) (*benchOutcome, error) {
+	// One benchmark at a time: a second one would load another model into the
+	// router and disturb the first one's measurements.
+	lock, err := bench.Acquire(a.paths.BenchLock())
+	if errors.Is(err, bench.ErrBusy) {
+		return nil, output.Fail([]string{"wait for it to finish, then run this again"}, "%v", err)
+	} else if err != nil {
+		return nil, output.Fail(nil, "%v", err)
+	}
+	defer lock.Release()
 	snap, err := a.reg.Load()
 	if err != nil {
 		return nil, output.Fail(nil, "%v", err)
@@ -155,6 +165,7 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 	}
 	env.Pi, _ = pi.Version(piBin)
 	runner := bench.NewRunner(a.rt, a.deps.Sys, piBin, env)
+	runner.Lock = lock
 	runner.Log = func(format string, args ...any) { a.printer.Progress(format, args...) }
 
 	stamp := time.Now().UTC().Format("20060102T150405Z")

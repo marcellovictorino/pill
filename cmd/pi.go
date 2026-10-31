@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"context"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/marcellovictorino/pill/internal/bench"
 	"github.com/marcellovictorino/pill/internal/config"
 	"github.com/marcellovictorino/pill/internal/output"
 	"github.com/marcellovictorino/pill/internal/pi"
@@ -59,6 +62,14 @@ func launchPi(ctx context.Context, a *App, userArgs []string) error {
 		return output.Fail([]string{"install it: brew install pi-coding-agent"}, "%v", err)
 	}
 
+	if bench.Held(a.paths.BenchLock()) {
+		return output.Fail([]string{"wait for the benchmark to finish"}, "another pill benchmark is running; starting Pi now would load a second model")
+	}
+	if a.rt.Healthy(ctx) {
+		if loaded, _ := a.rt.Loaded(ctx); len(loaded) > 0 && !slices.Contains(loaded, name) {
+			return output.Fail([]string{"free it first: pill stop"}, "the router is serving %s; starting Pi on %s would load a second model", strings.Join(loaded, ", "), name)
+		}
+	}
 	_, applied, err := a.reg.Refresh(ctx)
 	if err != nil {
 		return wrapState(err)
