@@ -26,6 +26,7 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking on | Failed, 3 runs, build 11429, 14 Oct | 130–144 s | Not run; one relaxed run 0/22 | 6.7–6.8 | 13–18% | Thinking: an 8,192-token thinking block and no tool call (PILL-9) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off | Relaxed gate, 3 runs, scratch home, 25 Oct (PILL-8) | 133–142 s (limit 300 s) | 22/22 in 4.3 min; 22/22 and 20/22 at the 30-min cap | 6.7 | 12% | Latency; Tier 1 answer wrong in every run (informational) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off, MTP, 32k | Failed gate, 3 runs, 25 Oct (PILL-10) | 151–159 s (limit 300 s) | 20/22; 22/22 in 11.4 min; 20/22; two runs repeated one shell command 90–105 times | 6.7 without MTP; 14.8 with MTP | 8–10% | Latency; loops; swap up 4.5 GB in run 1 |
+| Qwen3.8 Flash Next GSQ-RCO Coder IQ1_M (ISTA-DASLab, 256 of 512 experts, 29.6 GB plus a 28.8 GB n-gram shard), 32k, `cpu-moe`, mmap | Failed, 2 runs, build 11960, 1 Nov ([report](qwen38-flash-next.md)) | No answer in the limit (default); 632 s (relaxed, limit 900 s) | Not run (default); 20/22 in 33.1 min (relaxed, 90-min cap) | 4.1; 2.3–2.6 on code with or without MTP | 17% | Latency: experts read from memory pages; every full Flash Next file is 70 GB or more |
 | flint (RecursiveSI) IQ2_XXS, 64k | Failed, 3 runs, build 11669, 23 Oct; build 11804 runs in the [Flint report](recursive-flint-iq2xxs.md) | Load failed in 0.2–0.3 s on 11669 | Not run on 11669 | Not measured on 11669 | 43–44% | Load on 11669: `unknown model architecture: 'flint'`, so no timing limit applies |
 | LiquidAI LFM2.5-24B-A2B UD-Q3_K_XL (unsloth, 10.9 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–28 s | 17/22 at the cap; 21/22 in 7.4 min; 16/22 at the cap; two runs repeated one tool call 154 and 320 times | 36 | 17–18% | Accuracy and loops; Tier 1 answer wrong in every run (informational) |
 | LiquidAI LFM2.5-24B-A2B Q4_K_M (LiquidAI, 14.5 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–30 s | Not run on run 1 (Tier 1 memory gate); 19/22 and 21/22, both at the cap, repeating one tool call 105 and 182 times | 48 | 8–9% | Memory (below the 10% limit; swap up to 1.0 GB); accuracy and loops |
@@ -46,6 +47,15 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
   is not proven to cause the loops.
 - Memory: MTP cut the lowest free memory from about 30% to 7% at 16k (PILL-8), and it was 8–10% at 32k.
 - Not tried: MTP with the thinking leak fixed (PILL-9), or MTP at 16k context through a full gate run.
+
+## Qwen3.8 Flash Next: the Coder IQ1_M file, 2026-11-01
+
+- The full model does not fit: the smallest GGUFs found are about 70 GB (Bartowski IQ1_S) and 74 GB (Unsloth UD-IQ1_S).
+  The ISTA-DASLab Coder pack keeps 256 of 512 experts and loads with experts in CPU memory (`cpu-moe`, `no-repack`,
+  mmap, `lazy-mode on`) in 19 s with no swap. `--fit on` and all layers on the GPU both ran out of memory.
+- It is too slow for the agent loop: about 10 tok/s prompt processing and 2.3–4.1 tok/s decoding. MTP is available in
+  llama.cpp for this model and helps simple text (4.8–7.1 to 6.4–8.4 tok/s) but not code (2.6 to 2.3–2.6 tok/s).
+- Re-test only on a machine with 64 GB or more, which can hold a full file. Details in the [report](qwen38-flash-next.md).
 
 ## LiquidAI LFM2.5-24B-A2B: Q3_K_XL and Q4_K_M
 

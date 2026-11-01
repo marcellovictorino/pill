@@ -9,6 +9,7 @@ One focused report per model, plus a comparison across models. These are written
 | `minicpm-v-4-7-35b-a3b.md` | MiniCPM-V 4.7 (IQ2): strong points, weak points, recommended use |
 | `gemma-4-26b-a4b.md` | Gemma 4 26B-A4B (UD-IQ3_S), the local comparison |
 | `muse-glimmer-30b.md` | Meta Muse Glimmer 30B (UD-IQ2_XXS) with its DFlash drafter: one Tier 3 run, TLDR first |
+| `qwen38-flash-next.md` | Qwen3.8 Flash Next Coder IQ1_M on 24 GB: llama.cpp offload flags, MTP speed, Tier 1/2 (Tier 3 not run) |
 | `tried-and-rejected.md` | Models benchmarked and not adopted, with dates, numbers and what would justify a re-test |
 | `recursive-flint-iq2xxs.md` | RecursiveSI Flint Bartowski and Unsloth IQ2 variants, Tier 1/2 comparison (Tier 3 not run) |
 | `image-generation.md` | FLUX 3 Image Klein against Qwen-Image 2.1 Turbo on three prompts, Opus 5.5 scores and timings |
