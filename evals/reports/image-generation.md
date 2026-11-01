@@ -27,14 +27,14 @@
 
 ### TLDR
 
-**Verdict:** Not decided. Opus 5.5 cannot separate FLUX.2 klein 4B (20.6 of 25), Qwen-Image 2.1 Turbo (20.4) and Z-Image Turbo (19.9); the blind human rating is the tie-break and is not in yet. FLUX.2 klein 4B is the fastest and lightest. Qwen-Image 2512 does not run on this 24 GB Mac. Per the keep-a-model rule, no new model replaces Qwen Turbo until the human rating shows it ahead.
+**Verdict:** Qwen-Image 2.1 Turbo stays the default and FLUX.2 klein 4B is kept as the second model; Z-Image Turbo is dropped. In the captain's blind rating Qwen Turbo scored 4.67 and FLUX.2 klein 4B 4.56 (a tie on 9 images each), Z-Image Turbo 3.00. Opus 5.5 scored all three within 0.7 of 25 (20.6, 20.4, 19.9), so it ranks FLUX.2 first but cannot separate them. FLUX.2 klein 4B is the fastest and lightest (53 s, 3.8 GB). Qwen-Image 2512 does not run on this 24 GB Mac. The captain plans to generate with both kept models on each request for variety.
 
-| Model (Draw Things, 6-bit) | Opus (0-25) | Time per image | Peak footprint | Swap growth | Download |
+| Model (Draw Things, 6-bit) | Human (1-5) | Opus (0-25) | Time per image | Peak footprint | Swap growth | Download |
 |---|---|---|---|---|---|
-| FLUX.2 klein 4B (`flux_2_klein_4b_q6p`) | 20.6 | 53 s | 3.8 GB | 0 | 3.1 GB + 4.5 GB text encoder |
-| Qwen Turbo, 4-bit S (re-run baseline) | 20.4 | 75 s | 3.1 GB | 0 | already on disk |
-| Z-Image Turbo (`z_image_turbo_1.0_q6p`) | 19.9 | 150 s | 5.2 GB | 0 | 4.9 GB + 4.5 GB text encoder |
-| Qwen-Image 2512 (`qwen_image_2512_q6p`) | not run | first image stalled 21 min | n/a | swap 2.7 to 4.9 GB | 17.6 GB + VAE |
+| FLUX.2 klein 4B (`flux_2_klein_4b_q6p`) | 4.56 | 20.6 | 53 s | 3.8 GB | 0 | 3.1 GB + 4.5 GB text encoder |
+| Qwen Turbo, 4-bit S (re-run baseline) | 4.67 | 20.4 | 75 s | 3.1 GB | 0 | already on disk |
+| Z-Image Turbo (`z_image_turbo_1.0_q6p`) | 3.00 | 19.9 | 150 s | 5.2 GB | 0 | 4.9 GB + 4.5 GB text encoder |
+| Qwen-Image 2512 (`qwen_image_2512_q6p`) | not run | not run | first image stalled 21 min | n/a | swap 2.7 to 4.9 GB | 17.6 GB + VAE |
 
 ### Details
 
@@ -44,7 +44,10 @@
 - **Per prompt (Opus mean of 25), Z-Image / FLUX.2 / Qwen Turbo:** coffee shop 19.3 / 20.7 / 21.0; Halloween chef 19.0 / 18.3 / 18.3; vineyard 21.3 / 22.7 / 22.0.
 - **Text in images:** Opus flags garbled text in 2 of 9 Z-Image, 4 of 9 FLUX.2 and 3 of 9 Qwen Turbo images (coffee shop and vineyard signage). Neither new model fixes it.
 - **Round 1 baseline:** Qwen Turbo scored 20.4 on this re-run against 20.1 in round 1, so judge noise is about a third of a point. Differences between the three models are inside that noise plus the single-pass caveat. The raw round 1 images were kept outside the repository and are not on this machine, so the human sheet holds the re-run of Qwen Turbo instead of the round 1 images.
-- **Human rating:** pending. Blind sheet of 27 images (3 models x 9), key held back until rated.
+- **Human rating (captain, blind, 27 images, 1 to 5):** Qwen Turbo 4.67, FLUX.2 klein 4B 4.56, Z-Image Turbo 3.00. By prompt, Qwen / FLUX.2 / Z-Image: coffee shop 4.0 / 5.0 / 2.3, Halloween chef 5.0 / 3.7 / 3.0, vineyard 5.0 / 5.0 / 3.7. FLUX.2 is better on the coffee shop and worse on the anime chef.
+- **Judge against human:** Spearman 0.51 over the 27 images (round 1: 0.54), moderate. Both rank Z-Image last. Opus is lenient where the captain saw visible faults: three Z-Image images Opus scored 19 to 20 got a 2, and Qwen's coffee-shop seed 42 got 18 from Opus and 2 from the captain. Opus also separates the models by under 3%.
+- **Decision (captain):** drop Z-Image Turbo, keep Qwen Turbo as default and FLUX.2 klein 4B as support. The Z-Image and Qwen-Image 2512 downloads were removed from Draw Things' model folder (Z-Image 4.5 GB, the 2512 VAE 243 MB; the 2512 checkpoint was already gone). The shared text encoders stay. The flux_1 VAE (160 MB) may belong to Z-Image and is left in place until confirmed.
+- **FLUX.2 against FLUX 3:** FLUX.2 klein 4B (6-bit) beat the round 1 FLUX 3 Klein (4-bit S): human 4.56 against 3.44, Opus 20.6 against 17.7. The two were not compared in one blind sheet, and they differ in quantisation, text encoder and sampling defaults, so the cause is not isolated. A three-way blind test with new prompts is proposed to settle it.
 
 ## Running it
 
