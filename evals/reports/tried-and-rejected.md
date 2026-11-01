@@ -47,6 +47,9 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
   is not proven to cause the loops.
 - Memory: MTP cut the lowest free memory from about 30% to 7% at 16k (PILL-8), and it was 8–10% at 32k.
 - Not tried: MTP with the thinking leak fixed (PILL-9), or MTP at 16k context through a full gate run.
+- Tier 3, one run with thinking off and MTP at 32k (1 November): Go 100, cleaning 80, insight 0, Kanban 71, nursery 100,
+  Mars 100, tax 93, every task inside its cap. Strong where it finishes, but the gate still fails on Tier 1. See the
+  [Qwen3.8 27B report](qwen38-27b.md).
 
 ## Qwen3.8 Flash Next: the Coder IQ1_M file, 2026-11-01
 
