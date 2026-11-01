@@ -6,7 +6,7 @@ The only shared code is `MemorySampler`, imported read-only from `../run.py`.
 
 > **Licence warning.** The models tested here have restricted licences. FLUX 3 Image Klein (FLUX Kommunity
 > Licence v1.0) and Qwen-Image 2.1 (Qwen Research Licence) are, as far as we know, for non-commercial and
-> research use only. Do not use these images or models commercially. Read each model's current licence before
+> research use only. Z-Image Turbo and FLUX.2 klein 4B are listed as Apache 2.0 on their model cards (not re-checked in this run). Do not use these images or models commercially. Read each model's current licence before
 > relying on this summary, and check the licence of any model you add.
 
 ## What it does
@@ -20,7 +20,7 @@ memory and swap. Opus 5.5 scores each image 0 to 5 on subject, style, setting, t
 
 ```bash
 pill stop                                             # one local model at a time on this machine
-python3 evals/imagegen/imagegen.py run flux3          # or qwen-turbo
+python3 evals/imagegen/imagegen.py run flux3          # or qwen-turbo, z-image-turbo, flux2-klein-4b (qwen-image-2512 does not fit in 24 GB)
 python3 evals/imagegen/imagegen.py judge <run-dir> [<run-dir>...]     # Opus 5.5, uses the Claude plan allowance
 python3 evals/imagegen/imagegen.py blind <run-dir> [<run-dir>...]     # sheet.html to rate, key.json to open afterwards
 python3 evals/imagegen/imagegen.py validate agreement ratings-imagegen.json key.json <run-dir> [<run-dir>...]

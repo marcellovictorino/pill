@@ -2,7 +2,7 @@
 """Image-generation benchmark: generate, judge with Opus 5.5, build a blind human sheet, self-validate.
 
   python3 evals/imagegen/imagegen.py run flux3                 # 3 prompts x 3 seeds, one process per image
-  python3 evals/imagegen/imagegen.py run qwen-turbo
+  python3 evals/imagegen/imagegen.py run qwen-turbo            # also z-image-turbo, flux2-klein-4b, qwen-image-2512
   python3 evals/imagegen/imagegen.py judge <run-dir> [<run-dir>...]   # PAID: Opus 5.5 rubric, blind to the model
   python3 evals/imagegen/imagegen.py blind <run-dir> [<run-dir>...]   # blind human sheet + key.json
   python3 evals/imagegen/imagegen.py validate determinism flux3       # same seed twice -> same pixels?
@@ -54,9 +54,17 @@ def backend_cmd(model, prompt, seed, out):
         return ["draw-things-cli", "generate", "--local", "--model", "qwen_image_2.1_turbo_i4x.ckpt",
                 "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE),
                 "--steps", "8", "--output", str(out)]
+    # Three more candidates (PILL-27 shortlist), 6-bit through Draw Things at each model's recommended settings
+    # (steps and guidance), so only the file differs from the two runs above.
+    draw_things = {"z-image-turbo": "z_image_turbo_1.0_q6p.ckpt",
+                   "flux2-klein-4b": "flux_2_klein_4b_q6p.ckpt",
+                   "qwen-image-2512": "qwen_image_2512_q6p.ckpt"}
+    if model in draw_things:
+        return ["draw-things-cli", "generate", "--local", "--model", draw_things[model],
+                "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE), "--output", str(out)]
     if model == "fake":  # selftest only: a tiny deterministic PNG, no model
         return [sys.executable, str(HERE / "imagegen.py"), "_fake", prompt, str(seed), str(out)]
-    sys.exit(f"unknown model {model}; choose flux3, qwen-turbo")
+    sys.exit(f"unknown model {model}; choose flux3, qwen-turbo, z-image-turbo, flux2-klein-4b, qwen-image-2512")
 
 
 def sh(*cmd):
