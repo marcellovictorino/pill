@@ -179,14 +179,24 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil, output.Fail(nil, "%v", err)
 	}
 
-	// Record the verdict. The latest result decides the state. The prompt (if
-	// any) comes first, outside the state lock, because it waits for a person.
+	state, note, err := a.recordVerdict(ctx, m, res, plan.Dir, prevState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
+}
+
+// recordVerdict stores a finished benchmark's result and returns the model's
+// resulting state, plus a note when the verdict did not change it.
+func (a *App) recordVerdict(ctx context.Context, m config.Model, res config.Result, dir, prevState string) (state, note string, err error) {
+	// The latest result decides the state. The prompt (if any) comes first,
+	// outside the state lock, because it waits for a person.
 	demote := true
 	if !res.Passed && prevState == config.StatePassed {
 		demote = a.confirmDemotion(m.Name)
 	}
-	var state, note string
-	_, applied, err = a.reg.UpdateApply(ctx, func(s *snapshot) error {
+	_, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
 		// The benchmark ran for minutes. Judge the entry as it is now: if it was
 		// removed or redefined meanwhile (pill rm, pill add --ctx), the verdict
 		// belongs to something that no longer exists, and writing it back would
@@ -194,9 +204,9 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		cur, ok := s.Models.Find(m.Name)
 		switch {
 		case !ok:
-			return output.Fail([]string{"the full result is in " + plan.Dir}, "%s was removed while it was being benchmarked; its verdict was not recorded", m.Name)
+			return output.Fail([]string{"the full result is in " + dir}, "%s was removed while it was being benchmarked; its verdict was not recorded", m.Name)
 		case !sameModel(*cur, m):
-			return output.Fail([]string{"the full result is in " + plan.Dir, "benchmark it again: pill bench run " + m.Name}, "%s was changed while it was being benchmarked; its verdict was not recorded", m.Name)
+			return output.Fail([]string{"the full result is in " + dir, "benchmark it again: pill bench run " + m.Name}, "%s was changed while it was being benchmarked; its verdict was not recorded", m.Name)
 		}
 		st := s.Results.Ensure(m.Name)
 		st.Latest = &res
@@ -213,15 +223,14 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil
 	})
 	if err != nil {
-		return nil, wrapState(err)
+		return "", "", wrapState(err)
 	}
 	if a.rt.Healthy(ctx) {
 		if _, err := a.ensureRouter(ctx, applied); err != nil {
-			return nil, err
+			return "", "", err
 		}
 	}
-
-	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
+	return state, note, nil
 }
 
 func runBench(ctx context.Context, a *App, arg string, ctxSize, runs int, th config.Thresholds) error {
