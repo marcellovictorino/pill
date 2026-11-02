@@ -44,6 +44,8 @@ about 4 minutes.
   76–78% accepted. Reading experts from memory pages dominates, so the tiers ran without MTP.
 - **Runs:** one default run (Tier 1 failed, Tier 2 skipped) and one relaxed run (`--tier1-max-seconds 900
   --tier2-max-minutes 90`) on 1 November 2026, with no other model loaded. Tier 2 used 5 agent turns.
+- **Files:** deleted on 2 November 2026, with the MTP head and the partial Strata install. Do not re-test on this
+  machine.
 - **Caveats:** single runs. A machine with 64 GB or more could hold a full Flash Next file; nothing here says how
   that would score. Strata on Mac streams experts from the SSD and was not measured.
 

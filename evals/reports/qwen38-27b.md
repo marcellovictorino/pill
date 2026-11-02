@@ -2,9 +2,9 @@
 
 ## TLDR
 
-**Verdict:** Not decided; strong on code and landing pages, too slow to be the default. In one Tier 3 run it beat
-MiniCPM's median on three of seven tasks (Go 100, nursery 100, Mars 100), but scored 0 on insight and still fails the
-60 s Tier 1 limit at 151–159 s.
+**Verdict:** Not adopted. The model has potential but is limited on this 24 GB machine: in one Tier 3 run it beat
+MiniCPM's median on three of seven tasks (Go 100, nursery 100, Mars 100), but it scored 0 on insight, runs at half
+MiniCPM's speed and still fails the 60 s Tier 1 limit at 151–159 s. MiniCPM stays the default.
 
 | Check | Result |
 |---|---|
@@ -42,6 +42,28 @@ nursery 93, Mars 95, tax 98, at 3.5–22 minutes per task, and it passes the def
 - **Caveats:** single run, so differences of a few points are not findings; MiniCPM's own runs vary by tens of points.
   The gate failure is prompt processing on a dense model, which MTP does not speed up; a smaller quant or a
   different offload setting would not bring Tier 1 near 60 s either.
+
+## Tested so far, and what would justify a re-test
+
+All on this 24 GB M4 with Unsloth's UD-IQ3_XXS (10.9 GB). The files were deleted on 2 November; `pill pull` them again
+to re-test.
+
+| Setting | When | Result |
+|---|---|---|
+| Thinking on, 64k | 14 Oct, build 11429 | Tier 1 130–144 s; Tier 2 0/22 (8,192-token thinking block, no tool call) |
+| Thinking off, 64k | 25 Oct (PILL-8) | Tier 1 133–142 s; Tier 2 22, 22, 20 at 6.7 tok/s |
+| Thinking off, MTP, 16k | 25 Oct (PILL-8) | Decoding 16–18 tok/s; lowest free memory 7%; no full gate run |
+| Thinking off, MTP, 32k | 25 Oct (PILL-10) | Tier 1 151–159 s; Tier 2 20, 22, 20 with two runs looping; 14.8 tok/s |
+| Thinking off, MTP, 32k, Tier 3 | 1 Nov, build 11960 | The scores above, one run per task |
+
+Do not re-test for the Tier 1 gate on this machine. It is a dense model, so the 7,400-token prompt is bound by prompt
+processing: a smaller quant, a different offload setting or MTP does not bring it near 60 s, and a larger quant does
+not fit. Re-test only for one of these:
+
+- **A faster or larger machine**, where Tier 1 could pass at all.
+- **A pill change that relaxes Tier 1** for slow, high-quality models.
+- **Insight with a higher reply limit** (`max_tokens` above 8,192), the one cheap check left: it would show whether the
+  0 is the limit or the model.
 
 ## What it looks like
 
