@@ -26,4 +26,6 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      # Confirms downloaded modules match go.sum, so a tampered dependency fails the build.
+      - run: go mod verify
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
