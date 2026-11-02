@@ -16,6 +16,7 @@ import (
 	"github.com/marcellovictorino/pill/internal/output"
 	"github.com/marcellovictorino/pill/internal/pi"
 	"github.com/marcellovictorino/pill/internal/preset"
+	"github.com/marcellovictorino/pill/internal/registry"
 	"github.com/marcellovictorino/pill/internal/router"
 	"github.com/marcellovictorino/pill/internal/sysinfo"
 	"github.com/marcellovictorino/pill/internal/version"
@@ -121,29 +122,9 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil, output.Fail([]string{"Node ships with Pi: brew install pi-coding-agent"}, "%v", err)
 	}
 
-	// Write the candidate into models.toml and models.ini as unverified. It
-	// does not reach Pi unless it was already registered there.
-	var prevState string
-	loaded, hadEntry := snap.Models.Find(m.Name)
-	var loadedCopy config.Model
-	if hadEntry {
-		loadedCopy = *loaded
-	}
-	_, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
-		// Resolving, and maybe downloading, took a while. Register the
-		// candidate only if its entry is still what Resolve saw: otherwise a
-		// concurrent rm would be undone, or an add overwritten.
-		cur, has := s.Models.Find(m.Name)
-		if has != hadEntry || (has && !sameModel(*cur, loadedCopy)) {
-			return output.Fail([]string{"run the benchmark again: pill bench run " + arg}, "%s was changed while the benchmark was being prepared", m.Name)
-		}
-		s.Models.Upsert(m)
-		s.Results.Ensure(m.Name)
-		prevState = a.reg.State(s, m)
-		return nil
-	})
+	prevState, applied, err := a.registerCandidate(ctx, snap, m, arg)
 	if err != nil {
-		return nil, wrapState(err)
+		return nil, err
 	}
 	// Benchmark through the main router: free whatever it has loaded, then make
 	// sure it knows the candidate. Never unload a server pill did not start.
@@ -185,6 +166,34 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 	}
 
 	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
+}
+
+// registerCandidate writes the candidate into models.toml and models.ini as
+// unverified, and returns its previous state. It does not reach Pi unless it
+// was already registered there.
+func (a *App) registerCandidate(ctx context.Context, snap *snapshot, m config.Model, arg string) (prevState string, applied registry.Applied, err error) {
+	loaded, hadEntry := snap.Models.Find(m.Name)
+	var loadedCopy config.Model
+	if hadEntry {
+		loadedCopy = *loaded
+	}
+	_, applied, err = a.reg.UpdateApply(ctx, func(s *snapshot) error {
+		// Resolving, and maybe downloading, took a while. Register the
+		// candidate only if its entry is still what Resolve saw: otherwise a
+		// concurrent rm would be undone, or an add overwritten.
+		cur, has := s.Models.Find(m.Name)
+		if has != hadEntry || (has && !sameModel(*cur, loadedCopy)) {
+			return output.Fail([]string{"run the benchmark again: pill bench run " + arg}, "%s was changed while the benchmark was being prepared", m.Name)
+		}
+		s.Models.Upsert(m)
+		s.Results.Ensure(m.Name)
+		prevState = a.reg.State(s, m)
+		return nil
+	})
+	if err != nil {
+		return "", applied, wrapState(err)
+	}
+	return prevState, applied, nil
 }
 
 // recordVerdict stores a finished benchmark's result and returns the model's
