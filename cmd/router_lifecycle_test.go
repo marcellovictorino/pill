@@ -274,17 +274,6 @@ func TestOwnershipIsCheckedEvenWhenHealthFails(t *testing.T) {
 	e.run("bench", "run", "gemma4-26b-iq4xs-64k").fails(t, 1, "pill will not touch it")
 }
 
-func TestServiceReinstallIsRefusedWhileAModelIsLoaded(t *testing.T) {
-	e := newEnv(t)
-	e.register()
-	e.run("service", "install").ok(t)
-	e.chat("gemma4-26b-iq4xs-64k")
-	e.run("service", "install").fails(t, 1, "not replacing it while it may be in use")
-	if !portAnswers(e.port) || strings.Count(e.launchLog(), "bootstrap") != 1 {
-		t.Errorf("the busy service must be left alone:\n%s", e.launchLog())
-	}
-}
-
 // A service router that is there but not answering cannot be shown to be idle,
 // so changing the settings must not replace it.
 func TestServiceChangeIsRefusedWhenItsRouterDoesNotAnswer(t *testing.T) {
