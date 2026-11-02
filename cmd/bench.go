@@ -16,6 +16,7 @@ import (
 	"github.com/marcellovictorino/pill/internal/output"
 	"github.com/marcellovictorino/pill/internal/pi"
 	"github.com/marcellovictorino/pill/internal/preset"
+	"github.com/marcellovictorino/pill/internal/registry"
 	"github.com/marcellovictorino/pill/internal/router"
 	"github.com/marcellovictorino/pill/internal/sysinfo"
 	"github.com/marcellovictorino/pill/internal/version"
@@ -121,29 +122,9 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil, output.Fail([]string{"Node ships with Pi: brew install pi-coding-agent"}, "%v", err)
 	}
 
-	// Write the candidate into models.toml and models.ini as unverified. It
-	// does not reach Pi unless it was already registered there.
-	var prevState string
-	loaded, hadEntry := snap.Models.Find(m.Name)
-	var loadedCopy config.Model
-	if hadEntry {
-		loadedCopy = *loaded
-	}
-	_, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
-		// Resolving, and maybe downloading, took a while. Register the
-		// candidate only if its entry is still what Resolve saw: otherwise a
-		// concurrent rm would be undone, or an add overwritten.
-		cur, has := s.Models.Find(m.Name)
-		if has != hadEntry || (has && !sameModel(*cur, loadedCopy)) {
-			return output.Fail([]string{"run the benchmark again: pill bench run " + arg}, "%s was changed while the benchmark was being prepared", m.Name)
-		}
-		s.Models.Upsert(m)
-		s.Results.Ensure(m.Name)
-		prevState = a.reg.State(s, m)
-		return nil
-	})
+	prevState, applied, err := a.registerCandidate(ctx, snap, m, arg)
 	if err != nil {
-		return nil, wrapState(err)
+		return nil, err
 	}
 	// Benchmark through the main router: free whatever it has loaded, then make
 	// sure it knows the candidate. Never unload a server pill did not start.
@@ -179,14 +160,52 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil, output.Fail(nil, "%v", err)
 	}
 
-	// Record the verdict. The latest result decides the state. The prompt (if
-	// any) comes first, outside the state lock, because it waits for a person.
+	state, note, err := a.recordVerdict(ctx, m, res, plan.Dir, prevState)
+	if err != nil {
+		return nil, err
+	}
+
+	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
+}
+
+// registerCandidate writes the candidate into models.toml and models.ini as
+// unverified, and returns its previous state. It does not reach Pi unless it
+// was already registered there.
+func (a *App) registerCandidate(ctx context.Context, snap *snapshot, m config.Model, arg string) (prevState string, applied registry.Applied, err error) {
+	loaded, hadEntry := snap.Models.Find(m.Name)
+	var loadedCopy config.Model
+	if hadEntry {
+		loadedCopy = *loaded
+	}
+	_, applied, err = a.reg.UpdateApply(ctx, func(s *snapshot) error {
+		// Resolving, and maybe downloading, took a while. Register the
+		// candidate only if its entry is still what Resolve saw: otherwise a
+		// concurrent rm would be undone, or an add overwritten.
+		cur, has := s.Models.Find(m.Name)
+		if has != hadEntry || (has && !sameModel(*cur, loadedCopy)) {
+			return output.Fail([]string{"run the benchmark again: pill bench run " + arg}, "%s was changed while the benchmark was being prepared", m.Name)
+		}
+		s.Models.Upsert(m)
+		s.Results.Ensure(m.Name)
+		prevState = a.reg.State(s, m)
+		return nil
+	})
+	if err != nil {
+		return "", applied, wrapState(err)
+	}
+	return prevState, applied, nil
+}
+
+// recordVerdict stores a finished benchmark's result and returns the model's
+// resulting state, plus a note when the verdict did not change it.
+func (a *App) recordVerdict(ctx context.Context, m config.Model, res config.Result, dir, prevState string) (state, note string, err error) {
+	// The latest result decides the state. The prompt (if any) comes first,
+	// outside the state lock, because it waits for a person.
 	demote := true
 	if !res.Passed && prevState == config.StatePassed {
 		demote = a.confirmDemotion(m.Name)
 	}
-	var state, note string
-	_, applied, err = a.reg.UpdateApply(ctx, func(s *snapshot) error {
+	_, applied, err := a.reg.UpdateApply(ctx, func(s *snapshot) error {
 		// The benchmark ran for minutes. Judge the entry as it is now: if it was
 		// removed or redefined meanwhile (pill rm, pill add --ctx), the verdict
 		// belongs to something that no longer exists, and writing it back would
@@ -194,9 +213,9 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		cur, ok := s.Models.Find(m.Name)
 		switch {
 		case !ok:
-			return output.Fail([]string{"the full result is in " + plan.Dir}, "%s was removed while it was being benchmarked; its verdict was not recorded", m.Name)
+			return output.Fail([]string{"the full result is in " + dir}, "%s was removed while it was being benchmarked; its verdict was not recorded", m.Name)
 		case !sameModel(*cur, m):
-			return output.Fail([]string{"the full result is in " + plan.Dir, "benchmark it again: pill bench run " + m.Name}, "%s was changed while it was being benchmarked; its verdict was not recorded", m.Name)
+			return output.Fail([]string{"the full result is in " + dir, "benchmark it again: pill bench run " + m.Name}, "%s was changed while it was being benchmarked; its verdict was not recorded", m.Name)
 		}
 		st := s.Results.Ensure(m.Name)
 		st.Latest = &res
@@ -213,15 +232,14 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 		return nil
 	})
 	if err != nil {
-		return nil, wrapState(err)
+		return "", "", wrapState(err)
 	}
 	if a.rt.Healthy(ctx) {
 		if _, err := a.ensureRouter(ctx, applied); err != nil {
-			return nil, err
+			return "", "", err
 		}
 	}
-
-	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
+	return state, note, nil
 }
 
 func runBench(ctx context.Context, a *App, arg string, ctxSize, runs int, th config.Thresholds) error {

@@ -191,6 +191,10 @@ func (r *Router) UnloadAll(ctx context.Context) ([]string, error) {
 	return loaded, nil
 }
 
+// healthPoll is how often a startup wait re-probes /health. A real server takes
+// seconds to load, so a short interval only trims the wait once it is up.
+const healthPoll = 50 * time.Millisecond
+
 // unloadTimeout is how long UnloadAll waits for models to leave memory.
 var unloadTimeout = 30 * time.Second
 
@@ -367,43 +371,38 @@ func (r *Router) Start(ctx context.Context, iniHash string) (started bool, err e
 	exited := make(chan error, 1)
 	go func() { exited <- cmd.Wait() }()
 
-	timeout := time.NewTimer(StartTimeout())
-	defer timeout.Stop()
-	tick := time.NewTicker(200 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return false, ctx.Err()
-		case werr := <-exited:
-			return false, fmt.Errorf("llama-server exited during startup (%v); see %s", werr, r.Paths.ServerLog())
-		case <-timeout.C:
-			return false, fmt.Errorf("llama-server did not answer /health within %s; see %s", StartTimeout(), r.Paths.ServerLog())
-		case <-tick.C:
-			if r.Healthy(ctx) {
-				return true, nil
-			}
-		}
+	if err := r.waitHealthy(ctx, exited); err != nil {
+		return false, err
 	}
+	return true, nil
 }
 
 // WaitHealthy polls /health until it answers or StartTimeout passes. It is
 // used when something else (launchd) starts the process.
 func (r *Router) WaitHealthy(ctx context.Context) error {
-	deadline := time.NewTimer(StartTimeout())
-	defer deadline.Stop()
-	tick := time.NewTicker(200 * time.Millisecond)
+	return r.waitHealthy(ctx, nil)
+}
+
+// waitHealthy polls /health until it answers, the context ends, the timeout
+// passes, or exited delivers. A nil exited never fires (a nil channel blocks
+// forever in select), which is how WaitHealthy opts out of child watching.
+func (r *Router) waitHealthy(ctx context.Context, exited <-chan error) error {
+	timeout := time.NewTimer(StartTimeout())
+	defer timeout.Stop()
+	tick := time.NewTicker(healthPoll)
 	defer tick.Stop()
 	for {
-		if r.Healthy(ctx) {
-			return nil
-		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-deadline.C:
+		case werr := <-exited:
+			return fmt.Errorf("llama-server exited during startup (%v); see %s", werr, r.Paths.ServerLog())
+		case <-timeout.C:
 			return fmt.Errorf("llama-server did not answer /health within %s; see %s", StartTimeout(), r.Paths.ServerLog())
 		case <-tick.C:
+			if r.Healthy(ctx) {
+				return nil
+			}
 		}
 	}
 }

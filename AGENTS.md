@@ -36,6 +36,7 @@ skills/                 the agent skill (SKILL.md), embedded in the binary
 cmd/                    one cobra command per file
 internal/config         paths, config.toml, models.toml, results.json (state)
 internal/catalog        embedded catalog.toml
+internal/hf             Hugging Face client: ref parsing, resumable download, sha256 check
 internal/preset         models.ini generation
 internal/router         llama-server start/stop/probe and HTTP calls
 internal/pi             Pi models.json merge, launching pi

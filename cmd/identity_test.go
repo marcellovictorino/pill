@@ -160,7 +160,7 @@ func TestBenchVerdictDoesNotOverwriteConcurrentChanges(t *testing.T) {
 	needNode(t)
 	e := newEnv(t)
 	solveTier2(t)
-	t.Setenv("PILL_FAKE_PI_TIER2_SLEEP", "3") // the fake model "thinks" for 3 seconds in Tier 2
+	t.Setenv("PILL_FAKE_PI_TIER2_SLEEP", "1") // the fake model "thinks" for 1 second in Tier 2
 	e.gguf(gemmaFile)
 	e.gguf("other-Q4_K_M.gguf")
 	tomlPath := filepath.Join(e.dir, "pill", "config", "models.toml")
@@ -190,7 +190,7 @@ func TestBenchDoesNotResurrectAModelRemovedMeanwhile(t *testing.T) {
 	needNode(t)
 	e := newEnv(t)
 	solveTier2(t)
-	t.Setenv("PILL_FAKE_PI_TIER2_SLEEP", "3")
+	t.Setenv("PILL_FAKE_PI_TIER2_SLEEP", "1")
 	e.gguf(gemmaFile)
 	tomlPath := filepath.Join(e.dir, "pill", "config", "models.toml")
 
