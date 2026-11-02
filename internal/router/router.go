@@ -191,6 +191,10 @@ func (r *Router) UnloadAll(ctx context.Context) ([]string, error) {
 	return loaded, nil
 }
 
+// healthPoll is how often a startup wait re-probes /health. A real server takes
+// seconds to load, so a short interval only trims the wait once it is up.
+const healthPoll = 50 * time.Millisecond
+
 // unloadTimeout is how long UnloadAll waits for models to leave memory.
 var unloadTimeout = 30 * time.Second
 
@@ -369,7 +373,7 @@ func (r *Router) Start(ctx context.Context, iniHash string) (started bool, err e
 
 	timeout := time.NewTimer(StartTimeout())
 	defer timeout.Stop()
-	tick := time.NewTicker(200 * time.Millisecond)
+	tick := time.NewTicker(healthPoll)
 	defer tick.Stop()
 	for {
 		select {
@@ -392,7 +396,7 @@ func (r *Router) Start(ctx context.Context, iniHash string) (started bool, err e
 func (r *Router) WaitHealthy(ctx context.Context) error {
 	deadline := time.NewTimer(StartTimeout())
 	defer deadline.Stop()
-	tick := time.NewTicker(200 * time.Millisecond)
+	tick := time.NewTicker(healthPoll)
 	defer tick.Stop()
 	for {
 		if r.Healthy(ctx) {
