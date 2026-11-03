@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pill - Free, open-source command-line tool for local AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="nav" aria-label="Main navigation">
+        <a href="#hero" class="nav-logo">
+            <svg class="pill-logo" viewBox="0 0 40 20" aria-hidden="true">
+                <rect x="0" y="0" width="20" height="20" rx="10" fill="#7fdcff" />
+                <rect x="20" y="0" width="20" height="20" rx="10" fill="#e9eef8" />
+            </svg>
+        </a>
+    </nav>
+
+    <section id="hero" class="hero">
+        <div class="hero-content">
+            <h1>No subscription, no problem!</h1>
+            <div class="oprah-joke">
+                <p class="joke-line">You get tokens</p>
+                <p class="joke-line">you get tokens</p>
+                <p class="joke-line">you get tokens</p>
+            </div>
+            <p class="hero-sub">pill runs the Pi coding agent against local language models served by llama.cpp's <code>llama-server</code>. Apple Silicon Macs only for now.</p>
+            <div class="hero-buttons">
+                <a href="#install" class="btn btn-primary">Get started</a>
+                <a href="https://github.com/marcellovictorino/pill" class="btn btn-secondary" target="_blank" rel="noopener">GitHub</a>
+            </div>
+        </div>
+        <div class="hero-capsule-container">
+            <div class="hero-capsule">
+                <div class="capsule-half capsule-left"></div>
+                <div class="capsule-half capsule-right"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="runs-on-mac" class="section">
+        <div class="container">
+            <h2>Runs on your Mac</h2>
+            <p>pill runs a local model that fits your machine, with Apple Silicon (M-series) in focus. <code>pill catalog</code> lists the models pill can download and shows the variant recommended for this machine's RAM. Everything stays on your computer: no account, no API key, no per-token bill.</p>
+            <div class="feature-card">
+                <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="#7fdcff" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="4" fill="#7fdcff"/>
+                </svg>
+                <p><strong>Local-first.</strong> Your models, your data, your compute. No cloud, no telemetry.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pi-harness" class="section">
+        <div class="container">
+            <h2>Pi, the lightest harness</h2>
+            <p>pill opens the <a href="https://github.com/badlogic/pi-mono" target="_blank" rel="noopener">Pi coding agent</a>. Pi is a deliberately minimal coding harness, so its prompt and tool overhead leave more of a local model's limited context window for your code.</p>
+            <div class="feature-card">
+                <svg class="feature-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="#7fdcff" stroke-width="2"/>
+                    <line x1="8" y1="8" x2="16" y2="8" stroke="#7fdcff" stroke-width="2"/>
+                    <line x1="8" y1="12" x2="16" y2="12" stroke="#7fdcff" stroke-width="2"/>
+                    <line x1="8" y1="16" x2="12" y2="16" stroke="#7fdcff" stroke-width="2"/>
+                </svg>
+                <p><strong>Minimal overhead.</strong> More context for your code, less for the harness.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="built-on-giants" class="section">
+        <div class="container">
+            <h2>Built on giants</h2>
+            <p>pill is a thin wrapper around <a href="https://github.com/ggml-org/llama.cpp" target="_blank" rel="noopener">llama.cpp</a>, adding the convenience and ergonomics people know from Ollama.</p>
+            <div class="terminal-block">
+                <div class="terminal-header">
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-dot"></span>
+                    <span class="terminal-title">pill commands</span>
+                </div>
+                <div class="terminal-body">
+                    <div class="term-row">
+                        <code>pill catalog</code>
+                        <span>what pill can download, with the variant recommended for your RAM</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill pull &lt;name&gt;</code>
+                        <span>download a model (resumes, verifies sha256)</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill add &lt;name&gt; --unverified</code>
+                        <span>register it with the router and Pi</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill ls</code>
+                        <span>list local models and their state (pulled, unverified, passed, failed, missing)</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill default &lt;name&gt;</code>
+                        <span>choose the default model</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill ps</code>
+                        <span>router state, port, loaded model and its memory</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill serve</code>
+                        <span>start the router for any OpenAI-compatible client (http://127.0.0.1:11435/v1)</span>
+                    </div>
+                    <div class="term-row">
+                        <code>pill stop</code>
+                        <span>unload the model and free memory</span>
+                    </div>
+                    <div class="term-row highlight">
+                        <code>pill</code>
+                        <span>there is no <code>run</code> command. Bare <code>pill</code> starts the router if needed and opens Pi on your default model.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="benchmarks" class="section">
+        <div class="container">
+            <h2>Benchmarked in tiers, hunting a champion</h2>
+            <p><code>pill bench run &lt;name&gt;</code> gates every model: Tier 1 is a cold-start reply check, Tier 2 is a coding task scored by a hidden verifier (22/22 required), and the separate Tier 3 evaluations (Go, Python and web tasks including landing pages) show where each model is strong. The benchmark is re-run as new models are released or llama.cpp gains new flags, always looking for a new Champion.</p>
+            <p><strong>Current champion:</strong> MiniCPM-V 4.7 IQ2, which passed Tier 2 in 5 of 5 runs at about 25 tokens per second.</p>
+            <div class="benchmark-tiers">
+                <div class="tier tier-1">
+                    <div class="tier-badge">Tier 1</div>
+                    <p>Cold-start reply check</p>
+                </div>
+                <div class="tier tier-2">
+                    <div class="tier-badge">Tier 2</div>
+                    <p>Coding task (22/22 required)</p>
+                </div>
+                <div class="tier tier-3 champion">
+                    <div class="tier-badge">Tier 3</div>
+                    <p>Go, Python, web tasks</p>
+                    <div class="champion-crown">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 2L15 8L21 9L17 14L12 12L7 14L3 9L9 8L12 2Z" fill="#7fdcff"/>
+                        </svg>
+                        <span>Champion</span>
+                    </div>
+                </div>
+            </div>
+            <p class="bench-command"><code>pill bench summary</code> ranks benchmarked models.</p>
+        </div>
+    </section>
+
+    <section id="install" class="section">
+        <div class="container">
+            <h2>Install</h2>
+            <p><strong>Requirements:</strong></p>
+            <pre><code>brew install llama.cpp</code></pre>
+            <pre><code>brew install pi-coding-agent</code></pre>
+            <p><strong>Install pill:</strong></p>
+            <pre><code>go install github.com/marcellovictorino/pill@latest</code></pre>
+            <p><strong>Try it out:</strong></p>
+            <pre><code>pill pull gemma4-26b</code><button class="copy-btn" aria-label="Copy command">Copy</button></pre>
+            <pre><code>pill add gemma4-26b-iq4xs-64k --unverified</code><button class="copy-btn" aria-label="Copy command">Copy</button></pre>
+            <pre><code>pill</code><button class="copy-btn" aria-label="Copy command">Copy</button></pre>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-links">
+                <a href="https://github.com/marcellovictorino/pill" target="_blank" rel="noopener">GitHub</a>
+                <span>MIT licence</span>
+            </div>
+            <p class="footer-note">Issues welcome. Pull requests are not accepted; please open an issue instead.</p>
+            <p class="music-credit">
+                Music: Pill by Heuse & Zeus x Crona (feat. Emma Sameth) [NCS Release]. 
+                <a href="https://www.youtube.com/watch?v=CLiXUT3MS34" target="_blank" rel="noopener">Music provided by NoCopyrightSounds</a>.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Music button -->
+    <button class="music-toggle" aria-label="Play the theme" aria-pressed="false">
+        <svg class="music-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="8" width="2" height="8" fill="#7fdcff"/>
+            <rect x="8" y="4" width="2" height="16" fill="#7fdcff"/>
+            <rect x="12" y="6" width="2" height="12" fill="#7fdcff"/>
+            <rect x="16" y="10" width="2" height="4" fill="#7fdcff"/>
+        </svg>
+    </button>
+
+    <script src="script.js"></script>
+</body>
+</html>
+</content>
+</tool_call>
+<tool_call>
+<function=write>
+<parameter=path>
+style.css
