@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Image-generation benchmark: generate, judge with Opus 5.5, build a blind human sheet, self-validate.
 
-  python3 evals/imagegen/imagegen.py run flux3                 # 3 prompts x 3 seeds, one process per image
-  python3 evals/imagegen/imagegen.py run qwen-turbo            # also z-image-turbo, flux2-klein-4b, qwen-image-2512
+  python3 evals/imagegen/imagegen.py run qwen-turbo            # 3 prompts x 3 seeds, one process per image
+  python3 evals/imagegen/imagegen.py run flux2-klein-4b        # also z-image-turbo, qwen-image-2512; add --plain for old runs
+  python3 evals/imagegen/imagegen.py options "a prompt"        # six options: 3 Qwen Turbo + 3 FLUX.2, one pick page
   python3 evals/imagegen/imagegen.py judge <run-dir> [<run-dir>...]   # PAID: Opus 5.5 rubric, blind to the model
   python3 evals/imagegen/imagegen.py blind <run-dir> [<run-dir>...]   # blind human sheet + key.json
-  python3 evals/imagegen/imagegen.py validate determinism flux3       # same seed twice -> same pixels?
+  python3 evals/imagegen/imagegen.py validate determinism qwen-turbo  # same seed twice -> same pixels?
   python3 evals/imagegen/imagegen.py validate judge <run-dir>...      # PAID: matched vs mismatched, order swap
   python3 evals/imagegen/imagegen.py validate agreement <ratings.json> <key.json> <run-dir>...
   python3 evals/imagegen/imagegen.py selftest                         # whole pipeline with a fake generator, no model
 
-Models are the captain's: FLUX 3 Image Klein 5.6B (Draw Things, 4-bit S) and Qwen-Image 2.1 Turbo (Draw Things CLI,
-4-bit S, 8 steps). Every model gets the three prompts in prompts.json verbatim, no style words added,
-seeds 7/42/1234, 1024x1024. Only one local model can run on this machine at a time: run() refuses while
+Models are the captain's: Qwen-Image 2.1 Turbo (Draw Things CLI, 4-bit i4x, 8 steps, the default) and FLUX.2 klein 4B
+(6-bit). FLUX 3 Image Klein was dropped after round 3. Every model gets the same prompts, seeds 7/42/1234, 1024x1024.
+The prompts are prompts.json, or the file named by IMAGEGEN_PROMPTS (prompts-round3.json is the round 3 set).
+Every prompt is sent with a standing no-text sentence and, for FLUX.2 on realistic or photographic prompts, a
+realism cue (build_prompt); results.json keeps the prompt verbatim plus prompt_sent, and --plain turns both off. Only one local model can run on this machine at a time: run() refuses while
 another model server is up (stop pill first: `pill stop`). Results go to evals/results/imagegen/ (gitignored).
 """
 import argparse
@@ -36,25 +39,42 @@ sys.path.insert(0, str(HERE.parent))
 from run import MemorySampler  # noqa: E402  the same free-memory and swap sampler the coding evals use
 
 RESULTS = HERE.parent / "results" / "imagegen"
-PROMPTS = json.loads((HERE / "prompts.json").read_text())
+PROMPTS = json.loads(Path(os.environ.get("IMAGEGEN_PROMPTS", HERE / "prompts.json")).read_text())
 SEEDS = [7, 42, 1234]
 SIZE = 1024
 JUDGE_MODEL = "claude-opus-5-5"
 CRITERIA = ["subject", "style", "setting", "technical_quality", "composition"]
+# Standing rule from the captain: no written text in generated images (these models garble it); blurred stand-in text
+# only where a scene needs it. Exact text only when the user confirms what and where (then send the prompt with --plain).
+NO_TEXT = ("No text, letters, numbers or logos anywhere. All surfaces are plain and unmarked; "
+           "nothing is written on anything.")
+# FLUX.2 renders realistic prompts as glossy, over-processed HDR; a photographic cue pulls it back. Qwen needs none.
+REALISM_CUE = ("Shot as a candid documentary photograph on a 35 mm lens: natural skin with pores, worn fabric, wet "
+               "asphalt, natural un-retouched contrast and light film grain.")
+REALISM_MODELS = {"flux2-klein-4b"}
+DEFAULT_OPTION_MODELS = ["qwen-turbo", "flux2-klein-4b"]  # standing rule: both models, 3 variants each
+VARIANTS = 3
 MIN_FREE_PCT = 20  # personal rule for this machine: below this, raise it instead of starting a model run
 
 
+def build_prompt(model, prompt, plain=False, cue=True):
+    """What is sent to the model: the captain's prompt plus the standing no-text sentence, plus the realism cue
+    for the models in REALISM_MODELS when the prompt asks for realistic or photographic style."""
+    if plain:
+        return prompt
+    parts = [prompt]
+    if cue and model in REALISM_MODELS and re.search(r"realistic|photograph", prompt, re.I):
+        parts.append(REALISM_CUE)
+    parts.append(NO_TEXT)
+    return " ".join(parts)
+
+
 def backend_cmd(model, prompt, seed, out):
-    if model == "flux3":
-        # FLUX 3 Image Klein 5.6B, 4-bit S, through Draw Things at its recommended (distilled) step count.
-        # The mflux route needs the gated Hugging Face weights, which the captain chose not to unlock.
-        return ["draw-things-cli", "generate", "--local", "--model", "flux_3_klein_i4x.ckpt",
-                "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE), "--output", str(out)]
     if model == "qwen-turbo":
         return ["draw-things-cli", "generate", "--local", "--model", "qwen_image_2.1_turbo_i4x.ckpt",
                 "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE),
                 "--steps", "8", "--output", str(out)]
-    # Three more candidates (PILL-27 shortlist), 6-bit through Draw Things at each model's recommended settings
+    # More candidates (PILL-27 shortlist), 6-bit through Draw Things at each model's recommended settings
     # (steps and guidance), so only the file differs from the two runs above.
     draw_things = {"z-image-turbo": "z_image_turbo_1.0_q6p.ckpt",
                    "flux2-klein-4b": "flux_2_klein_4b_q6p.ckpt",
@@ -64,7 +84,7 @@ def backend_cmd(model, prompt, seed, out):
                 "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE), "--output", str(out)]
     if model == "fake":  # selftest only: a tiny deterministic PNG, no model
         return [sys.executable, str(HERE / "imagegen.py"), "_fake", prompt, str(seed), str(out)]
-    sys.exit(f"unknown model {model}; choose flux3, qwen-turbo, z-image-turbo, flux2-klein-4b, qwen-image-2512")
+    sys.exit(f"unknown model {model}; choose qwen-turbo, z-image-turbo, flux2-klein-4b, qwen-image-2512")
 
 
 def sh(*cmd):
@@ -77,9 +97,11 @@ def sh(*cmd):
 def preflight():
     """Refuse to start while another local model runs or memory is tight. Returns a list of problems."""
     problems = []
-    busy = sh("pgrep", "-fl", "llama-server|mlx_lm|ollama runner|gRPCServerCLI").strip()
+    # A llama-server router (--models-dir) with no child process has no model loaded and holds no memory.
+    busy = [ln for ln in sh("pgrep", "-fl", "llama-server|mlx_lm|ollama runner|gRPCServerCLI").splitlines()
+            if not ("--models-dir" in ln and not sh("pgrep", "-P", ln.split()[0]).strip())]
     if busy:
-        problems.append("a model server is running (stop it first; never kill someone else's): " + busy.splitlines()[0][:120])
+        problems.append("a model server is running (stop it first; never kill someone else's): " + busy[0][:120])
     m = re.search(r"free percentage: (\d+)%", sh("memory_pressure", "-Q"))
     if m and int(m.group(1)) < MIN_FREE_PCT:
         problems.append(f"free memory {m.group(1)}% is under {MIN_FREE_PCT}%")
@@ -109,10 +131,11 @@ def cmd_run(a):
     for pid, prompt in PROMPTS.items():
         for seed in SEEDS:
             img = out / f"{pid}-{seed}.png"
-            cmd = ["/usr/bin/time", "-l"] + backend_cmd(a.model, prompt, seed, img)
+            sent = build_prompt(a.model, prompt, a.plain, not a.no_cue)
+            cmd = ["/usr/bin/time", "-l"] + backend_cmd(a.model, sent, seed, img)
             t0 = time.time()
             r = subprocess.run(cmd, capture_output=True, text=True, timeout=a.timeout)
-            row = {"model": a.model, "prompt_id": pid, "prompt": prompt, "seed": seed, "file": img.name,
+            row = {"model": a.model, "prompt_id": pid, "prompt": prompt, "prompt_sent": sent, "seed": seed, "file": img.name,
                    "seconds": round(time.time() - t0, 1), "cold": first, "exit": r.returncode,
                    **parse_time_l(r.stderr)}
             if r.returncode != 0 or not img.exists():
@@ -120,9 +143,72 @@ def cmd_run(a):
             first = False
             rows.append(row)
             print(json.dumps(row), flush=True)
-    summary = {"model": a.model, "swap_and_memory": sampler.stop(), "size": SIZE, "seeds": SEEDS}
+    summary = {"model": a.model, "swap_and_memory": sampler.stop(), "size": SIZE, "seeds": SEEDS, "plain": a.plain}
     (out / "results.json").write_text(json.dumps({"summary": summary, "images": rows}, indent=1))
     print(f"wrote {out}")
+
+
+def wait_for_memory(wait, force):
+    """Before each model: free memory at least MIN_FREE_PCT and no other model server. Waits up to `wait` seconds."""
+    deadline = time.time() + wait
+    while True:
+        problems = [] if force else preflight()
+        if not problems:
+            return
+        if time.time() >= deadline:
+            sys.exit("refusing to start:\n  " + "\n  ".join(problems))
+        print("waiting:", "; ".join(problems), flush=True)
+        time.sleep(30)
+
+
+OPTIONS_PAGE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image options</title><style>
+body{font-family:system-ui,sans-serif;margin:0;background:#f4f4f5;color:#18181b}
+header{padding:16px 24px;background:#fff;border-bottom:1px solid #d4d4d8}h1{font-size:1.2rem;margin:0 0 4px}p{margin:4px 0}
+.imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin:24px}
+figure{margin:0;background:#fff;border-radius:10px;padding:12px}figure img{width:100%;display:block;border:1px solid #d4d4d8}
+figcaption{font-size:.9rem;margin-top:6px}details{font-size:.8rem;color:#52525b}
+</style></head><body><header><h1>Image options</h1><p>__PROMPT__</p>
+<p>Pick your favourite; the model and seed are under each image (the same seed and prompt re-make it).</p></header>
+<div class="imgs">__FIGS__</div></body></html>"""
+
+
+def cmd_options(a):
+    """Standing rule: for one request, `variants` images from each model (default Qwen Turbo then FLUX.2 klein 4B,
+    3 each = 6 options), one model at a time, fresh seeds, one HTML pick page. Seeds and sent prompts are saved so any
+    favourite can be re-made."""
+    import html
+    models = [m for m in a.models.split(",") if m]
+    rng = random.Random(a.rng)
+    stamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
+    out = Path(a.out) / stamp
+    out.mkdir(parents=True)
+    rows = []
+    for mi, model in enumerate(models):
+        # Each image is its own draw-things-cli process, so the model is unloaded when it exits; check memory
+        # again before the next model loads.
+        wait_for_memory(a.wait, a.force)
+        sent = build_prompt(model, a.prompt, a.plain)
+        for seed in rng.sample(range(1, 2 ** 31), a.variants):
+            img = out / f"{mi + 1}-{model}-{seed}.png"
+            t0 = time.time()
+            r = subprocess.run(backend_cmd(model, sent, seed, img), capture_output=True, text=True, timeout=a.timeout)
+            row = {"model": model, "prompt": a.prompt, "prompt_sent": sent, "seed": seed, "file": img.name,
+                   "seconds": round(time.time() - t0, 1), "exit": r.returncode}
+            if r.returncode != 0 or not img.exists():
+                row["error"] = (r.stderr or r.stdout)[-400:]
+            rows.append(row)
+            print(json.dumps(row), flush=True)
+    (out / "options.json").write_text(json.dumps({"prompt": a.prompt, "plain": a.plain, "options": rows}, indent=1))
+    figs = "".join(
+        f'<figure><img alt="Option {i}" src="{html.escape(r["file"])}"><figcaption>Option {i}: {html.escape(r["model"])}, '
+        f'seed {r["seed"]}</figcaption><details><summary>Prompt sent</summary>{html.escape(r["prompt_sent"])}</details></figure>'
+        for i, r in enumerate((r for r in rows if not r.get("error")), 1))
+    (out / "pick.html").write_text(OPTIONS_PAGE.replace("__PROMPT__", html.escape(a.prompt)).replace("__FIGS__", figs))
+    failed = [r for r in rows if r.get("error")]
+    print(f"wrote {out / 'pick.html'} ({len(rows) - len(failed)} options" + (f", {len(failed)} failed" if failed else "") + ")")
+    if failed:
+        sys.exit(1)
 
 
 def load_run(d):
@@ -257,13 +343,17 @@ def validate_determinism(a):
     if problems and not a.force:
         sys.exit("refusing to start:\n  " + "\n  ".join(problems))
     tmp = Path(tempfile.mkdtemp(prefix="imagegen-det-"))
-    prompt = PROMPTS["coffee-night"]
+    pid = a.prompt_id or next(iter(PROMPTS))
+    prompt = build_prompt(a.model, PROMPTS[pid], a.plain)
     hashes = []
     for i in (1, 2):
         img = tmp / f"d{i}.png"
         subprocess.run(backend_cmd(a.model, prompt, SEEDS[0], img), capture_output=True, text=True, timeout=a.timeout, check=True)
         hashes.append(hashlib.sha256(img.read_bytes()).hexdigest())
-    print(json.dumps({"model": a.model, "identical_bytes": hashes[0] == hashes[1], "sha256": hashes, "dir": str(tmp)}))
+    res = {"model": a.model, "prompt_id": pid, "identical_bytes": hashes[0] == hashes[1], "sha256": hashes, "dir": str(tmp)}
+    if a.against:  # an earlier image of the same model, prompt and seed 7: does today's run reproduce it?
+        res["matches_baseline"] = hashlib.sha256(Path(a.against).read_bytes()).hexdigest() == hashes[0]
+    print(json.dumps(res))
 
 
 def validate_judge(a):
@@ -335,7 +425,7 @@ def fake_png(prompt, seed, path):
 def cmd_selftest(a):
     """Whole pipeline with the fake generator: run -> blind sheet. The judge needs Opus and is not called."""
     tmp = Path(tempfile.mkdtemp(prefix="imagegen-selftest-"))
-    ns = argparse.Namespace(model="fake", out=str(tmp), force=True, timeout=60)
+    ns = argparse.Namespace(model="fake", out=str(tmp), force=True, timeout=60, plain=False, no_cue=False)
     cmd_run(ns)
     run_dir = next(tmp.iterdir())
     rows = load_run(run_dir)
@@ -357,6 +447,18 @@ def main():
     p.add_argument("--out", default=str(RESULTS))
     p.add_argument("--force", action="store_true", help="skip the preflight (another model server or low memory)")
     p.add_argument("--timeout", type=int, default=1800, help="seconds per image")
+    p.add_argument("--plain", action="store_true", help="send each prompt verbatim: no no-text sentence, no realism cue")
+    p.add_argument("--no-cue", action="store_true", help="keep the no-text sentence but skip the realism cue (A/B arm)")
+    p = sub.add_parser("options")
+    p.add_argument("prompt")
+    p.add_argument("--models", default=",".join(DEFAULT_OPTION_MODELS), help="comma list, run one after the other")
+    p.add_argument("--variants", type=int, default=VARIANTS, help="images per model (standing rule: 3)")
+    p.add_argument("--rng", type=int, default=None, help="seed the seed picker (tests)")
+    p.add_argument("--out", default=str(RESULTS / "options"))
+    p.add_argument("--plain", action="store_true")
+    p.add_argument("--force", action="store_true", help="skip the memory check and the wait")
+    p.add_argument("--wait", type=int, default=1800, help="seconds to wait for free memory before each model")
+    p.add_argument("--timeout", type=int, default=1800, help="seconds per image")
     p = sub.add_parser("judge")
     p.add_argument("run_dir", nargs="+")
     p = sub.add_parser("blind")
@@ -369,6 +471,9 @@ def main():
     v.add_argument("model")
     v.add_argument("--force", action="store_true")
     v.add_argument("--timeout", type=int, default=1800)
+    v.add_argument("--plain", action="store_true", help="send the prompt verbatim")
+    v.add_argument("--prompt-id", default=None)
+    v.add_argument("--against", default=None, help="an earlier PNG (same model, prompt id, seed 7) to compare with")
     v = vs.add_parser("judge")
     v.add_argument("run_dir", nargs="+")
     v.add_argument("--pairs", type=int, default=10)
@@ -386,7 +491,7 @@ def main():
         return fake_png(a.prompt, a.seed, a.out)
     if a.cmd == "validate":
         return {"determinism": validate_determinism, "judge": validate_judge, "agreement": validate_agreement}[a.what](a)
-    {"run": cmd_run, "judge": cmd_judge, "blind": cmd_blind, "selftest": cmd_selftest}[a.cmd](a)
+    {"run": cmd_run, "judge": cmd_judge, "blind": cmd_blind, "options": cmd_options, "selftest": cmd_selftest}[a.cmd](a)
 
 
 if __name__ == "__main__":
