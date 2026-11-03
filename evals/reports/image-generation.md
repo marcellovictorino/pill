@@ -49,13 +49,42 @@
 - **Decision (captain):** drop Z-Image Turbo, keep Qwen Turbo as default and FLUX.2 klein 4B as support. The Z-Image and Qwen-Image 2512 downloads were removed from Draw Things' model folder (Z-Image 4.5 GB, the 2512 VAE 243 MB; the 2512 checkpoint was already gone). The shared text encoders stay. The flux_1 VAE (160 MB) may belong to Z-Image and is left in place until confirmed.
 - **FLUX.2 against FLUX 3:** FLUX.2 klein 4B (6-bit) beat the round 1 FLUX 3 Klein (4-bit S): human 4.56 against 3.44, Opus 20.6 against 17.7. The two were not compared in one blind sheet, and they differ in quantisation, text encoder and sampling defaults, so the cause is not isolated. A three-way blind test with new prompts is proposed to settle it.
 
+## Round 3 and the no-text rule
+
+### TLDR
+
+**Verdict:** FLUX 3 Klein is dropped (captain's call; round 3 human mean 3.44 against Qwen Turbo 4.44 and FLUX.2 klein 4B 4.33). Qwen Turbo and FLUX.2 klein 4B are both used for every request: three variants each, six options, through `imagegen.py options`. A standing no-text sentence is now added to every prompt, but the target (lettering on 2 or fewer of 18 images) was **not met**: the best wording leaves lettering on 6 of 18, and cyberpunk-type scenes still show text.
+
+| Check | Result |
+|---|---|
+| Round 3 prompts | cyberpunk night, fashion magazine cover, Mars domes; 2 models x 3 seeds = 18 images per variant |
+| Determinism | Qwen Turbo and FLUX.2 reproduced their round 3 image byte for byte, so round 3 is the baseline |
+| Lettering, no sentence (Opus 5.5, per image yes or no) | Qwen 4 of 9, FLUX.2 8 of 9: 12 of 18 |
+| First wording ("The image contains no text of any kind: signs, screens, labels...") | Qwen 4, FLUX.2 5: 9 of 18 |
+| Strict wording ("IMPORTANT: NEVER WRITE ANY TEXT", naming signs, menus, screens) | Qwen 8, FLUX.2 5: 13 of 18, worse |
+| Short wording ("No text, letters, numbers or logos anywhere.") | Qwen 3, FLUX.2 3: 6 of 18 |
+| Short wording plus "All surfaces are plain and unmarked; nothing is written on anything." (shipped, e-combo) | Qwen 3, FLUX.2 3: 6 of 18 |
+| Realism cue on FLUX.2 (cyberpunk and magazine, 3 seeds each) | Opus judged the cue image more photographic in 6 of 6 pairs, both orders |
+
+### Details
+
+- **Method:** autoresearch-style loop, one prompt lever per variant, same 18 prompts and seeds, same Opus lettering judge ("any legible or garbled text, signs, labels, logos or watermarks"), FLUX.2 realism cue off to isolate the wording. Results per variant, Qwen / FLUX.2 of 9: a-short 3 / 3; b "all surfaces plain and unmarked" 2 / 6; c "clean, text-free image" 3 / 7; d short wording as a prefix 4 / 6; e-combo 3 / 3; f "No text." 3 / 5; g short wording at both ends 3 / 4; j abstract pictograms 9 / 9; k no signage on storefronts 3 / 8; l "no signs, banners or billboards" only 4 / 7; m e-combo plus no signs 3 / 3; n e-combo plus a negative prompt at `--cfg 2` 3 / 3.
+- **What helped:** short wording that names nothing (the long first and strict wordings were worse, and the strict one made Qwen worse); a suffix rather than a prefix; "plain and unmarked surfaces" helped Qwen most (2 of 9 on its own).
+- **What did not:** naming signs, menus or screens (it appears to prompt them), asking for pictograms (every image then carries lettering), repetition, a negative prompt at `--cfg 2`.
+- **The floor:** the cyberpunk prompt keeps lettering in all three seeds for both models under every suffix (food stalls and neon storefronts invite signs); magazine covers and Mars domes are nearly clean once a suffix is present. No wording tried removes it. Use `--plain` or reword the scene per request when a scene is sign-heavy.
+- **No clear winner:** e-combo ties the best count (6 of 18) with the shortest wording and is shipped as the default. With per-model mixing the best is 5 of 18 (Qwen "plain and unmarked" 2, FLUX.2 e-combo 3), still above the target.
+- **Judge:** one Opus 5.5 call per image, so expect a count to move by one or two between runs; the first before/after blind sheet for the captain's own picks was built but not rated.
+- **Realism cue:** FLUX.2 on realistic or photographic prompts gets a documentary-photo cue; Qwen gets none.
+- **Magazine covers:** with the sentence a cover gets no masthead or cover lines.
+
 ## Running it
 
 ```bash
 pill stop
-python3 evals/imagegen/imagegen.py run flux3
 python3 evals/imagegen/imagegen.py run qwen-turbo
-python3 evals/imagegen/imagegen.py run z-image-turbo        # also flux2-klein-4b; qwen-image-2512 does not fit in 24 GB
+python3 evals/imagegen/imagegen.py run flux2-klein-4b       # also z-image-turbo; qwen-image-2512 does not fit in 24 GB; add --plain to send prompts verbatim
+python3 evals/imagegen/imagegen.py options "your prompt"    # six options: 3 Qwen Turbo then 3 FLUX.2, one pick page (pick.html)
+python3 -m unittest discover -s evals/imagegen              # unit tests, no model
 python3 evals/imagegen/imagegen.py judge <run-dir> <run-dir>      # Opus 5.5, uses the plan allowance
 python3 evals/imagegen/imagegen.py blind <run-dir> <run-dir>      # sheet.html to rate, key.json to open afterwards
 python3 evals/imagegen/imagegen.py validate agreement ratings-imagegen.json key.json <run-dir> <run-dir>
@@ -63,4 +92,4 @@ python3 evals/imagegen/imagegen.py validate agreement ratings-imagegen.json key.
 
 ## Sources
 
-`evals/imagegen/imagegen.py` (tool and `validate`), `evals/imagegen/prompts.json`. Raw runs, judge output and the blind sheet were kept outside the repository.
+`evals/imagegen/imagegen.py` (tool and `validate`), `evals/imagegen/prompts.json`, `evals/imagegen/prompts-round3.json`. FLUX 3 Image Klein was dropped from the runner after round 3 (below); its numbers above are history and cannot be re-run from this tool. Raw runs, judge output and the blind sheet were kept outside the repository.
