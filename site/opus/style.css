@@ -683,3 +683,6 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
 .champ-time { margin: 0; color: var(--ink-3); font-size: 0.88rem; font-style: italic; }
 
 .code-next { margin-top: 0.75rem; }
+
+/* one chip around a multi-line command, instead of one per line */
+.code pre code.multi { display: inline-block; }
