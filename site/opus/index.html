@@ -228,11 +228,18 @@
             <p class="champ-ref"><a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">View the model on Hugging Face</a></p>
           </div>
           <dl class="champ-stats">
-            <div><dt>Tier 2 runs passed</dt><dd><span data-count="5">5</span> of 5</dd></div>
-            <div><dt>Throughput</dt><dd>≈ <span data-count="25">25</span> tok/s</dd></div>
+            <div><dt>Quality gate</dt><dd><span data-count="22">22</span>/22</dd></div>
+            <div>
+              <dt>Throughput</dt><dd>≈ <span data-count="25">25</span> tok/s</dd>
+              <dt class="times-label">Time to complete</dt>
+              <dd class="times">
+                <span class="t-main">MiniCPM 4.7 min</span>
+                <span class="t-ref">Sonnet 5.5 0.2 min</span>
+                <span class="t-ref">Opus 5.5 0.4 min</span>
+              </dd>
+            </div>
           </dl>
           <p class="champ-ref">Measured on a MacBook M4 with 24 GB.</p>
-          <p class="champ-time">Tier 2 took MiniCPM 4.7 minutes on average (2.5 to 8.9 over 5 runs, MacBook M4 with 24 GB). For reference, the same task with two runs each: Opus 5.5 25 seconds, Sonnet 5.5 14 seconds and Haiku 5.5 91 seconds, all scoring 22/22.</p>
           <p class="champ-cmd"><code>pill bench summary</code> ranks benchmarked models.</p>
         </article>
       </div>
