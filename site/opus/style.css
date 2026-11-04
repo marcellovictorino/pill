@@ -701,3 +701,7 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
   background: linear-gradient(90deg, var(--cyan) 50%, var(--ink) 50%);
   box-shadow: 0 0 8px rgba(127, 220, 255, 0.5); transform: rotate(-28deg);
 }
+
+/* breathing room between the highlight and the command text */
+.code pre code { padding: 0.3em 0.9em; }
+.code pre code.multi { padding: 0.55em 1.1em; border-radius: 18px; line-height: 1.7; }
