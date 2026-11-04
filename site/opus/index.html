@@ -135,7 +135,9 @@
           <h2 id="pi-title">Pi, the lightest harness.</h2>
           <p class="section-lede">pill opens the <a href="https://github.com/badlogic/pi-mono" rel="noopener" target="_blank">Pi coding agent<span class="sr-only"> (opens in a new tab)</span></a>. Pi is a deliberately minimal coding harness.</p>
           <p>Local models have limited context windows. Because Pi keeps its prompt and tool overhead small, more of that window is left for your code.</p>
-          <p>pill runs your local model on Pi with a 64k-token context window. That is room for real agent work across long sessions, not a toy chat of five messages. A larger quant leaves less memory for the window, so lower it with <code>--ctx</code> when you try one.</p>
+          <p class="ctx-claim">With <strong>64k context window</strong> as default</p>
+          <p class="ctx-sub">Enough for <strong>real agent work</strong>, not a toy chatbot with 5 message history.</p>
+          <p class="ctx-tip"><code>--ctx</code> can be used to reduce the context window if needed.</p>
         </header>
 
         <figure class="context reveal">

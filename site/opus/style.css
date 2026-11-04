@@ -708,3 +708,9 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
 .code pre code { padding: 0.3em 0.9em; }
 .code pre code.multi { padding: 0.55em 1.1em; border-radius: 18px; line-height: 1.7; }
 .champ-body .eyebrow span { letter-spacing: 0; margin-left: 0.15em; font-size: 1.1em; }
+
+.ctx-claim { font-size: 1.5rem; line-height: 1.25; margin: 1.6rem 0 0.3rem; color: var(--ink); }
+.ctx-claim strong, .ctx-sub strong { color: var(--cyan); font-weight: 700; }
+.ctx-claim strong { text-shadow: 0 0 14px rgba(127, 220, 255, 0.5); }
+.ctx-sub { margin: 0; color: var(--ink-2); }
+.ctx-tip { margin: 1rem 0 0; font-size: 0.9rem; font-style: italic; color: var(--ink-3); }
