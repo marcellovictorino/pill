@@ -34,6 +34,11 @@ type Variant struct {
 // and unified memory). Tier1 and Tier2 are "pass", "relaxed" (passed only
 // with limits looser than pill's defaults), "fail", or empty when the tier did
 // not run. A missing measurement is "no result", never a failure.
+//
+// The detail fields come from results.json (tier1_seconds, tier2_score,
+// min_free_pct, swap_growth_mb, reason) and the Tier 3 index. A zero or nil
+// field means "not measured", never a measured zero. Records backfilled from
+// the reports summarise a batch by its least favourable reported value.
 type Measurement struct {
 	Chip     string  `toml:"chip"`
 	RAMGB    int     `toml:"ram_gb"`
@@ -47,7 +52,40 @@ type Measurement struct {
 	LlamaCpp string  `toml:"llama_cpp"`
 	Gate     string  `toml:"gate"` // limits used, e.g. "tier 1 60 s, tier 2 15 min"
 	Source   string  `toml:"source"`
-	Note     string  `toml:"note"`
+	// SourceRow is the first cell of the report table row this record was
+	// converted from, so a test can compare the two.
+	SourceRow string `toml:"source_row"`
+	Note      string `toml:"note"`
+
+	Tier1Seconds  float64 `toml:"tier1_seconds"`   // time to the first reply
+	Tier2Score    int     `toml:"tier2_score"`     // hidden tests passed; meaningful when Tier2Total > 0
+	Tier2Total    int     `toml:"tier2_total"`     // hidden tests in the task; 0 when Tier 2 did not score
+	Tier2Minutes  float64 `toml:"tier2_minutes"`   // wall time of the Tier 2 run
+	Tier2TimedOut bool    `toml:"tier2_timed_out"` // the Tier 2 cap was hit
+	// MinFreePct and SwapMB are pointers because zero swap is a result.
+	MinFreePct *float64    `toml:"min_free_pct"` // lowest free memory during the run
+	SwapMB     *float64    `toml:"swap_mb"`      // swap growth during the run
+	FailReason string      `toml:"fail_reason"`  // why the run did not pass
+	Tier3      []Tier3Task `toml:"tier3"`        // empty when Tier 3 did not run
+}
+
+// Tier3Task is one Tier 3 task result. Tier 3 has no pass mark; the score is
+// the hidden test score out of 100. With one run, Median is that run's score.
+type Tier3Task struct {
+	Task   string  `toml:"task"`
+	Median float64 `toml:"median"`
+	Min    float64 `toml:"min"` // 0 when Runs is 1
+	Max    float64 `toml:"max"` // 0 when Runs is 1
+	Runs   int     `toml:"runs"`
+}
+
+// Tried is a model that was benchmarked but is not offered: it has no
+// download reference, so it never appears as something to pull. It exists to
+// hold its measurements, so `pill catalog` can show what a device cannot do.
+type Tried struct {
+	Name         string        `toml:"name"` // display name, e.g. "Qwen3-8B Q4_K_M"
+	Ctx          int           `toml:"ctx"`  // 0 when not recorded
+	Measurements []Measurement `toml:"measurement"`
 }
 
 // Family is one model with its variants.
@@ -68,6 +106,7 @@ type Family struct {
 // Catalog is the parsed catalog.toml.
 type Catalog struct {
 	Families []Family `toml:"model"`
+	Tried    []Tried  `toml:"tried"`
 }
 
 // Entry is a family + variant + context size resolved from a pill name.
