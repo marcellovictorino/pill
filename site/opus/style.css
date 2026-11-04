@@ -693,7 +693,7 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
 .champ-stats dd.times { display: grid; gap: 0.1rem; font-size: 0.95rem; font-weight: 600; }
 .champ-stats dd.times span { text-shadow: none; }
 .champ-stats dd.times .t-main { color: var(--cyan); text-shadow: 0 0 14px rgba(127, 220, 255, 0.6); }
-.champ-stats dd.times .t-ref { color: var(--ink-3); font-weight: 400; }
+.champ-stats dd.times .t-ref { color: var(--ink-3); font-weight: 400; font-size: 0.82rem; }
 
 .task-list { list-style: none; margin: 0.6rem 0 0; padding: 0; color: var(--ink-2); font-size: 0.95rem; }
 .task-list li { display: flex; align-items: center; gap: 0.6rem; margin: 0.3rem 0; }
