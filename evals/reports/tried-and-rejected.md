@@ -171,3 +171,35 @@ Not adopted. It is slower than the default and no better in quality.
 - **Not tried:** the smaller `PTQ1_0` file (5.9 GB); PrismML measures it slower at reading prompts, so it
   would not fix the cold start. A faster Mac (M4 Pro or later) might fit the Tier 1 limit but would not
   change the decoding speed or the Tier 2 behaviour.
+
+## 16 GB M2 Pro, 2026-11-04
+
+Everything above ran on a 24 GB M4. This block is the first batch on a 16 GB M2 Pro (macOS 27.2, pill 0.4.1, llama.cpp
+build 11960, one run each, 32k context unless noted). None passed both tiers, so none is adopted; the default MiniCPM-V 4.7
+also fails Tier 1 on this Mac (6% free, 845 MB swap growth), so there is no champion to beat here. Full table, setup and
+caveats in [the report](m2-pro-16gb-2026-11-04.md). Every GGUF was deleted after its run; re-pull with the references below the table.
+
+| Model | Result | Tier 1 | Tier 2 | tok/s | Lowest free | Issues seen |
+|---|---|---|---|---|---|---|
+| NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL | Failed | 28 s | 20/22 in 7.1 min | 25 | 22% | Accuracy |
+| Ornith 1.5 9B Q6_K | Failed | 38 s | 18/22 in 10.8 min | 23 | 16% | Accuracy; swap up 911 MB |
+| Qwen3.5 9B UD-Q4_K_XL | Failed | 31 s | 21/22, hit the 15-min cap | 24 | 24% | Latency |
+| Qwen3.5 9B UD-Q4_K_XL, MTP (spec-type draft-mtp) | Failed | 33 s | 18/22, hit the 15-min cap | 43 | 32% | Accuracy and latency; MTP nearly doubled decoding but not the score |
+| Qwen3.6 35B-A3B UD-IQ1_M | Failed | 31 s | Not run | 42 | 8% | Memory (a `go test` run overlapped); swap up 544 MB |
+| Qwen3.6 35B-A3B UD-IQ1_M, 16k context | Failed | 27 s | 19/22 in 5.0 min | 43 | 11% | Accuracy; the closest MoE run, fastest finish |
+| Qwen3.8 27B UD-IQ2_S | Failed | 116 s | Not run | 8 | 10% | Latency (dense prefill); swap up 1080 MB |
+| MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS (default) | Failed | 31 s | Not run | 30 | 6% | Memory; swap up 845 MB |
+| LiquidAI LFM2.5 24B-A2B UD-Q3_K_XL | Failed | 22 s | Not run | - | 7% | Empty reply; memory |
+| Meta Muse Glimmer 30B UD-IQ2_XXS | Failed | 97 s | Not run | - | 15% | Latency; empty reply (thinking) |
+| flint (RecursiveSI) UD-IQ2_XXS | Failed | 13 s | Not run | - | 5% | Load/compute: HTTP 500 `Compute error`; memory; swap up 198 MB |
+| LiquidAI LFM2.5 24B-A2B Q4_K_M | Failed | 8 s | Not run | - | 51% | Load/compute: HTTP 500 `Compute error` |
+
+- **References:** Hugging Face files are `hf.co/unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF:UD-Q8_K_XL`, `hf.co/ornith-ai/Ornith-1.5-9B-GGUF:Q6_K`,
+  `hf.co/unsloth/Qwen3.5-9B-GGUF:UD-Q4_K_XL`, `hf.co/unsloth/Qwen3.5-9B-MTP-GGUF:UD-Q4_K_XL`,
+  `hf.co/unsloth/Qwen3.6-35B-A3B-GGUF:UD-IQ1_M`, `hf.co/unsloth/Qwen3.8-27B-GGUF:UD-IQ2_S`,
+  `hf.co/unsloth/LFM2.5-24B-A2B-GGUF:UD-Q3_K_XL`, `hf.co/LiquidAI/LFM2.5-24B-A2B-GGUF:Q4_K_M`,
+  `hf.co/unsloth/Muse-Glimmer-30B-GGUF:UD-IQ2_XXS` and `hf.co/unsloth/flint-GGUF:UD-IQ2_XXS`.
+- **Skipped:** Qwen3.8 Flash Next (about 70 GB), Ternary Bonsai 2 (needs PrismML's fork), and the Ornith 1.5 35B-A3B, Qwen3.6 35B
+  IQ2_M and Qwen3.8 27B IQ3_XXS quants from the 24 GB runs (10.9 to 13 GB with a KV cache exceed this Mac's roughly 10.7 GB Metal limit).
+- **Re-test only after:** a smaller KV cache or quant for Qwen3.6 35B (16k got 19/22 in 5 min), an MTP file for a 9B model that
+  scores 22/22 without it, or a 24 GB Mac.

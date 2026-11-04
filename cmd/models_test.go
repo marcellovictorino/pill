@@ -70,14 +70,14 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	if !strings.Contains(r.out, "recommendations[0]:") || !strings.Contains(r.out, "tried_on_this_mac[") {
 		t.Fatalf("nothing passes on 16 GB, so the tried block must follow an empty shortlist:\n%s", r.out)
 	}
-	// Qwen3-8B (17/22) is closer to a pass than gemma-4-E4B (16/22).
-	i8, iE4 := strings.Index(r.out, "Qwen3-8B Q4_K_M"), strings.Index(r.out, "gemma-4-E4B Q4_K_M")
-	if i8 < 0 || iE4 < 0 || i8 > iE4 || !strings.Contains(r.out, "17/22") {
+	// Qwen3.5 9B (21/22) is closer to a pass than Ornith 1.5 9B (18/22).
+	i21, i18 := strings.Index(r.out, "Qwen3.5 9B UD-Q4_K_XL"), strings.Index(r.out, "Ornith 1.5 9B Q6_K")
+	if i21 < 0 || i18 < 0 || i21 > i18 || !strings.Contains(r.out, "21/22") {
 		t.Errorf("tried models must be ordered by Tier 2 score:\n%s", r.out)
 	}
 	// Tried models hold results only: the download table lists catalog files.
 	table := r.out[strings.Index(r.out, "catalog["):]
-	if strings.Contains(table, "Qwen3-8B") {
+	if strings.Contains(table, "Qwen3.5 9B") {
 		t.Errorf("a tried model must not appear as a download:\n%s", table)
 	}
 
