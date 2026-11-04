@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pill: local coding agent for Apple Silicon</title>
+  <meta name="description" content="pill runs the Pi coding agent against local language models served by llama.cpp. Free and open source, for Apple Silicon Macs.">
+  <meta name="theme-color" content="#05070d">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 24'%3E%3Cg transform='rotate(-28 24 12)'%3E%3Cpath d='M13 1.5H24V22.5H13A10.5 10.5 0 0 1 13 1.5Z' fill='%237fdcff'/%3E%3Cpath d='M24 1.5H35A10.5 10.5 0 0 1 35 22.5H24Z' fill='%23e9eef8'/%3E%3C/g%3E%3C/svg%3E">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="pill: local coding agent for Apple Silicon">
+  <meta property="og:description" content="Run the Pi coding agent on your own Mac with local models. No subscription. Free and open source.">
+  <meta property="og:url" content="https://marcellovictorino.github.io/pill/">
+  <meta property="og:image" content="https://marcellovictorino.github.io/pill/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="style.css">
+  <noscript><style>.reveal{opacity:1!important;transform:none!important}</style></noscript>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="progress" aria-hidden="true"><span class="progress-bar"></span></div>
+
+  <header class="site-header">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="#top" aria-label="pill, back to top">
+        <svg class="brand-mark" viewBox="0 0 48 24" aria-hidden="true">
+          <g transform="rotate(-28 24 12)">
+            <path d="M13 1.5H24V22.5H13A10.5 10.5 0 0 1 13 1.5Z" fill="#7fdcff"/>
+            <path d="M24 1.5H35A10.5 10.5 0 0 1 35 22.5H24Z" fill="#e9eef8"/>
+          </g>
+        </svg>
+        <span>pill</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#mac">Your Mac</a></li>
+        <li><a href="#pi">Pi</a></li>
+        <li><a href="#commands">Commands</a></li>
+        <li><a href="#bench">Bench</a></li>
+        <li><a href="#install">Install</a></li>
+      </ul>
+      <a class="btn btn-ghost btn-sm" href="https://github.com/marcellovictorino/pill" rel="noopener" target="_blank">GitHub<span class="sr-only"> (opens in a new tab)</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- 1. Hero -->
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="badge"><span class="badge-dot" aria-hidden="true"></span>Free &amp; open source · MIT</p>
+          <h1 id="hero-title">No subscription, <span class="glow">no problem!</span></h1>
+          <p class="joke">
+            <span class="sr-only">You get tokens, you get tokens, you get tokens.</span>
+            <span class="joke-line" aria-hidden="true">You get tokens,</span>
+            <span class="joke-line" aria-hidden="true">you get tokens,</span>
+            <span class="joke-line" aria-hidden="true">you get tokens.</span>
+          </p>
+          <p class="lede">pill runs coding-agent models on your own Mac.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="#install">Get started</a>
+            <a class="btn btn-ghost" href="https://github.com/marcellovictorino/pill" rel="noopener" target="_blank">
+              <svg viewBox="0 0 24 24" aria-hidden="true" class="icon"><path d="M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 9a9 9 0 0 1-9 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              View on GitHub<span class="sr-only"> (opens in a new tab)</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-art" aria-hidden="true">
+          <div class="halo"></div>
+          <div class="capsule-float">
+            <div class="capsule">
+              <span class="half half-a"></span>
+              <span class="half half-b"></span>
+            </div>
+          </div>
+          <div class="orbit orbit-1"></div>
+          <div class="orbit orbit-2"></div>
+        </div>
+      </div>
+      <a class="scroll-cue" href="#mac" aria-label="Scroll to next section"><span></span></a>
+    </section>
+
+    <!-- 2. Runs on your Mac -->
+    <section class="section" id="mac" aria-labelledby="mac-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow"><span class="pill-chip" aria-hidden="true"></span>01 · Local</p>
+          <h2 id="mac-title">Runs on your Mac.</h2>
+          <p class="section-lede">pill runs a local model that fits your machine. Apple Silicon (M-series) Macs are the focus, and the only platform for now.</p>
+        </header>
+
+        <div class="cards cards-3">
+          <article class="card reveal">
+            <svg class="card-icon" viewBox="0 0 64 64" aria-hidden="true">
+              <rect x="14" y="14" width="36" height="36" rx="7" fill="none" stroke="#7fdcff" stroke-width="2"/>
+              <path d="M22 8v6M32 8v6M42 8v6M22 50v6M32 50v6M42 50v6M8 22h6M8 32h6M8 42h6M50 22h6M50 32h6M50 42h6" stroke="#e9eef8" stroke-opacity=".5" stroke-width="2" stroke-linecap="round"/>
+              <text x="32" y="38" text-anchor="middle" font-size="16" font-weight="700" fill="#e9eef8" font-family="system-ui, sans-serif">M</text>
+            </svg>
+            <h3>Sized to your machine</h3>
+            <p>Built for Apple Silicon M-series Macs, running a local model that fits the machine in front of you.</p>
+          </article>
+
+          <article class="card reveal">
+            <svg class="card-icon" viewBox="0 0 64 64" aria-hidden="true">
+              <rect x="8" y="12" width="48" height="40" rx="8" fill="none" stroke="#e9eef8" stroke-opacity=".6" stroke-width="2"/>
+              <path d="M17 26l6 5-6 5M28 37h12" fill="none" stroke="#7fdcff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3><code>pill catalog</code></h3>
+            <p>Lists the models pill can download and shows the variant recommended for this machine's RAM.</p>
+          </article>
+
+          <article class="card reveal">
+            <svg class="card-icon" viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M32 8l20 8v14c0 13-9 22-20 26-11-4-20-13-20-26V16z" fill="none" stroke="#7fdcff" stroke-width="2"/>
+              <path d="M24 32l6 6 11-12" fill="none" stroke="#e9eef8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h3>Stays on your computer</h3>
+            <ul class="nope-list">
+              <li>No account</li>
+              <li>No API key</li>
+              <li>No per-token bill</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"><span></span></div>
+
+    <!-- 3. Pi -->
+    <section class="section" id="pi" aria-labelledby="pi-title">
+      <div class="wrap split">
+        <header class="section-head reveal">
+          <p class="eyebrow"><span class="pill-chip" aria-hidden="true"></span>02 · Harness</p>
+          <h2 id="pi-title">Pi, the lightest harness.</h2>
+          <p class="section-lede">pill opens the <a href="https://github.com/badlogic/pi-mono" rel="noopener" target="_blank">Pi coding agent<span class="sr-only"> (opens in a new tab)</span></a>. Pi is a deliberately minimal coding harness.</p>
+          <p>Local models have limited context windows. Because Pi keeps its prompt and tool overhead small, more of that window is left for your code.</p>
+          <p class="ctx-claim">With <strong>64k context window</strong> as default</p>
+          <p class="ctx-sub">Enough for <strong>real agent work</strong>, not a toy chatbot with 5 message history.</p>
+          <p class="ctx-tip"><code>--ctx</code> can be used to reduce the context window if needed.</p>
+        </header>
+
+        <figure class="context reveal">
+          <figcaption>A local model's context window <span class="muted">(illustration, not to scale)</span></figcaption>
+          <div class="ctx-row">
+            <span class="ctx-label">Heavier harness</span>
+            <div class="ctx-bar">
+              <span class="ctx-overhead ctx-heavy">prompt + tools</span>
+              <span class="ctx-code">your code</span>
+            </div>
+          </div>
+          <div class="ctx-row">
+            <span class="ctx-label">Pi</span>
+            <div class="ctx-bar ctx-bar-pi">
+              <span class="ctx-overhead ctx-light"><span class="sr-only">prompt + tools</span></span>
+              <span class="ctx-code">your code</span>
+            </div>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"><span></span></div>
+
+    <!-- 4. Built on giants -->
+    <section class="section" id="commands" aria-labelledby="giants-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow"><span class="pill-chip" aria-hidden="true"></span>03 · Foundations</p>
+          <h2 id="giants-title">Built on giants.</h2>
+          <p class="section-lede">pill is a thin wrapper around <a href="https://github.com/ggml-org/llama.cpp" rel="noopener" target="_blank">llama.cpp<span class="sr-only"> (opens in a new tab)</span></a>, adding the convenience and ergonomics people know from Ollama.</p>
+        </header>
+
+        <div class="terminal reveal" data-typewriter>
+          <div class="term-bar" aria-hidden="true">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="term-title">~ pill</span>
+          </div>
+          <ul class="term-body" aria-label="pill commands">
+            <li class="t-line"><code class="t-cmd">pill catalog</code><span class="t-desc">what pill can download, with the variant recommended for your RAM</span></li>
+            <li class="t-line"><code class="t-cmd">pill pull &lt;name&gt;</code><span class="t-desc">download a model (resumes, verifies sha256)</span></li>
+            <li class="t-line"><code class="t-cmd">pill add &lt;name&gt; --unverified</code><span class="t-desc">register it with the router and Pi</span></li>
+            <li class="t-line"><code class="t-cmd">pill ls</code><span class="t-desc">list local models and their state: pulled, unverified, passed, failed, missing</span></li>
+            <li class="t-line"><code class="t-cmd">pill default &lt;name&gt;</code><span class="t-desc">choose the default model</span></li>
+            <li class="t-line"><code class="t-cmd">pill ps</code><span class="t-desc">router state, port, loaded model and its memory</span></li>
+            <li class="t-line"><code class="t-cmd">pill serve</code><span class="t-desc">start the router for any OpenAI-compatible client at http://127.0.0.1:11435/v1</span></li>
+            <li class="t-line"><code class="t-cmd">pill stop</code><span class="t-desc">unload the model and free memory</span></li>
+            <li class="t-line t-hero"><code class="t-cmd">pill</code><span class="t-desc">start the router if needed and open Pi on your default model</span></li>
+          </ul>
+        </div>
+
+        <aside class="callout reveal" aria-label="About pill run">
+          <span class="callout-pill" aria-hidden="true">no <code>run</code></span>
+          <p>There is no <code>pill run</code> command. Bare <code>pill</code> starts the router if needed and opens Pi on your default model.</p>
+        </aside>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"><span></span></div>
+
+    <!-- 5. Bench -->
+    <section class="section" id="bench" aria-labelledby="bench-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow"><span class="pill-chip" aria-hidden="true"></span>04 · Benchmarks</p>
+          <h2 id="bench-title">Benchmarked in tiers, hunting a champion.</h2>
+          <p class="section-lede"><code>pill bench run &lt;name&gt;</code> gates every model. The benchmark is re-run as new models are released or llama.cpp gains new flags, always looking for a new Champion.</p>
+        </header>
+
+        <ol class="stairs">
+          <li class="step step-1 reveal">
+            <span class="step-tag">Tier 1 · gate</span>
+            <h3>Cold start</h3>
+            <p>A cold-start reply check.</p>
+          </li>
+          <li class="step step-2 reveal">
+            <span class="step-tag">Tier 2 · gate</span>
+            <h3>Coding task</h3>
+            <p>Build a tic-tac-toe engine and CLI in Node.js, checked by <strong class="stat"><span data-count="22">22</span></strong> hidden tests. All must pass.</p>
+          </li>
+          <li class="step step-3 reveal">
+            <span class="crown-marker" aria-hidden="true">
+              <svg viewBox="0 0 32 22"><path d="M2 20L4 6l7 6 5-10 5 10 7-6 2 14z" fill="#7fdcff"/></svg>
+            </span>
+            <span class="step-tag">Tier 3 · separate evaluations</span>
+            <h3>Real-world tasks</h3>
+            <p>Bigger, more varied work that shows where each model is strong:</p>
+            <ul class="task-list">
+              <li>Fixing a CLI in Go</li>
+              <li>Analysing data in Python</li>
+              <li>Building landing pages</li>
+              <li>Building a single-page app in TypeScript</li>
+            </ul>
+          </li>
+        </ol>
+
+        <article class="champion reveal" aria-labelledby="champ-title">
+          <div class="champ-crown" aria-hidden="true">
+            <svg viewBox="0 0 32 22"><path d="M2 20L4 6l7 6 5-10 5 10 7-6 2 14z" fill="none" stroke="#7fdcff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="champ-body">
+            <p class="eyebrow">Current champion<span aria-hidden="true">*</span></p>
+            <h3 id="champ-title">MiniCPM-V 4.7 IQ2</h3>
+            <p class="champ-ref"><a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">View the model on Hugging Face</a></p>
+          </div>
+          <dl class="champ-stats">
+            <div><dt>Quality gate</dt><dd><span data-count="22">22</span>/22</dd></div>
+            <div>
+              <dt>Throughput</dt><dd>≈ <span data-count="25">25</span> tok/s</dd>
+              <dt class="times-label">Time to complete</dt>
+              <dd class="times">
+                <span class="t-main">MiniCPM 4.7 min</span>
+                <span class="t-ref">Sonnet 5.5 0.2 min</span>
+                <span class="t-ref">Opus 5.5 0.4 min</span>
+              </dd>
+            </div>
+          </dl>
+          <p class="champ-ref champ-foot">* Measured on a MacBook M4 with 24 GB, at a 64k-token context window.</p>
+          <p class="champ-cmd"><code>pill bench summary</code> ranks benchmarked models.</p>
+        </article>
+      </div>
+    </section>
+
+    <div class="divider" aria-hidden="true"><span></span></div>
+
+    <!-- 6. Install -->
+    <section class="section" id="install" aria-labelledby="install-title">
+      <div class="wrap">
+        <header class="section-head reveal">
+          <p class="eyebrow"><span class="pill-chip" aria-hidden="true"></span>05 · Install</p>
+          <h2 id="install-title">Take your first pill.</h2>
+          <p class="section-lede">Apple Silicon Mac, Homebrew and Go. Six steps from nothing to a local coding agent.</p>
+        </header>
+
+        <ol class="install">
+          <li class="install-step reveal">
+            <h3><span class="num">1</span>Requirements</h3>
+            <div class="code">
+              <pre><code class="multi">brew install llama.cpp &amp;&amp; \
+brew install pi-coding-agent</code></pre>
+              <button class="copy" type="button" aria-label="Copy requirements commands">Copy</button>
+            </div>
+          </li>
+          <li class="install-step reveal">
+            <h3><span class="num">2</span>Install pill</h3>
+            <div class="code">
+              <pre><code class="multi">go install github.com/marcellovictorino/pill@latest
+echo 'export PATH="$HOME/go/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
+              <button class="copy" type="button" aria-label="Copy install commands">Copy</button>
+            </div>
+          </li>
+          <li class="install-step reveal">
+            <h3><span class="num">3</span>Turn on tab completion (zsh) <span class="optional">optional</span></h3>
+            <div class="code">
+              <pre><code>echo 'source &lt;(pill completion zsh)' &gt;&gt; ~/.zshrc</code></pre>
+              <button class="copy" type="button" aria-label="Copy completion command">Copy</button>
+            </div>
+            <p class="note">Open a new terminal, then <code>pill bench run mini</code> and Tab fills in the model name.</p>
+          </li>
+          <li class="install-step reveal">
+            <h3><span class="num">4</span>Check the setup</h3>
+            <div class="code">
+              <pre><code>pill doctor</code></pre>
+              <button class="copy" type="button" aria-label="Copy doctor command">Copy</button>
+            </div>
+            <p class="note">Confirms llama.cpp and Pi are found. pill never installs them for you.</p>
+          </li>
+          <li class="install-step reveal">
+            <h3><span class="num">5</span>Pull, test and register the champion</h3>
+            <div class="code">
+              <pre><code>pill bench run minicpm-v4-7</code></pre>
+              <button class="copy" type="button" aria-label="Copy benchmark command">Copy</button>
+            </div>
+            <p class="note">Downloads <a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">MiniCPM-V 4.7 IQ2</a> (11.3 GB), runs the tier 1 and 2 gate on your Mac and registers it with Pi only if it passes. A run can take up to about 25 minutes. Run <code>pill catalog</code> to see what is measured on your device.</p>
+          </li>
+          <li class="install-step reveal">
+            <h3><span class="num">6</span>Have fun!</h3>
+            <div class="code">
+              <pre><code>pill</code></pre>
+              <button class="copy" type="button" aria-label="Copy pill command">Copy</button>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <div class="footer-brand">
+        <svg class="brand-mark" viewBox="0 0 48 24" aria-hidden="true">
+          <g transform="rotate(-28 24 12)">
+            <path d="M13 1.5H24V22.5H13A10.5 10.5 0 0 1 13 1.5Z" fill="#7fdcff"/>
+            <path d="M24 1.5H35A10.5 10.5 0 0 1 35 22.5H24Z" fill="#e9eef8"/>
+          </g>
+        </svg>
+        <span>pill</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="https://github.com/marcellovictorino/pill" rel="noopener" target="_blank">github.com/marcellovictorino/pill<span class="sr-only"> (opens in a new tab)</span></a></li>
+        <li>MIT licence</li>
+      </ul>
+      <p class="footer-note">Issues welcome. Pull requests are not accepted; please open an issue instead.</p>
+      <p class="credit">Music: <a href="https://www.youtube.com/watch?v=CLiXUT3MS34" rel="noopener" target="_blank">Pill by Heuse &amp; Zeus x Crona (feat. Emma Sameth) [NCS Release]<span class="sr-only"> (opens in a new tab)</span></a>. Music provided by NoCopyrightSounds.</p>
+    </div>
+  </footer>
+
+  <button class="music" type="button" aria-pressed="false" aria-label="Click here for the full Pilled experience">
+    <span class="eq" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+    <span class="music-label">Click here for the full Pilled experience</span>
+  </button>
+  <div class="music-frame" id="music-frame"></div>
+</body>
+</html>
