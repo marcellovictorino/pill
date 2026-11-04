@@ -44,7 +44,7 @@ func newEnv(t *testing.T) *env {
 		dir = r // macOS temp dirs sit behind a /var -> /private/var symlink
 	}
 	e := &env{t: t, dir: dir, port: testutil.FreePort(t), fakes: testutil.InstallFakes(t),
-		sys: &sysinfo.Fake{RAM: 24 << 30, RSS: 12 << 30, OS: "27.0", Samples: []sysinfo.Sample{{FreePct: 40, Pressure: 1, GPUUtilPct: -1, GPUMemBytes: 15 << 30}}}}
+		sys: &sysinfo.Fake{RAM: 24 << 30, Chip: "Apple M4", RSS: 12 << 30, OS: "27.0", Samples: []sysinfo.Sample{{FreePct: 40, Pressure: 1, GPUUtilPct: -1, GPUMemBytes: 15 << 30}}}}
 	t.Setenv("HOME", filepath.Join(dir, "home"))
 	t.Setenv("PILL_HOME", filepath.Join(dir, "pill"))
 	t.Setenv("PI_CODING_AGENT_DIR", filepath.Join(dir, "piagent"))

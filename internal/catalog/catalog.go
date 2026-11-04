@@ -25,12 +25,40 @@ type Variant struct {
 	Ctx      int     `toml:"ctx"`
 	MinRAMGB int     `toml:"min_ram_gb"`
 	Default  bool    `toml:"default"`
+	// Measurements are benchmark results for this variant, each tied to one
+	// exact device profile. They are the only evidence behind a recommendation.
+	Measurements []Measurement `toml:"measurement"`
+}
+
+// Measurement is one pill benchmark result on one exact device profile (chip
+// and unified memory). Tier1 and Tier2 are "pass", "relaxed" (passed only
+// with limits looser than pill's defaults), "fail", or empty when the tier did
+// not run. A missing measurement is "no result", never a failure.
+type Measurement struct {
+	Chip     string  `toml:"chip"`
+	RAMGB    int     `toml:"ram_gb"`
+	Ctx      int     `toml:"ctx"`
+	Tier1    string  `toml:"tier1"`
+	Tier2    string  `toml:"tier2"`
+	TokPerS  float64 `toml:"tok_per_s"` // 0 when not recorded
+	Runs     int     `toml:"runs"`
+	Date     string  `toml:"date"`
+	Pill     string  `toml:"pill"`
+	LlamaCpp string  `toml:"llama_cpp"`
+	Gate     string  `toml:"gate"` // limits used, e.g. "tier 1 60 s, tier 2 15 min"
+	Source   string  `toml:"source"`
+	Note     string  `toml:"note"`
 }
 
 // Family is one model with its variants.
 type Family struct {
-	Name      string         `toml:"name"`
-	Repo      string         `toml:"repo"`
+	Name string `toml:"name"`
+	Repo string `toml:"repo"`
+	// Source is where the weights come from. The catalog only ever holds
+	// references (source, repo, file), never the weights. "huggingface" is the
+	// only source pill can download from; Load rejects any other.
+	Source    string         `toml:"source"`
+	Strengths []string       `toml:"strengths"` // curated tags, from the Tier 3 reports
 	Reasoning bool           `toml:"reasoning"`
 	MaxTokens int            `toml:"max_tokens"`
 	Preset    map[string]any `toml:"preset"`
@@ -55,6 +83,11 @@ func Load() (*Catalog, error) {
 	var c Catalog
 	if _, err := toml.Decode(catalogTOML, &c); err != nil {
 		return nil, fmt.Errorf("parse embedded catalog: %w", err)
+	}
+	for _, f := range c.Families {
+		if f.Source != "" && f.Source != "huggingface" {
+			return nil, fmt.Errorf("catalog model %s: source %q is not supported (only huggingface)", f.Name, f.Source)
+		}
 	}
 	return &c, nil
 }
@@ -149,22 +182,6 @@ func (c *Catalog) Entries() []Entry {
 		}
 	}
 	return out
-}
-
-// Recommended picks the variant for a machine with ramGB of memory: the
-// default variant if it fits, otherwise the smallest one.
-func (f *Family) Recommended(ramGB int) *Variant {
-	d := f.DefaultVariant()
-	if ramGB >= d.MinRAMGB {
-		return d
-	}
-	best := &f.Variants[0]
-	for i := range f.Variants {
-		if f.Variants[i].SizeGB < best.SizeGB {
-			best = &f.Variants[i]
-		}
-	}
-	return best
 }
 
 // FindByRepoQuant finds the catalog entry for a Hugging Face repository and

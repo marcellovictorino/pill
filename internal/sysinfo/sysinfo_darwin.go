@@ -30,6 +30,17 @@ func (Darwin) TotalRAMBytes() (int64, error) {
 	return strconv.ParseInt(out, 10, 64)
 }
 
+func (Darwin) ChipName() (string, error) {
+	out, err := run("sysctl", "-n", "machdep.cpu.brand_string")
+	if err != nil {
+		return "", err
+	}
+	if out == "" {
+		return "", fmt.Errorf("empty chip name")
+	}
+	return out, nil
+}
+
 func (Darwin) OSVersion() string {
 	out, err := run("sw_vers", "-productVersion")
 	if err != nil {

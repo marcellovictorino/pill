@@ -29,7 +29,7 @@ While developing, `go install .` from a checkout does the same.
 ## Quick start
 
 ```bash
-pill catalog                                 # what pill knows how to download
+pill catalog                                 # what pill can download, and what is measured on this Mac
 pill pull gemma4-26b                         # download the recommended variant (13.6 GB)
 pill add gemma4-26b-iq4xs-64k --unverified   # register it with the router and Pi
 pill default gemma4-26b-iq4xs-64k            # make it the default
@@ -89,7 +89,7 @@ Things to know:
 | `pill ls` | Local models: name, state (`pulled`, `unverified`, `passed`, `failed`, `missing`), size, default. |
 | `pill pull <name>` | Download a GGUF (catalog name or Hugging Face reference). Resumes, verifies sha256, never registers. |
 | `pill rm <name>` | Remove the entry and its Pi registration; delete the GGUF when no other entry uses it. |
-| `pill catalog` | Built-in models and the variant recommended for this machine's RAM. |
+| `pill catalog` | Built-in models, plus up to three measured on this exact chip and memory (strengths, tiers, tok/s). Nothing is guessed: no result means no recommendation. |
 | `pill bench run <name> [--runs N]` | Gate a model: cold-start agent-sized request, Pi tool-calling turn, then a Tier 2 coding task scored by a hidden verifier (needs Node). A failure exits 1 and removes the model from Pi. |
 | `pill bench summary [--all]` | Rank benchmarked models by Tier 2 score, speed and memory headroom. |
 | `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the unverified ones. |

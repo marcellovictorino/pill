@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,15 +25,60 @@ func gemmaHub(t *testing.T) *testutil.Hub {
 	})
 }
 
-func TestCatalogRecommendsForRAM(t *testing.T) {
+// Intent (captain): recommendations are per device, from measurements on that
+// exact chip and memory, with explicit empty and unverified states.
+func TestCatalogRecommendsPerDevice(t *testing.T) {
 	e := newEnv(t)
 	r := e.run("catalog").ok(t)
 	golden(t, "catalog", r.out)
 
-	e.sys.RAM = 16 << 30 // a 16 GB machine gets the smaller variant
+	// A 16 GB Mac: nothing fits, so nothing is recommended and the table says why.
+	e.sys.RAM = 16 << 30
 	r = e.run("catalog").ok(t)
-	if !strings.Contains(r.out, "gemma4-26b-q3kxl-64k,12.9 GB,65536,yes,no") {
-		t.Errorf("16 GB should recommend Q3_K_XL:\n%s", r.out)
+	for _, want := range []string{"recommendations[0]:", "gemma4-26b-q3kxl-64k,12.9 GB,65536,too-small,no", "no catalog model fits"} {
+		if !strings.Contains(r.out, want) {
+			t.Errorf("16 GB output lacks %q:\n%s", want, r.out)
+		}
+	}
+	if strings.Contains(r.out, ",yes,") {
+		t.Errorf("nothing may be recommended on 16 GB:\n%s", r.out)
+	}
+
+	// Same memory as the tested Mac but another chip: its results are not borrowed.
+	e.sys.RAM, e.sys.Chip = 24<<30, "Apple M3 Max"
+	r = e.run("catalog").ok(t)
+	if strings.Contains(r.out, ",yes,") || !strings.Contains(r.out, "minicpm-v4-7-adiq2xsiq2xxs-64k,11.3 GB,65536,unmeasured,no") || !strings.Contains(r.out, "recommendations[0]:") {
+		t.Errorf("another chip must show unmeasured, not the M4 result:\n%s", r.out)
+	}
+
+	// Detection failed: explicit unverified state, no recommendation, still exit 0.
+	e.sys.Chip, e.sys.ChipErr = "", errors.New("no sysctl")
+	r = e.run("catalog").ok(t)
+	if !strings.Contains(r.out, "chip: unknown") || !strings.Contains(r.out, ",unverified,") || strings.Contains(r.out, ",yes,") || !strings.Contains(r.out, "could not detect") {
+		t.Errorf("failed detection must be unverified:\n%s", r.out)
+	}
+}
+
+// Intent: the champion is a catalog reference with short commands. Its short
+// name pulls the exact recorded file from the recorded repository, and the
+// binary only ever held the reference.
+func TestChampionShortNamePullsRecordedFile(t *testing.T) {
+	e := newEnv(t)
+	const file = "MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf"
+	hub := testutil.NewHub(t, map[string]map[string][]byte{
+		"AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF": {file: []byte("pretend-champion-weights")},
+	})
+	r := e.run("pull", "minicpm-v4-7").ok(t)
+	if !strings.Contains(r.out, "status: downloaded") || !strings.Contains(r.out, "file: "+file) {
+		t.Errorf("pull:\n%s", r.out)
+	}
+	if hub.Hits("/resolve/") != 1 {
+		t.Errorf("one download expected, got %d", hub.Hits("/resolve/"))
+	}
+	// Registering resolves the short name to the same variant and its context.
+	add := e.run("add", "minicpm-v4-7", "--unverified").ok(t)
+	if !strings.Contains(add.out, "model: minicpm-v4-7-adiq2xsiq2xxs-64k") {
+		t.Errorf("add:\n%s", add.out)
 	}
 }
 

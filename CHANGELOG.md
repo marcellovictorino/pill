@@ -8,11 +8,14 @@ All notable changes to pill are documented here. The format follows
 
 ### Added
 
+- `pill catalog` is per device. It detects this Mac's chip and memory and shows up to three models that passed both standard benchmark tiers on that exact chip and memory, with strength tags, tier results, tokens per second and when they were measured. It shows an empty list, not a guess, when no result exists for the device, and `unverified` when detection fails. The `recommended` column is now `yes`, `unmeasured`, `relaxed`, `failed`, `too-small` or `unverified`.
+- The catalog lists MiniCPM-V 4.7 (`pill pull minicpm-v4-7`), the tested champion on a 24 GB M4. The catalog holds only references to model files, never weights.
 - README: "Use the models from another agent" explains pointing any OpenAI-compatible tool at `http://127.0.0.1:11435/v1` after `pill serve` (any API key works, no authentication, local only).
 - Shell completion offers model names. `pill add`, `pill pull` and `pill bench run` complete catalog and registered names (`add` also local GGUF files); `pill rm` and `pill default` complete registered names. Load it with `source <(pill completion zsh)`.
 
 ### Fixed
 
+- `pill catalog` no longer recommends a model below its stated memory minimum (a 16 GB Mac used to be offered the 24 GB Gemma variant).
 - `pill bench run` refuses to start while another benchmark is running, and `pill` refuses to open Pi while a benchmark runs or the router serves a model other than your default, so a second model can no longer be loaded under a running benchmark. A benchmark ended by a hangup, interrupt or termination now stops its Pi agent and everything the agent started, and the next benchmark ends an agent left behind by one that was killed with SIGKILL.
 - A scratch `PILL_HOME` now ignores a LaunchAgent installed for another pill home and starts a detached router. It cannot replace or remove that LaunchAgent through `pill serve` or `pill service`.
 - `tok_per_s` in `pill bench run` and `bench summary` measures real decoding speed. It used to come from the agent-sized request, whose reply is only a few tokens, so the figure was mostly start-up overhead (5 tok/s for a model that decodes at 28). Tier 1 now times a 128-token generation on the warm model; results recorded before this change keep the old figure.

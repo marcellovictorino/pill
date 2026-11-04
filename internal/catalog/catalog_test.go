@@ -13,7 +13,7 @@ func mustLoad(t *testing.T) *Catalog {
 
 func TestEmbeddedCatalog(t *testing.T) {
 	c := mustLoad(t)
-	if len(c.Families) != 1 || c.Families[0].Name != "gemma4-26b" || len(c.Families[0].Variants) != 2 {
+	if len(c.Families) != 2 || c.Families[0].Name != "gemma4-26b" || len(c.Families[0].Variants) != 2 || c.Families[1].Name != "minicpm-v4-7" {
 		t.Fatalf("unexpected catalog: %+v", c.Families)
 	}
 }
@@ -75,16 +75,6 @@ func TestResolveWithCtxRenames(t *testing.T) {
 	e, ok := c.ResolveWithCtx("gemma4-26b", 32768)
 	if !ok || e.Name != "gemma4-26b-iq4xs-32k" || e.Ctx != 32768 {
 		t.Errorf("got %+v", e)
-	}
-}
-
-func TestRecommended(t *testing.T) {
-	f := &mustLoad(t).Families[0]
-	if v := f.Recommended(24); v.Quant != "UD-IQ4_XS" {
-		t.Errorf("24 GB should get the default variant, got %s", v.Quant)
-	}
-	if v := f.Recommended(16); v.Quant != "UD-Q3_K_XL" {
-		t.Errorf("16 GB should get the smallest variant, got %s", v.Quant)
 	}
 }
 
