@@ -1,6 +1,6 @@
 # Landing page variants
 
-Seven versions of the pill landing page were built side by side from the same brief, one per model run, and compared before choosing. Only the winner (Opus 5.5) is kept as the live site in `site/`; the rest were removed and survive in this repository's git history (the commit that added them is the first of the landing page pull request).
+Seven versions of the pill landing page were built side by side from the same brief, one per model run, and compared before choosing. Only the winner (Opus 5.5) is kept as the live site in `site/`; the rest were removed from the repository. Their sources stay viewable in the commits of the landing page pull request (#29) on GitHub.
 
 ![Hero of each variant, side by side](comparison.png)
 
