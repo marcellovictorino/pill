@@ -15,3 +15,4 @@ func (unsupported) TotalRAMBytes() (int64, error)          { return 0, errUnsupp
 func (unsupported) ProcessTreeRSSBytes(int) (int64, error) { return 0, errUnsupported }
 func (unsupported) Sample() (Sample, error)                { return Sample{}, errUnsupported }
 func (unsupported) OSVersion() string                      { return "unsupported" }
+func (unsupported) ChipName() (string, error)              { return "", errUnsupported }

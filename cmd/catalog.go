@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/marcellovictorino/pill/internal/catalog"
 	"github.com/marcellovictorino/pill/internal/output"
 	"github.com/marcellovictorino/pill/internal/sysinfo"
 )
@@ -14,37 +16,69 @@ import (
 func newCatalogCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "catalog",
-		Short: "List the built-in models and the variant recommended for this machine",
+		Short: "List the built-in models and the ones measured to work on this exact Mac",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
 				return err
 			}
-			ramBytes, err := a.deps.Sys.TotalRAMBytes()
-			if err != nil {
-				return output.Fail(nil, "cannot read this machine's memory: %v", err)
+			// Detection failures are not fatal: an unknown chip or memory gives
+			// an explicit "unverified" state and no recommendation.
+			dev := catalog.Device{}
+			if b, err := a.deps.Sys.TotalRAMBytes(); err == nil {
+				dev.RAMGB = sysinfo.RAMGB(b)
 			}
-			ram := sysinfo.RAMGB(ramBytes)
+			if chip, err := a.deps.Sys.ChipName(); err == nil {
+				dev.Chip = chip
+			}
+			cat := a.reg.Catalog
 			var table []output.Obj
-			for _, e := range a.reg.Catalog.Entries() {
-				local, recommended := "no", "no"
+			fits := false
+			for _, e := range cat.Entries() {
+				local := "no"
 				if _, err := os.Stat(filepath.Join(a.settings.ModelsDir, e.Variant.File)); err == nil {
 					local = "yes"
 				}
-				if e.Variant.Quant == e.Family.Recommended(ram).Quant {
-					recommended = "yes"
+				if st := cat.Assess(dev, e).Status; st != catalog.StatusTooSmall {
+					fits = true
 				}
 				table = append(table, output.Obj{}.
 					Set("name", e.Name).
 					Set("size", fmt.Sprintf("%.1f GB", e.Variant.SizeGB)).
 					Set("ctx", e.Ctx).
-					Set("recommended", recommended).
+					Set("recommended", cat.Assess(dev, e).Status).
 					Set("local", local))
 			}
+			var recs []output.Obj
+			for _, r := range cat.Shortlist(dev) {
+				m := r.Measurement
+				recs = append(recs, output.Obj{}.
+					Set("name", r.Entry.Name).
+					Set("strengths", strings.Join(r.Entry.Family.Strengths, ", ")).
+					Set("tier1", m.Tier1).
+					Set("tier2", m.Tier2).
+					Set("tok_per_s", m.TokPerS).
+					Set("measured", fmt.Sprintf("%s, pill %s, %d runs", m.Date, m.Pill, m.Runs)))
+			}
+			help := []string{"download one: pill pull <name>", "any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M"}
+			switch {
+			case !dev.Known():
+				help = append([]string{"could not detect this Mac's chip or memory, so nothing is recommended; pill pull <name> still works"}, help...)
+			case !fits:
+				help = append([]string{"no catalog model fits this Mac's memory; try a smaller GGUF from Hugging Face and test it with pill bench run"}, help...)
+			case len(recs) == 0:
+				help = append([]string{"no catalog model has passed both standard benchmark tiers on this exact chip and memory yet; unmeasured rows fit but are untested here (pill bench run <name> tests one)"}, help...)
+			}
+			chip := dev.Chip
+			if chip == "" {
+				chip = "unknown"
+			}
 			a.printer.Emit(output.Obj{}.
-				Set("ram_gb", ram).
+				Set("chip", chip).
+				Set("ram_gb", dev.RAMGB).
+				Set("recommendations", recs).
 				Set("catalog", table).
-				Set("help", []string{"download one: pill pull <name>", "any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M"}))
+				Set("help", help))
 			return nil
 		},
 	}

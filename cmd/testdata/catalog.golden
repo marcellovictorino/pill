@@ -1,6 +1,10 @@
+chip: Apple M4
 ram_gb: 24
-catalog[2]{name,size,ctx,recommended,local}:
-  gemma4-26b-iq4xs-64k,13.6 GB,65536,yes,no
-  gemma4-26b-q3kxl-64k,12.9 GB,65536,no,no
+recommendations[1]{name,strengths,tier1,tier2,tok_per_s,measured}:
+  minicpm-v4-7-adiq2xsiq2xxs-64k,"all-rounder, landing pages, small apps, Go features, data cleaning",pass,pass,25,"2026-10-29, pill 0.4.1, 5 runs"
+catalog[3]{name,size,ctx,recommended,local}:
+  gemma4-26b-iq4xs-64k,13.6 GB,65536,unmeasured,no
+  gemma4-26b-q3kxl-64k,12.9 GB,65536,unmeasured,no
+  minicpm-v4-7-adiq2xsiq2xxs-64k,11.3 GB,65536,yes,no
 help[1]: download one: pill pull <name>
 help[2]: any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M

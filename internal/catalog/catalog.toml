@@ -3,7 +3,13 @@
 # is what the short name (for example "gemma4-26b") resolves to.
 # Verified against the Hugging Face repo listing on 2026-10-08.
 #
-# Not listed on purpose: 16 GB machines. Benchmarked on an M2 Pro with 16 GB
+# The catalog holds references only (source, repo, file name, size), never
+# model weights; weights download when someone runs `pill pull`.
+# Each variant may carry [[model.variant.measurement]] results, each tied to
+# one exact chip + memory profile. A recommendation needs a standard pass
+# (tier1 and tier2 both "pass") on the same chip and memory as the machine.
+#
+# 16 GB machines: no gemma4-26b variant fits (min_ram_gb 24). Benchmarked on an M2 Pro with 16 GB
 # (pill 0.4.1, llama.cpp build 11146, 2026-10-09); nothing passed both tiers.
 # The Metal working set is roughly 10.7 GB, so model plus KV cache must fit
 # under that, not under 16 GB.
@@ -20,6 +26,7 @@
 [[model]]
 name = "gemma4-26b"
 repo = "unsloth/gemma-4-26B-A4B-it-GGUF"
+source = "huggingface"
 reasoning = true
 max_tokens = 16384
 
@@ -43,3 +50,50 @@ file = "gemma-4-26B-A4B-it-UD-Q3_K_XL.gguf"
 size_gb = 12.9
 ctx = 65536
 min_ram_gb = 24
+
+# Measured on a 16 GB M2 Pro: the only gemma4-26b file that came close, and it
+# did not load. Kept so the failure is attributable to that device.
+[[model.variant.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 65536
+tier1 = "fail"
+runs = 1
+date = "2026-10-09"
+pill = "0.4.1"
+llama_cpp = "build 11146"
+gate = "tier 1 60 s"
+source = "evals/reports/summary.md"
+note = "Metal out of memory; the Metal working set is about 10.7 GB"
+
+[[model]]
+name = "minicpm-v4-7"
+source = "huggingface"
+repo = "AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF"
+strengths = ["all-rounder", "landing pages", "small apps", "Go features", "data cleaning"]
+reasoning = false
+max_tokens = 8192
+
+[[model.variant]]
+quant = "AD-IQ2_XS-IQ2_XXS"
+file = "MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf"
+size_gb = 11.3
+ctx = 65536
+min_ram_gb = 24
+default = true
+
+# The tested champion: 5 of 5 gate runs, Tier 2 22/22 every time.
+[[model.variant.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "pass"
+tier2 = "pass"
+tok_per_s = 25
+runs = 5
+date = "2026-10-29"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min, free memory 10%"
+source = "evals/reports/summary.md"
+note = "lowest free memory 22%, no swap; thinking off"

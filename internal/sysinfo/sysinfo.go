@@ -27,6 +27,8 @@ type Info interface {
 	ProcessTreeRSSBytes(pid int) (int64, error)
 	Sample() (Sample, error)
 	OSVersion() string
+	// ChipName is the exact processor name, e.g. "Apple M4".
+	ChipName() (string, error)
 }
 
 // RAMGB converts a byte count to whole gigabytes (binary, rounded).
@@ -41,12 +43,15 @@ type Fake struct {
 	RSS     int64
 	Samples []Sample
 	OS      string
+	Chip    string
+	ChipErr error
 	next    int
 }
 
 func (f *Fake) TotalRAMBytes() (int64, error)          { return f.RAM, nil }
 func (f *Fake) ProcessTreeRSSBytes(int) (int64, error) { return f.RSS, nil }
 func (f *Fake) OSVersion() string                      { return f.OS }
+func (f *Fake) ChipName() (string, error)              { return f.Chip, f.ChipErr }
 func (f *Fake) Sample() (Sample, error) {
 	if len(f.Samples) == 0 {
 		return Sample{FreePct: 50, Pressure: 1, GPUUtilPct: -1}, nil
