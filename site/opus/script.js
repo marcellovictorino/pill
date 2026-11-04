@@ -222,9 +222,11 @@
   var CLIP_SECONDS = 62 - 24;
   var stopTimer = null;
 
+  var IDLE_LABEL = "Click here for the full Pilled experience";
+
   function setMusicState(playing) {
     musicBtn.setAttribute("aria-pressed", playing ? "true" : "false");
-    var label = playing ? "Stop the theme" : "Play the theme";
+    var label = playing ? "Stop the music" : IDLE_LABEL;
     musicBtn.setAttribute("aria-label", label);
     if (musicLabel) musicLabel.textContent = label;
   }
@@ -235,29 +237,11 @@
     setMusicState(false);
   }
 
-  // Browsers only allow sound after a user gesture, so the clip starts muted on page
-  // load (always allowed) and is unmuted on the visitor's first click, key press,
-  // touch (scrolling alone does not count as a gesture for audio). The button then mutes or unmutes it.
-  var muted = true;
-  function sendToPlayer(func, args) {
-    var f = musicFrame.querySelector("iframe");
-    if (f && f.contentWindow) {
-      f.contentWindow.postMessage(JSON.stringify({ event: "command", func: func, args: args || [] }), "*");
-    }
-  }
-  function setMuted(m) {
-    muted = m;
-    sendToPlayer(m ? "mute" : "unMute");
-    if (!m) sendToPlayer("setVolume", [70]);
-    musicBtn.setAttribute("aria-pressed", m ? "false" : "true");
-    var label = m ? "Unmute the theme" : "Mute the theme";
-    musicBtn.setAttribute("aria-label", label);
-    if (musicLabel) musicLabel.textContent = label;
-  }
-
+  // Created only on click (a user gesture), so sound is allowed and the clip starts
+  // at the chorus start point (0:24) and ends at 1:02.
   function playMusic() {
     var iframe = document.createElement("iframe");
-    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?start=24&end=62&autoplay=1&mute=1&enablejsapi=1&rel=0&playsinline=1";
+    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?start=24&end=62&autoplay=1&rel=0&playsinline=1";
     iframe.title = "Pill by Heuse & Zeus x Crona (feat. Emma Sameth), NoCopyrightSounds";
     iframe.setAttribute("allow", "autoplay; encrypted-media");
     iframe.setAttribute("tabindex", "-1");
@@ -266,27 +250,15 @@
     iframe.addEventListener("load", function () {
       window.clearTimeout(stopTimer);
       stopTimer = window.setTimeout(stopMusic, (CLIP_SECONDS + 3) * 1000);
-      if (!muted) setMuted(false);
     });
     musicFrame.appendChild(iframe);
-    setMuted(true);
+    setMusicState(true);
   }
 
   if (musicBtn && musicFrame) {
-    playMusic();
-    var firstGesture = function () {
-      ["pointerdown", "keydown", "touchstart"].forEach(function (t) {
-        window.removeEventListener(t, firstGesture, true);
-      });
-      if (musicFrame.querySelector("iframe") && muted) setMuted(false);
-    };
-    ["pointerdown", "keydown", "touchstart"].forEach(function (t) {
-      window.addEventListener(t, firstGesture, true);
-    });
-    musicBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (!musicFrame.querySelector("iframe")) { playMusic(); setMuted(false); }
-      else setMuted(!muted);
+    musicBtn.addEventListener("click", function () {
+      if (musicFrame.querySelector("iframe")) stopMusic();
+      else playMusic();
     });
   }
 
