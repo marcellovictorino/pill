@@ -245,7 +245,7 @@
               </dd>
             </div>
           </dl>
-          <p class="champ-ref champ-foot">* Measured on a MacBook M4 with 24 GB.</p>
+          <p class="champ-ref champ-foot">* Measured on a MacBook M4 with 24 GB, at a 64k-token context window.</p>
           <p class="champ-cmd"><code>pill bench summary</code> ranks benchmarked models.</p>
         </article>
       </div>
@@ -302,6 +302,7 @@ echo 'export PATH="$HOME/go/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
               <button class="copy" type="button" aria-label="Copy benchmark command">Copy</button>
             </div>
             <p class="note">Downloads <a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">MiniCPM-V 4.7 IQ2</a> (11.3 GB), runs the tier 1 and 2 gate on your Mac and registers it with Pi only if it passes. A run can take up to about 25 minutes, and tier 2 needs Node.js. Run <code>pill catalog</code> to see what is measured on your device.</p>
+            <p class="note">pill runs the champion with a 64k-token context window. To try a larger quant, add <code>--ctx 32768</code> to the command so the bigger model has memory to spare.</p>
           </li>
           <li class="install-step reveal">
             <h3><span class="num">6</span>Go</h3>
