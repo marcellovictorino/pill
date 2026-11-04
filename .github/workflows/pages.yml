@@ -11,6 +11,7 @@ permissions:
   id-token: write
 concurrency:
   group: pages
+  # Let a running deployment finish; a newer push waits its turn instead of cancelling it mid-publish.
   cancel-in-progress: false
 jobs:
   deploy:
