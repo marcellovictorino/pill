@@ -255,7 +255,6 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
   position: relative;
   flex: 1;
   height: 100%;
-  transition: transform 0.1s linear;
   will-change: transform;
 }
 .half::after {
@@ -716,3 +715,12 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
 .ctx-sub { margin: 0; color: var(--ink-2); }
 .ctx-tip { margin: 1rem 0 0; font-size: 0.9rem; font-style: italic; color: var(--ink-3); }
 .install-step h3 .optional { margin-left: 0.4rem; font-size: 0.75rem; font-weight: 500; font-style: italic; color: var(--ink-3); }
+
+/* Install commands on phones: wrap long lines instead of clipping them behind a
+   horizontal scroll that is hard to discover, and put Copy under the command. */
+@media (max-width: 560px) {
+  .code { flex-direction: column; align-items: stretch; gap: 0.2rem; padding: 0.35rem 0.6rem 0.6rem; }
+  .code pre { width: 100%; overflow-x: visible; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .code pre code, .code pre code.multi { display: block; padding: 0.55em 0.8em; }
+  .copy { align-self: flex-end; }
+}

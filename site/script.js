@@ -212,8 +212,7 @@
 
   /* ---------- Music button ---------- */
   // The track is streamed from the official NoCopyrightSounds upload via YouTube's
-  // embed player; nothing is downloaded or bundled. The iframe is only created after
-  // the visitor clicks. Note: the YouTube player may not load when this page is
+  // embed player; nothing is downloaded or bundled. Note: the YouTube player may not load when this page is
   // opened from file:// (the embed can refuse a null/file origin); serve the folder
   // over http (e.g. `python3 -m http.server`) if the button stays silent.
   var musicBtn = document.querySelector(".music");
@@ -229,28 +228,49 @@
     if (musicLabel) musicLabel.textContent = label;
   }
 
-  function stopMusic() {
-    while (musicFrame.firstChild) musicFrame.removeChild(musicFrame.firstChild);
-    setMusicState(false);
+  var musicFrameEl = null;
+  var musicLoaded = false;
+  var musicWanted = false;
+
+  // Ask the embedded player to do something (YouTube's postMessage command API,
+  // enabled by enablejsapi=1). No script is loaded from YouTube.
+  function playerCommand(func) {
+    if (!musicFrameEl || !musicLoaded) return;
+    musicFrameEl.contentWindow.postMessage(
+      JSON.stringify({ event: "command", func: func, args: [] }), "*");
   }
 
-  // Created only on click (a user gesture), so sound is allowed. The whole track plays
-  // and repeats until the visitor stops it (loop=1 needs playlist set to the same id).
-  function playMusic() {
+  // iOS Safari only allows sound when the tap reaches the player. An iframe created
+  // inside the click handler (with autoplay=1) is blocked there, so the iframe is
+  // created paused once the page has loaded, and the click sends it playVideo
+  // synchronously inside the tap. The whole track plays and repeats until stopped
+  // (loop=1 needs playlist set to the same id).
+  function createMusicFrame() {
+    if (musicFrameEl) return;
     var iframe = document.createElement("iframe");
-    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?autoplay=1&loop=1&playlist=CLiXUT3MS34&rel=0&playsinline=1";
+    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?enablejsapi=1&loop=1&playlist=CLiXUT3MS34&rel=0&playsinline=1";
     iframe.title = "Pill by Heuse & Zeus x Crona (feat. Emma Sameth), NoCopyrightSounds";
     iframe.setAttribute("allow", "autoplay; encrypted-media");
     iframe.setAttribute("tabindex", "-1");
     iframe.setAttribute("aria-hidden", "true");
+    iframe.addEventListener("load", function () {
+      musicLoaded = true;
+      // Tapped before the player was ready: start as soon as it is (works off iOS).
+      if (musicWanted) playerCommand("playVideo");
+    });
+    musicFrameEl = iframe;
     musicFrame.appendChild(iframe);
-    setMusicState(true);
   }
 
   if (musicBtn && musicFrame) {
+    if (document.readyState === "complete") createMusicFrame();
+    else window.addEventListener("load", createMusicFrame);
+
     musicBtn.addEventListener("click", function () {
-      if (musicFrame.querySelector("iframe")) stopMusic();
-      else playMusic();
+      createMusicFrame();
+      musicWanted = !musicWanted;
+      playerCommand(musicWanted ? "playVideo" : "pauseVideo");
+      setMusicState(musicWanted);
     });
   }
 
