@@ -219,8 +219,6 @@
   var musicBtn = document.querySelector(".music");
   var musicFrame = document.getElementById("music-frame");
   var musicLabel = musicBtn && musicBtn.querySelector(".music-label");
-  var CLIP_SECONDS = 62 - 24;
-  var stopTimer = null;
 
   var IDLE_LABEL = "Click here for the full Pilled experience";
 
@@ -232,25 +230,19 @@
   }
 
   function stopMusic() {
-    window.clearTimeout(stopTimer);
     while (musicFrame.firstChild) musicFrame.removeChild(musicFrame.firstChild);
     setMusicState(false);
   }
 
-  // Created only on click (a user gesture), so sound is allowed and the clip starts
-  // at the chorus start point (0:24) and ends at 1:02.
+  // Created only on click (a user gesture), so sound is allowed. The whole track plays
+  // and repeats until the visitor stops it (loop=1 needs playlist set to the same id).
   function playMusic() {
     var iframe = document.createElement("iframe");
-    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?start=24&end=62&autoplay=1&rel=0&playsinline=1";
+    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?autoplay=1&loop=1&playlist=CLiXUT3MS34&rel=0&playsinline=1";
     iframe.title = "Pill by Heuse & Zeus x Crona (feat. Emma Sameth), NoCopyrightSounds";
     iframe.setAttribute("allow", "autoplay; encrypted-media");
     iframe.setAttribute("tabindex", "-1");
     iframe.setAttribute("aria-hidden", "true");
-    // Reset the button once the clip has had time to finish.
-    iframe.addEventListener("load", function () {
-      window.clearTimeout(stopTimer);
-      stopTimer = window.setTimeout(stopMusic, (CLIP_SECONDS + 3) * 1000);
-    });
     musicFrame.appendChild(iframe);
     setMusicState(true);
   }
