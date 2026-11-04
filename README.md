@@ -89,7 +89,7 @@ Things to know:
 | `pill ls` | Local models: name, state (`pulled`, `unverified`, `passed`, `failed`, `missing`), size, default. |
 | `pill pull <name>` | Download a GGUF (catalog name or Hugging Face reference). Resumes, verifies sha256, never registers. |
 | `pill rm <name>` | Remove the entry and its Pi registration; delete the GGUF when no other entry uses it. |
-| `pill catalog` | Built-in models, plus up to three measured on this exact chip and memory (strengths, tiers, tok/s). Nothing is guessed: no result means no recommendation. |
+| `pill catalog` | Built-in models, plus up to three measured on this exact chip and memory (strengths, tiers, tok/s). When fewer than three pass, a `tried_on_this_mac` block lists the closest failed or relaxed runs with time, score and reason. Nothing is guessed: no result means no recommendation. |
 | `pill bench run <name> [--runs N]` | Gate a model: cold-start agent-sized request, Pi tool-calling turn, then a Tier 2 coding task scored by a hidden verifier (needs Node). A failure exits 1 and removes the model from Pi. |
 | `pill bench summary [--all]` | Rank benchmarked models by Tier 2 score, speed and memory headroom. |
 | `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the unverified ones. |

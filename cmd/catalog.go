@@ -58,7 +58,22 @@ func newCatalogCmd(a *App) *cobra.Command {
 					Set("tier1", m.Tier1).
 					Set("tier2", m.Tier2).
 					Set("tok_per_s", m.TokPerS).
-					Set("measured", fmt.Sprintf("%s, pill %s, %d runs", m.Date, m.Pill, m.Runs)))
+					Set("measured", measuredLabel(m)).
+					Set("note", m.Note))
+			}
+			// Fewer than three passes: show what else was tried on this device,
+			// closest to a pass first, so the best available is still visible.
+			var tried []output.Obj
+			var triedMore int
+			if len(recs) < catalog.MaxRecommendations {
+				attempts := cat.Attempts(dev)
+				if len(attempts) > catalog.MaxAttempts {
+					triedMore = len(attempts) - catalog.MaxAttempts
+					attempts = attempts[:catalog.MaxAttempts]
+				}
+				for _, at := range attempts {
+					tried = append(tried, attemptRow(at))
+				}
 			}
 			help := []string{"download one: pill pull <name>", "any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M"}
 			switch {
@@ -73,13 +88,68 @@ func newCatalogCmd(a *App) *cobra.Command {
 			if chip == "" {
 				chip = "unknown"
 			}
-			a.printer.Emit(output.Obj{}.
+			if triedMore > 0 {
+				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records; the closest %d are shown", triedMore, catalog.MaxAttempts))
+			}
+			out := output.Obj{}.
 				Set("chip", chip).
 				Set("ram_gb", dev.RAMGB).
-				Set("recommendations", recs).
+				Set("recommendations", recs)
+			if len(recs) < catalog.MaxRecommendations && dev.Known() {
+				out = out.Set("tried_on_this_mac", tried)
+			}
+			a.printer.Emit(out.
 				Set("catalog", table).
 				Set("help", help))
 			return nil
 		},
 	}
+}
+
+// attemptRow is one line of the "tried on this Mac" block. Values that were
+// not measured print as "-", never as zero.
+func attemptRow(at catalog.Attempt) output.Obj {
+	m := at.Measurement
+	t1 := m.Tier1
+	if t1 == "" {
+		t1 = "-"
+	}
+	if m.Tier1Seconds > 0 {
+		t1 += fmt.Sprintf(" %gs", m.Tier1Seconds)
+	}
+	t2 := "-"
+	if m.Tier2Total > 0 {
+		t2 = fmt.Sprintf("%d/%d", m.Tier2Score, m.Tier2Total)
+		if m.Tier2Minutes > 0 {
+			t2 += fmt.Sprintf(" in %g min", m.Tier2Minutes)
+		}
+		if m.Tier2TimedOut {
+			t2 += ", cap hit"
+		}
+	}
+	var tok any = "-"
+	if m.TokPerS > 0 {
+		tok = m.TokPerS
+	}
+	reason := m.FailReason
+	if reason == "" {
+		reason = "-"
+	}
+	return output.Obj{}.
+		Set("name", at.Name).
+		Set("verdict", at.Status).
+		Set("tier1", t1).
+		Set("tier2", t2).
+		Set("tok_per_s", tok).
+		Set("reason", reason)
+}
+
+// measuredLabel is "date, pill version, N runs", leaving out what the record
+// does not hold (backfilled records carry no pill version).
+func measuredLabel(m *catalog.Measurement) string {
+	parts := []string{m.Date}
+	if m.Pill != "" {
+		parts = append(parts, "pill "+m.Pill)
+	}
+	return strings.Join(append(parts, fmt.Sprintf("%d runs", m.Runs)), ", ")
 }

@@ -182,11 +182,28 @@ func TestEmbeddedCatalogHoldsReferencesAndAttributableMeasurements(t *testing.T)
 			t.Errorf("%s lacks a repo/file reference", e.Name)
 		}
 		for _, m := range e.Variant.Measurements {
-			if m.Chip == "" || m.RAMGB == 0 || m.Ctx == 0 || m.Date == "" || m.Pill == "" || m.LlamaCpp == "" || m.Source == "" {
+			if !attributable(m) || m.Ctx == 0 {
 				t.Errorf("%s: measurement is not attributable: %+v", e.Name, m)
 			}
 		}
 	}
+	for _, tr := range c.Tried {
+		if tr.Name == "" {
+			t.Errorf("a tried entry has no name")
+		}
+		for _, m := range tr.Measurements {
+			if !attributable(m) {
+				t.Errorf("%s: measurement is not attributable: %+v", tr.Name, m)
+			}
+		}
+	}
+}
+
+// attributable: a record names its device, date, build and source. The pill
+// version is required unless the record was converted from a report row,
+// which does not state it.
+func attributable(m Measurement) bool {
+	return m.Chip != "" && m.RAMGB != 0 && m.Date != "" && m.LlamaCpp != "" && m.Source != "" && (m.Pill != "" || m.SourceRow != "")
 }
 
 // Intent: the recorded champion is a recommendation on the tested Mac, and the
@@ -202,5 +219,79 @@ func TestChampionOnTestedMacOnly(t *testing.T) {
 	}
 	if e, ok := c.Resolve("minicpm-v4-7"); !ok || e.Variant.File != "MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf" {
 		t.Errorf("short name must resolve to the champion file: %+v", e)
+	}
+}
+
+// Intent (captain): on a device where nothing passes, the best available is
+// still shown, closest to a pass first, and only from that exact device.
+func TestAttemptsOrderByCloseness(t *testing.T) {
+	const data = `
+[[tried]]
+name = "far"
+[[tried.measurement]]
+chip = "Apple M9"
+ram_gb = 16
+tier1 = "fail"
+tok_per_s = 90
+[[tried]]
+name = "close-slow"
+[[tried.measurement]]
+chip = "Apple M9"
+ram_gb = 16
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 20
+tier2_total = 22
+tok_per_s = 10
+[[tried]]
+name = "closer"
+[[tried.measurement]]
+chip = "Apple M9"
+ram_gb = 16
+tier1 = "relaxed"
+tier2 = "fail"
+tier2_score = 21
+tier2_total = 22
+[[tried]]
+name = "elsewhere"
+[[tried.measurement]]
+chip = "Apple M9"
+ram_gb = 32
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 22
+tier2_total = 22
+`
+	var c Catalog
+	if _, err := toml.Decode(data, &c); err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, a := range c.Attempts(Device{"Apple M9", 16}) {
+		names = append(names, a.Name)
+	}
+	if got := strings.Join(names, ","); got != "closer,close-slow,far" {
+		t.Errorf("want closer,close-slow,far (other memory excluded), got %s", got)
+	}
+	if c.Attempts(Device{}) != nil {
+		t.Error("an undetected device has no attempts")
+	}
+}
+
+// Intent (PILL-55 plan, swap cap): a run that passes its tests but pushes more
+// than 4 GB to swap is not a recommendation; zero swap stays a pass, and a
+// missing swap figure is "not measured", not a failure.
+func TestSwapPastTheCapIsNotAPass(t *testing.T) {
+	over, zero := 4750.0, 0.0
+	pass := Measurement{Tier1: "pass", Tier2: "pass"}
+	for name, c := range map[string]struct {
+		swap *float64
+		want string
+	}{"over": {&over, StatusFailed}, "zero": {&zero, StatusRecommended}, "unmeasured": {nil, StatusRecommended}} {
+		m := pass
+		m.SwapMB = c.swap
+		if got := verdict(&m); got != c.want {
+			t.Errorf("%s: %s, want %s", name, got, c.want)
+		}
 	}
 }

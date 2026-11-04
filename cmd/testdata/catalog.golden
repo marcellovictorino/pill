@@ -1,10 +1,17 @@
 chip: Apple M4
 ram_gb: 24
-recommendations[1]{name,strengths,tier1,tier2,tok_per_s,measured}:
-  minicpm-v4-7-adiq2xsiq2xxs-64k,"all-rounder, landing pages, small apps, Go features, data cleaning",pass,pass,25,"2026-10-29, pill 0.4.1, 5 runs"
+recommendations[1]{name,strengths,tier1,tier2,tok_per_s,measured,note}:
+  minicpm-v4-7-adiq2xsiq2xxs-64k,"all-rounder, landing pages, small apps, Go features, data cleaning",pass,pass,25,"2026-10-29, pill 0.4.1, 5 runs","lowest free memory 22%, no swap; thinking off"
+tried_on_this_mac[5]{name,verdict,tier1,tier2,tok_per_s,reason}:
+  Gemma 4 26B UD-IQ3_S,failed,pass 29s,"22/22 in 15 min, cap hit",24,Tier 2 scored 22/22 but runs 1 and 2 hit the 15 min cap
+  gemma4-26b-q3kxl-64k,failed,pass 48s,22/22 in 4.9 min,22.4,"swap growth 4.75 GB, past the 4 GB limit"
+  "Muse Glimmer 30B UD-IQ2_XXS, thinking-off template, DFlash drafter",relaxed,relaxed 111s,22/22 in 13.2 min,12.8,"passed only the relaxed gate: Tier 1 is about twice the 60 s limit"
+  Muse Glimmer 30B UD-IQ2_XXS,failed,fail 140s,22/22 in 11.1 min,5,Tier 1 took 113-140 s; thinking left an empty visible reply in 8 of 9 runs
+  Ornith 1.5 35B-A3B IQ3_XXS-IQ2_S,failed,pass 32s,"20/22 in 15 min, cap hit",24,Tier 2 run 1 scored 20/22; one run reached 22/22 only at the cap
 catalog[3]{name,size,ctx,recommended,local}:
   gemma4-26b-iq4xs-64k,13.6 GB,65536,unmeasured,no
-  gemma4-26b-q3kxl-64k,12.9 GB,65536,unmeasured,no
+  gemma4-26b-q3kxl-64k,12.9 GB,65536,failed,no
   minicpm-v4-7-adiq2xsiq2xxs-64k,11.3 GB,65536,yes,no
 help[1]: download one: pill pull <name>
 help[2]: any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M
+help[3]: 14 more tried results are in the catalog records; the closest 5 are shown
