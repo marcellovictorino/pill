@@ -152,7 +152,7 @@ h1, h2, h3 { line-height: 1.1; margin: 0; letter-spacing: -0.02em; }
 .step-box, .champ { width: 100%; border: 1px solid var(--line); border-radius: 28px; padding: 1.4rem; background: rgba(233, 238, 248, 0.03); display: flex; flex-direction: column; gap: 0.5rem; }
 .step-box h3, .champ h3 { font-size: 1.3rem; }
 .step-box p { margin: 0; color: var(--ink-2); font-size: 0.97rem; }
-.s1 .step-box { min-height: 12rem; } .s2 .step-box { min-height: 15rem; } .s3 .step-box { min-height: 18rem; }
+.st1 .step-box { min-height: 12rem; } .st2 .step-box { min-height: 15rem; } .st3 .step-box { min-height: 18rem; }
 .champ { min-height: 21rem; border-color: var(--cyan); box-shadow: var(--glow), inset 0 0 40px rgba(127, 220, 255, 0.08); background: linear-gradient(180deg, rgba(127, 220, 255, 0.14), rgba(127, 220, 255, 0.03)); }
 .tier { align-self: flex-start; padding: 0.15rem 0.8rem; border: 1px solid var(--line-2); border-radius: 999px; font-family: var(--mono); font-size: 0.78rem; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.08em; }
 .crown { width: 56px; height: 38px; filter: drop-shadow(0 0 10px rgba(127, 220, 255, 0.8)); animation: float 4s ease-in-out infinite; }
@@ -201,7 +201,7 @@ h1, h2, h3 { line-height: 1.1; margin: 0; letter-spacing: -0.02em; }
   .hero { grid-template-columns: 1fr; text-align: left; padding-bottom: 5rem; }
   .hero-art { order: -1; max-width: 420px; justify-self: center; width: 100%; }
   .stairs { grid-template-columns: 1fr; }
-  .s1 .step-box, .s2 .step-box, .s3 .step-box, .champ { min-height: 0; }
+  .st1 .step-box, .st2 .step-box, .st3 .step-box, .champ { min-height: 0; }
   .stairs .step:nth-child(1) { margin-right: 60%; } .stairs .step:nth-child(2) { margin-right: 40%; } .stairs .step:nth-child(3) { margin-right: 20%; }
   .term-body li { grid-template-columns: 1fr; }
 }
@@ -220,3 +220,5 @@ h1, h2, h3 { line-height: 1.1; margin: 0; letter-spacing: -0.02em; }
   .capsule-wrap { transform: rotate(-14deg); }
   .half.left, .half.right { transform: none; }
 }
+
+.ref { margin: 0.8rem 0 0; color: var(--ink-2); font-size: 0.85rem; }

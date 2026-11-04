@@ -235,9 +235,29 @@
     setMusicState(false);
   }
 
+  // Browsers only allow sound after a user gesture, so the clip starts muted on page
+  // load (always allowed) and is unmuted on the visitor's first click, key press,
+  // touch (scrolling alone does not count as a gesture for audio). The button then mutes or unmutes it.
+  var muted = true;
+  function sendToPlayer(func, args) {
+    var f = musicFrame.querySelector("iframe");
+    if (f && f.contentWindow) {
+      f.contentWindow.postMessage(JSON.stringify({ event: "command", func: func, args: args || [] }), "*");
+    }
+  }
+  function setMuted(m) {
+    muted = m;
+    sendToPlayer(m ? "mute" : "unMute");
+    if (!m) sendToPlayer("setVolume", [70]);
+    musicBtn.setAttribute("aria-pressed", m ? "false" : "true");
+    var label = m ? "Unmute the theme" : "Mute the theme";
+    musicBtn.setAttribute("aria-label", label);
+    if (musicLabel) musicLabel.textContent = label;
+  }
+
   function playMusic() {
     var iframe = document.createElement("iframe");
-    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?start=24&end=62&autoplay=1&rel=0&playsinline=1";
+    iframe.src = "https://www.youtube-nocookie.com/embed/CLiXUT3MS34?start=24&end=62&autoplay=1&mute=1&enablejsapi=1&rel=0&playsinline=1";
     iframe.title = "Pill by Heuse & Zeus x Crona (feat. Emma Sameth), NoCopyrightSounds";
     iframe.setAttribute("allow", "autoplay; encrypted-media");
     iframe.setAttribute("tabindex", "-1");
@@ -246,15 +266,27 @@
     iframe.addEventListener("load", function () {
       window.clearTimeout(stopTimer);
       stopTimer = window.setTimeout(stopMusic, (CLIP_SECONDS + 3) * 1000);
+      if (!muted) setMuted(false);
     });
     musicFrame.appendChild(iframe);
-    setMusicState(true);
+    setMuted(true);
   }
 
   if (musicBtn && musicFrame) {
-    musicBtn.addEventListener("click", function () {
-      if (musicFrame.querySelector("iframe")) stopMusic();
-      else playMusic();
+    playMusic();
+    var firstGesture = function () {
+      ["pointerdown", "keydown", "touchstart"].forEach(function (t) {
+        window.removeEventListener(t, firstGesture, true);
+      });
+      if (musicFrame.querySelector("iframe") && muted) setMuted(false);
+    };
+    ["pointerdown", "keydown", "touchstart"].forEach(function (t) {
+      window.addEventListener(t, firstGesture, true);
+    });
+    musicBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!musicFrame.querySelector("iframe")) { playMusic(); setMuted(false); }
+      else setMuted(!muted);
     });
   }
 
