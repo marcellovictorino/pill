@@ -274,8 +274,9 @@ brew install pi-coding-agent</code></pre>
           <li class="install-step reveal">
             <h3><span class="num">2</span>Install pill</h3>
             <div class="code">
-              <pre><code>go install github.com/marcellovictorino/pill@latest</code></pre>
-              <button class="copy" type="button" aria-label="Copy install command">Copy</button>
+              <pre><code class="multi">go install github.com/marcellovictorino/pill@latest
+echo 'export PATH="$HOME/go/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
+              <button class="copy" type="button" aria-label="Copy install commands">Copy</button>
             </div>
           </li>
           <li class="install-step reveal">
@@ -284,22 +285,23 @@ brew install pi-coding-agent</code></pre>
               <pre><code>echo 'source &lt;(pill completion zsh)' &gt;&gt; ~/.zshrc</code></pre>
               <button class="copy" type="button" aria-label="Copy completion command">Copy</button>
             </div>
-            <p class="note">Open a new terminal, then <code>pill pull mini</code> and Tab fills in the model name.</p>
+            <p class="note">Open a new terminal, then <code>pill bench run mini</code> and Tab fills in the model name.</p>
           </li>
           <li class="install-step reveal">
-            <h3><span class="num">4</span>Pull a model</h3>
+            <h3><span class="num">4</span>Check the setup</h3>
             <div class="code">
-              <pre><code>pill pull minicpm-v4-7</code></pre>
-              <button class="copy" type="button" aria-label="Copy pull command">Copy</button>
+              <pre><code>pill doctor</code></pre>
+              <button class="copy" type="button" aria-label="Copy doctor command">Copy</button>
             </div>
-            <p class="note">The current champion, <a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">MiniCPM-V 4.7 IQ2 on Hugging Face</a> (11.3 GB). Run <code>pill catalog</code> to see what is measured on your Mac.</p>
+            <p class="note">Confirms llama.cpp and Pi are found. pill never installs them for you.</p>
           </li>
           <li class="install-step reveal">
-            <h3><span class="num">5</span>Register it</h3>
+            <h3><span class="num">5</span>Pull, test and register the champion</h3>
             <div class="code">
-              <pre><code>pill add minicpm-v4-7-adiq2xsiq2xxs-64k --unverified</code></pre>
-              <button class="copy" type="button" aria-label="Copy add command">Copy</button>
+              <pre><code>pill bench run minicpm-v4-7</code></pre>
+              <button class="copy" type="button" aria-label="Copy benchmark command">Copy</button>
             </div>
+            <p class="note">Downloads <a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">MiniCPM-V 4.7 IQ2</a> (11.3 GB), runs the tier 1 and 2 gate on your Mac and registers it with Pi only if it passes. A run can take up to about 25 minutes, and tier 2 needs Node.js. Run <code>pill catalog</code> to see what is measured on your device.</p>
           </li>
           <li class="install-step reveal">
             <h3><span class="num">6</span>Go</h3>
