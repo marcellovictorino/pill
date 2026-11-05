@@ -1,6 +1,6 @@
 # Model comparison: Tier 3
 
-Eight models on the seven Tier 3 tasks. Scores are hidden-test scores out of 100 unless noted. **Read the
+Nine models on the seven Tier 3 tasks (Qwen3.5 9B on a different device, see the note under Scores). Scores are hidden-test scores out of 100 unless noted. **Read the
 run counts:** every cloud model, Gemma, Muse and Qwen3.8 27B has a **single run** per task (one run can land well away from
 the typical result); MiniCPM has **six runs** per task, so it is shown as median with range. Task
 descriptions are in `../README.md`. Both Flint IQ2_XXS variants were retested with llama.cpp b11804 `--reasoning-budget 0` after the template left the default 64-token reply in reasoning. Both passed the corrected Pill Tier 1 gate 3/3, but neither met the stable Tier 2 bar: Bartowski scored 0/22, 13/22, 19/22; Unsloth scored 22/22, 17/22, 19/22 versus MiniCPM's 22/22. Neither reached Tier 3, so Flint has no task scores here. See [the Flint report](recursive-flint-iq2xxs.md) for diagnosis, per-run memory and recommendations.
@@ -40,6 +40,8 @@ landing page is worth a slower run.
 | `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 99 | 100 | 90 | 93 median (18–96)  |
 | `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 100 | 100 | 95 | 95 median (87–100)  |
 | `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 90 | 93 | 76 | 98 median (54–100)  |
+
+The Qwen3.5 9B column is a different device: one run per task on a 16 GB M2 Pro (32k, thinking off, 5 November), while every other column ran on the 24 GB M4. Read its scores as a profile of that model, not as a like-for-like comparison; it did not pass the Tier 2 gate (21/22 at the cap), so it is also absent from the passing-models table above. Setup in [the M2 Pro report](m2-pro-16gb-2026-11-04.md).
 
 Agent settings: Claude models through Claude Code with the effort shown, GPT-5.6 Luna through Codex, local models
 through Pi with thinking off and a throwaway Pi config. Cloud agents ran with permissions bypassed in temporary
