@@ -390,6 +390,30 @@ min_free_pct = 12
 fail_reason = "two of three relaxed Tier 2 runs hit the 30 min cap, one at 20/22"
 
 [[tried]]
+name = "Qwen3.8 27B UD-IQ4_XS, thinking off"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "relaxed"
+tier2 = "fail"
+tok_per_s = 6.4
+runs = 6
+date = "2026-11-05"
+llama_cpp = "build 11960"
+gate = "tier 1 300 s, tier 2 30 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.8 27B UD-IQ4_XS (unsloth, 14.3 GB), 32k, thinking off, no MTP"
+tier1_seconds = 135
+tier2_score = 21
+tier2_total = 22
+tier2_minutes = 24.5
+min_free_pct = 8
+swap_mb = 9900
+fail_reason = "Tier 1 took 135-183 s and Tier 2 took 24-30 min at 21-22/22"
+
+[[tried]]
 name = "Qwen3.8 27B UD-IQ3_XXS, thinking off, MTP"
 ctx = 32768
 [[tried.measurement]]
