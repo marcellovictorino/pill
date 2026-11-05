@@ -75,6 +75,11 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	if i21 < 0 || i18 < 0 || i21 > i18 || !strings.Contains(r.out, "21/22") {
 		t.Errorf("tried models must be ordered by Tier 2 score:\n%s", r.out)
 	}
+	// Tier 3 and memory show when a record has them, so a 9B model that wins
+	// landing pages but fails multi-step tasks is visible before downloading it.
+	if !strings.Contains(r.out, "web-landing-mars 95") || !strings.Contains(r.out, "24% free, swap +0 MB") {
+		t.Errorf("tried rows must show Tier 3 scores and memory when recorded:\n%s", r.out)
+	}
 	// Tried models hold results only: the download table lists catalog files.
 	table := r.out[strings.Index(r.out, "catalog["):]
 	if strings.Contains(table, "Qwen3.5 9B") {
