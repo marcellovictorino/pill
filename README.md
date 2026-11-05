@@ -10,15 +10,20 @@ Apple Silicon macOS only for now.
 
 ## Requirements
 
-pill orchestrates; it never installs or patches these:
-
-- [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`): `brew install llama.cpp`
-- [Pi](https://github.com/badlogic/pi-mono) (`pi`): `brew install pi-coding-agent`
-- Go, to build pill: `brew install go`
+pill needs [llama.cpp](https://github.com/ggml-org/llama.cpp) (`llama-server`) and [Pi](https://github.com/badlogic/pi-mono) (`pi`). Homebrew installs both as dependencies. pill does not patch them.
 
 ## Install
 
+Once the first release is available in the tap, install with Homebrew:
+
 ```bash
+brew install marcellovictorino/tap/pill
+```
+
+Alternatively, install the dependencies and build with Go:
+
+```bash
+brew install llama.cpp pi-coding-agent go
 go install github.com/marcellovictorino/pill@latest
 # make sure Go's bin directory is on your PATH:
 echo 'export PATH="$HOME/go/bin:$PATH"' >> ~/.zshrc

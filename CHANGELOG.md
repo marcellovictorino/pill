@@ -8,6 +8,12 @@ All notable changes to pill are documented here. The format follows
 
 ### Added
 
+- Homebrew source builds can include their source commit in `pill version`.
+
+## [0.5.0] - Unreleased
+
+### Added
+
 - `pill catalog` rows (recommendations and the "tried on this Mac" block) now carry `memory` (lowest free memory and swap growth) and `tier3` (score per task) when the measurement has them, and `-` when it does not. The "tried on this Mac" block also always lists a failed catalog model (such as the default MiniCPM-V 4.7, which fails Tier 1 on a 16 GB M2 Pro) even when it ranks below the closest five.
 - Catalog measurements for a 16 GB Apple M2 Pro (Tier 1 and 2, llama.cpp build 11960, 2026-11-04): 12 runs including the default MiniCPM-V 4.7, which fails Tier 1 on memory there. `pill catalog` on that Mac now lists the closest tried models. See `evals/reports/m2-pro-16gb-2026-11-04.md`.
 - `pill catalog` shows a `tried_on_this_mac` block when fewer than three models pass on this Mac. It lists the closest failed or relaxed runs on your exact chip and memory (up to five), with Tier 1 time, Tier 2 score and time, tokens per second and the reason, so a 16 GB Mac sees the best it can get. Catalog measurements now also record Tier 1 seconds, Tier 2 score and minutes, lowest free memory, swap growth, the failure reason and Tier 3 scores. Results from the benchmark reports are backfilled, including models that are not offered for download. A run that pushes more than 4 GB to swap no longer counts as a recommendation, and recommendation rows carry a `note`.

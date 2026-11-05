@@ -5,15 +5,19 @@ import "runtime/debug"
 
 // Version is bumped by hand with every meaningful feature (see CHANGELOG.md).
 // Keep it in sync with the top released section of the changelog.
-const Version = "0.4.1"
+const Version = "0.5.0"
+
+// buildCommit can be set with -ldflags when building from a source archive.
+var buildCommit string
 
 // Commit returns the short git commit the binary was built from.
 //
-// Go stamps VCS information into every binary built with `go build` or
-// `go install` inside a git checkout; debug.ReadBuildInfo exposes it, so no
-// -ldflags are needed. It returns "unknown" when the information is missing
-// (for example in `go test` binaries).
+// An explicitly stamped commit takes precedence over Go's VCS metadata.
+// It returns "unknown" when neither is available.
 func Commit() string {
+	if buildCommit != "" {
+		return shortCommit(buildCommit)
+	}
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return "unknown"
@@ -30,11 +34,16 @@ func Commit() string {
 	if commit == "" {
 		return "unknown"
 	}
-	if len(commit) > 7 {
-		commit = commit[:7]
-	}
+	commit = shortCommit(commit)
 	if dirty {
 		commit += "-dirty"
+	}
+	return commit
+}
+
+func shortCommit(commit string) string {
+	if len(commit) > 7 {
+		return commit[:7]
 	}
 	return commit
 }
