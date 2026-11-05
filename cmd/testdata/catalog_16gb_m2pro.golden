@@ -1,12 +1,14 @@
 chip: Apple M2 Pro
 ram_gb: 16
 recommendations[0]:
-tried_on_this_mac[5]{name,verdict,tier1,tier2,tok_per_s,reason}:
-  Qwen3-8B Q4_K_M,failed,pass,17/22,"-",Tier 2 scored 17/22
-  gemma-4-E4B Q4_K_M,failed,pass,16/22,"-",Tier 2 scored 21/22 then 16/22
-  Qwen3-4B-Instruct-2507 Q4_K_M,failed,pass,14/22,"-",Tier 1 failed once then passed; Tier 2 scored 14/22
-  gemma4-26b-q3kxl-64k,failed,fail,"-","-",Metal out of memory
-  Qwen3-14B Q3_K_M,failed,fail 69s,"-","-",Tier 1 took 69 s against the 60 s limit
+tried_on_this_mac[7]{name,verdict,tier1,tier2,tok_per_s,memory,tier3,reason}:
+  Qwen3.5 9B UD-Q4_K_XL,failed,pass 31s,"21/22 in 15 min, cap hit",24,"24% free, swap +0 MB","go-notes 15, py-clean 21, py-insight 0, web-kanban 2, web-landing-nursery 90, web-landing-mars 95, web-landing-tax 76",Tier 2 scored 21/22 and hit the 15-minute cap
+  NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL,failed,pass 28s,20/22 in 7.1 min,25,"22% free, swap +0 MB","-",Tier 2 scored 20/22
+  "Qwen3.6 35B-A3B UD-IQ1_M, 16k context",failed,pass 27s,19/22 in 5 min,43,"11% free, swap +0 MB","-",Tier 2 scored 19/22
+  "Qwen3.5 9B UD-Q4_K_XL, MTP (spec-type draft-mtp)",failed,pass 33s,"18/22 in 15 min, cap hit",43,"32% free, swap +0 MB","-",Tier 2 scored 18/22 and hit the 15-minute cap
+  Ornith 1.5 9B Q6_K,failed,pass 38s,18/22 in 10.8 min,23,"16% free, swap +911 MB","-",Tier 2 scored 18/22
+  minicpm-v4-7-adiq2xsiq2xxs-64k,failed,fail 31s,"-",30,"6% free, swap +845 MB","-","Tier 1 free memory fell below the limit: minimum 6% (limit 10%)"
+  gemma4-26b-q3kxl-64k,failed,fail,"-","-","-","-",Metal out of memory
 catalog[3]{name,size,ctx,recommended,local}:
   gemma4-26b-iq4xs-64k,13.6 GB,65536,too-small,no
   gemma4-26b-q3kxl-64k,12.9 GB,65536,too-small,no
@@ -14,4 +16,4 @@ catalog[3]{name,size,ctx,recommended,local}:
 help[1]: no catalog model fits this Mac's memory; try a smaller GGUF from Hugging Face and test it with pill bench run
 help[2]: download one: pill pull <name>
 help[3]: any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M
-help[4]: 1 more tried results are in the catalog records; the closest 5 are shown
+help[4]: 11 more tried results are in the catalog records; the closest 5 and every offered model are shown

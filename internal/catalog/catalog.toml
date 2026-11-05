@@ -9,10 +9,17 @@
 # one exact chip + memory profile. A recommendation needs a standard pass
 # (tier1 and tier2 both "pass") on the same chip and memory as the machine.
 #
-# 16 GB machines: no gemma4-26b variant fits (min_ram_gb 24). The 16 GB M2 Pro
-# results (pill 0.4.1, llama.cpp build 11146, 2026-10-09) are [[tried]] records
-# below; nothing passed both tiers. The Metal working set is roughly 10.7 GB,
-# so model plus KV cache must fit under that, not under 16 GB.
+# 16 GB machines: no gemma4-26b variant fits (min_ram_gb 24). Results on a 16 GB
+# M2 Pro are recorded in two batches: 2026-10-09 (pill 0.4.1, llama.cpp build
+# 11146) and 2026-11-04 (pill 0.4.1, llama.cpp build 11960, macOS 27.2), the
+# latter between the BEGIN/END markers at the end of this file plus a MiniCPM
+# measurement on its variant. Nothing passed both tiers. The Metal working set
+# is roughly 10.7 GB, so model plus KV cache must fit under that, not under 16 GB.
+#
+# How records are made: every measurement is copied by hand from `pill bench run`
+# output (Tier 3 from evals/run.py) and from the reports under evals/reports/;
+# nothing here is generated. fail_reason uses one form: "Tier 1 ..." or "Tier 2
+# ..." first, then the number (for example "Tier 2 scored 19/22").
 #
 # [[tried]] entries hold results for models that are not offered: they have no
 # repo or file, so they never appear as something to pull. `pill catalog` shows
@@ -172,6 +179,26 @@ median = 98
 min = 54
 max = 100
 runs = 6
+
+# The default on a 16 GB M2 Pro: Tier 1 fails on memory (6% free against the 10% limit), so Tier 2 never ran.
+[[model.variant.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 65536
+tier1 = "fail"
+tok_per_s = 30
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min, free memory 10%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS (default)"
+note = "macOS 27.2; 11.3 GB file plus 64k KV cache exceeds the Metal working set"
+tier1_seconds = 31
+min_free_pct = 6
+swap_mb = 845
+fail_reason = "Tier 1 free memory fell below the limit: minimum 6% (limit 10%)"
 
 [[tried]]
 name = "Devstral Small 2 24B Q3_K_M"
@@ -763,3 +790,282 @@ tier2_score = 14
 tier2_total = 22
 fail_reason = "Tier 1 failed once then passed; Tier 2 scored 14/22"
 
+# BEGIN m2pro-16gb-2026-11-04 (backfilled by hand from evals/reports/m2-pro-16gb-2026-11-04.md)
+[[tried]]
+name = "Qwen3.6 35B-A3B UD-IQ1_M, 16k context"
+ctx = 16384
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 16384
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 19
+tier2_total = 22
+tier2_minutes = 5.0
+tok_per_s = 43
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.6 35B-A3B UD-IQ1_M, 16k context"
+tier1_seconds = 27
+min_free_pct = 11
+swap_mb = 0
+fail_reason = "Tier 2 scored 19/22"
+
+[[tried]]
+name = "Qwen3.5 9B UD-Q4_K_XL, MTP (spec-type draft-mtp)"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 18
+tier2_total = 22
+tier2_minutes = 15.0
+tier2_timed_out = true
+tok_per_s = 43
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.5 9B UD-Q4_K_XL, MTP (spec-type draft-mtp)"
+tier1_seconds = 33
+min_free_pct = 32
+swap_mb = 0
+fail_reason = "Tier 2 scored 18/22 and hit the 15-minute cap"
+
+[[tried]]
+name = "NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 7.1
+tok_per_s = 25
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL"
+tier1_seconds = 28
+min_free_pct = 22
+swap_mb = 0
+fail_reason = "Tier 2 scored 20/22"
+
+[[tried]]
+name = "Ornith 1.5 9B Q6_K"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 18
+tier2_total = 22
+tier2_minutes = 10.8
+tok_per_s = 23
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Ornith 1.5 9B Q6_K"
+tier1_seconds = 38
+min_free_pct = 16
+swap_mb = 911
+fail_reason = "Tier 2 scored 18/22"
+
+[[tried]]
+name = "Qwen3.5 9B UD-Q4_K_XL"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 21
+tier2_total = 22
+tier2_minutes = 15.0
+tier2_timed_out = true
+tok_per_s = 24
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.5 9B UD-Q4_K_XL"
+tier1_seconds = 31
+min_free_pct = 24
+swap_mb = 0
+fail_reason = "Tier 2 scored 21/22 and hit the 15-minute cap"
+[[tried.measurement.tier3]]
+task = "go-notes"
+median = 15
+runs = 1
+[[tried.measurement.tier3]]
+task = "py-clean"
+median = 21
+runs = 1
+[[tried.measurement.tier3]]
+task = "py-insight"
+median = 0
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-kanban"
+median = 2
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-landing-nursery"
+median = 90
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-landing-mars"
+median = 95
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-landing-tax"
+median = 76
+runs = 1
+
+[[tried]]
+name = "Qwen3.8 27B UD-IQ2_S"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 8
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.8 27B UD-IQ2_S"
+tier1_seconds = 116
+min_free_pct = 10
+swap_mb = 1080
+fail_reason = "Tier 1 took 116 s against the 60 s limit"
+
+[[tried]]
+name = "Qwen3.6 35B-A3B UD-IQ1_M"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 42
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.6 35B-A3B UD-IQ1_M"
+tier1_seconds = 31
+min_free_pct = 8
+swap_mb = 544
+fail_reason = "Tier 1 free memory fell below the limit: minimum 8% (limit 10%)"
+
+[[tried]]
+name = "LiquidAI LFM2.5 24B-A2B UD-Q3_K_XL"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "LiquidAI LFM2.5 24B-A2B UD-Q3_K_XL"
+tier1_seconds = 22
+min_free_pct = 7
+swap_mb = 0
+fail_reason = "Tier 1 returned an empty reply"
+
+[[tried]]
+name = "Meta Muse Glimmer 30B UD-IQ2_XXS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Meta Muse Glimmer 30B UD-IQ2_XXS"
+tier1_seconds = 97
+min_free_pct = 15
+swap_mb = 0
+fail_reason = "Tier 1 returned an empty reply"
+
+[[tried]]
+name = "flint (RecursiveSI) UD-IQ2_XXS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "flint (RecursiveSI) UD-IQ2_XXS"
+tier1_seconds = 13
+min_free_pct = 5
+swap_mb = 198
+fail_reason = "Tier 1 failed with HTTP 500: Compute error"
+
+[[tried]]
+name = "LiquidAI LFM2.5 24B-A2B Q4_K_M"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+runs = 1
+date = "2026-11-04"
+pill = "0.4.1"
+llama_cpp = "build 11960"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "LiquidAI LFM2.5 24B-A2B Q4_K_M"
+tier1_seconds = 8
+min_free_pct = 51
+swap_mb = 0
+fail_reason = "Tier 1 failed with HTTP 500: Compute error"
+
+# END m2pro-16gb-2026-11-04

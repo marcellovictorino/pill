@@ -58,6 +58,8 @@ func newCatalogCmd(a *App) *cobra.Command {
 					Set("tier1", m.Tier1).
 					Set("tier2", m.Tier2).
 					Set("tok_per_s", m.TokPerS).
+					Set("memory", memoryLabel(m)).
+					Set("tier3", tier3Label(m)).
 					Set("measured", measuredLabel(m)).
 					Set("note", m.Note))
 			}
@@ -68,8 +70,16 @@ func newCatalogCmd(a *App) *cobra.Command {
 			if len(recs) < catalog.MaxRecommendations {
 				attempts := cat.Attempts(dev)
 				if len(attempts) > catalog.MaxAttempts {
-					triedMore = len(attempts) - catalog.MaxAttempts
-					attempts = attempts[:catalog.MaxAttempts]
+					// The closest MaxAttempts, plus every offered model: a failed
+					// default must be visible even when it ranks low.
+					var shown []catalog.Attempt
+					for i, at := range attempts {
+						if i < catalog.MaxAttempts || at.Offered {
+							shown = append(shown, at)
+						}
+					}
+					triedMore = len(attempts) - len(shown)
+					attempts = shown
 				}
 				for _, at := range attempts {
 					tried = append(tried, attemptRow(at))
@@ -89,7 +99,7 @@ func newCatalogCmd(a *App) *cobra.Command {
 				chip = "unknown"
 			}
 			if triedMore > 0 {
-				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records; the closest %d are shown", triedMore, catalog.MaxAttempts))
+				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records; the closest %d and every offered model are shown", triedMore, catalog.MaxAttempts))
 			}
 			out := output.Obj{}.
 				Set("chip", chip).
@@ -141,7 +151,38 @@ func attemptRow(at catalog.Attempt) output.Obj {
 		Set("tier1", t1).
 		Set("tier2", t2).
 		Set("tok_per_s", tok).
+		Set("memory", memoryLabel(m)).
+		Set("tier3", tier3Label(m)).
 		Set("reason", reason)
+}
+
+// memoryLabel is the lowest free memory and swap growth of a run, or "-" when
+// neither was recorded. Zero swap is a result, so it prints as "+0 MB".
+func memoryLabel(m *catalog.Measurement) string {
+	var parts []string
+	if m.MinFreePct != nil {
+		parts = append(parts, fmt.Sprintf("%g%% free", *m.MinFreePct))
+	}
+	if m.SwapMB != nil {
+		parts = append(parts, fmt.Sprintf("swap +%g MB", *m.SwapMB))
+	}
+	if len(parts) == 0 {
+		return "-"
+	}
+	return strings.Join(parts, ", ")
+}
+
+// tier3Label lists the Tier 3 score of each task ("-" when Tier 3 did not run).
+// Tier 3 has no pass mark, so these are informational scores out of 100.
+func tier3Label(m *catalog.Measurement) string {
+	if len(m.Tier3) == 0 {
+		return "-"
+	}
+	var parts []string
+	for _, t := range m.Tier3 {
+		parts = append(parts, fmt.Sprintf("%s %g", t.Task, t.Median))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // measuredLabel is "date, pill version, N runs", leaving out what the record
