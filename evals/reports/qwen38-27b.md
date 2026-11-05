@@ -1,5 +1,12 @@
 # Qwen3.8 27B, UD-IQ3_XXS (10.9 GB), 32k context, thinking off, MTP
 
+## Update: UD-IQ4_XS (4-bit, 14.3 GB) tested and discarded
+
+**Verdict:** Tested and discarded (PILL-47, 4–5 November, build 11960). The 4-bit quant from unsloth, 32k, thinking off,
+no MTP, does not fix the problems above. Accuracy is stable but not perfect (21, 21 and 22 of 22 on the last three
+runs), Tier 2 takes 24–30 minutes, and Tier 1 takes 135–183 s, 2.3 to 3 times the 60 s default. Tier 3 was not run.
+MiniCPM stays the default. Runs and numbers: [`tried-and-rejected.md`](tried-and-rejected.md).
+
 ## TLDR
 
 **Verdict:** Not adopted. The model has potential but is limited on this 24 GB machine: in one Tier 3 run it beat
