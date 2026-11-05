@@ -22,24 +22,24 @@ Muse against MiniCPM's medians, task by task, from Muse's single run:
 - **Behind on Go and Python:** Go 77 against 88 and cleaning 53 against 90.5, both at the 30-minute cap; insight 35 against 40.
 
 Gemma 4 UD-IQ3_S also has Tier 3 scores (Kanban 100, nursery 92) but failed Tier 2 on the 15-minute cap, so it is not
-listed as passing. Qwen3.8 27B UD-IQ3_XXS (thinking off, MTP, 32k) is not listed either: Tier 1 takes 151–159 s and
+listed as passing. Qwen3.5 9B UD-Q4_K_XL (32k, thinking off, run on a 16 GB M2 Pro, not the 24 GB M4 of the other columns) is not listed either: Tier 2 scored 21/22 at the 15-minute cap, and its Tier 3 run is landing pages 76 to 95 but Go 15, cleaning 21, insight 0 and Kanban 2 (see [the M2 Pro report](m2-pro-16gb-2026-11-04.md)). Qwen3.8 27B UD-IQ3_XXS (thinking off, MTP, 32k) is not listed either: Tier 1 takes 151–159 s and
 Tier 2 scored 20, 22, 20. Its one Tier 3 run scored Go 100, nursery 100 and Mars 100, above MiniCPM's medians, but
 insight 0 and Kanban 71; see [the Qwen3.8 27B report](qwen38-27b.md). Muse would fail the default Tier 1 limit, so MiniCPM stays the default; use Muse only where a
 landing page is worth a slower run.
 
 ## Scores
 
-| Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | Muse Glimmer 30B IQ2 (DFlash) | Qwen3.8 27B IQ3_XXS (MTP) | MiniCPM-V 4.7 IQ2 |
-|---|---|---|---|---|---|---|---|---|
-| Runs per cell | 1 | 1 | 1 | 1 | 1 | 1 | 1 | **6** |
-| `go-notes` (Go CLI feature) | 100 | 100 | 100 | 100 | 13 (timeout) | 77 (timeout) | 100 | 88 median (67–94) |
-| `py-clean` (data cleaning) | 100 | 100 | 100 | 100 | 68 | 53 (timeout) | 80 | 90.5 median (57–96) |
-| `py-insight` (automated) | 100 | 92 | 95 | 90 | 0 (timeout) | 35 | 0 (output limit) | 40 median (40–60) |
-| `py-insight` (Opus judge) | 96 | 87 | 91 | 64 | 0 (no report) | not judged | 0 (no report) | 17 mean (9–30) |
-| `web-kanban` | 100 | 100 | 100 | 98 | 100 | 84 | 71 | 90 median (40–92) |
-| `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 99 | 100 | 93 median (18–96) |
-| `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 100 | 100 | 95 median (87–100) |
-| `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 90 | 93 | 98 median (54–100) |
+| Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | Muse Glimmer 30B IQ2 (DFlash) | Qwen3.8 27B IQ3_XXS (MTP) | Qwen3.5 9B UD-Q4_K_XL (M2 Pro 16 GB) | MiniCPM-V 4.7 IQ2  |
+|---|---|---|---|---|---|---|---|---|---|
+| Runs per cell | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | **6**  |
+| `go-notes` (Go CLI feature) | 100 | 100 | 100 | 100 | 13 (timeout) | 77 (timeout) | 100 | 15 | 88 median (67–94)  |
+| `py-clean` (data cleaning) | 100 | 100 | 100 | 100 | 68 | 53 (timeout) | 80 | 21 | 90.5 median (57–96)  |
+| `py-insight` (automated) | 100 | 92 | 95 | 90 | 0 (timeout) | 35 | 0 (output limit) | 0 (no report) | 40 median (40–60)  |
+| `py-insight` (Opus judge) | 96 | 87 | 91 | 64 | 0 (no report) | not judged | 0 (no report) | not judged | 17 mean (9–30)  |
+| `web-kanban` | 100 | 100 | 100 | 98 | 100 | 84 | 71 | 2 (timeout) | 90 median (40–92)  |
+| `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 99 | 100 | 90 | 93 median (18–96)  |
+| `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 100 | 100 | 95 | 95 median (87–100)  |
+| `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 90 | 93 | 76 | 98 median (54–100)  |
 
 Agent settings: Claude models through Claude Code with the effort shown, GPT-5.6 Luna through Codex, local models
 through Pi with thinking off and a throwaway Pi config. Cloud agents ran with permissions bypassed in temporary
@@ -48,15 +48,15 @@ workspaces. The model versions behind the Claude aliases were not independently 
 
 ## Time per run (minutes, mean)
 
-| Task | Opus | Sonnet | Haiku | GPT-5.6 Luna | Muse (1 run) | Qwen3.8 27B (1 run) | MiniCPM (6 runs) |
-|---|---|---|---|---|---|---|---|
-| `go-notes` | 1.1 | 0.7 | 2.0 | 1.8 | 30.0 | 18.1 | 21.8 |
-| `py-clean` | 1.0 | 0.7 | 2.4 | 1.6 | 30.0 | 21.8 | 17.4 |
-| `py-insight` | 5.3 | 1.9 | 10.5 | 3.1 | 21.5 | 23.5 | 13.7 |
-| `web-kanban` | 0.9 | 0.4 | 1.4 | 2.2 | 7.3 | 7.5 | 3.5 |
-| `web-landing-nursery` | 2.9 | 1.0 | 4.3 | 1.5 | 14.6 | 21.2 | 6.1 |
-| `web-landing-mars` | 3.3 | 0.8 | 4.8 | 2.6 | 17.4 | 21.9 | 6.3 |
-| `web-landing-tax` | 3.0 | 0.8 | 4.2 | 2.9 | 9.7 | 18.6 | 5.9 |
+| Task | Opus | Sonnet | Haiku | GPT-5.6 Luna | Muse (1 run) | Qwen3.8 27B (1 run) | Qwen3.5 9B (1 run) | MiniCPM (6 runs)  |
+|---|---|---|---|---|---|---|---|---|
+| `go-notes` | 1.1 | 0.7 | 2.0 | 1.8 | 30.0 | 18.1 | 15.7 | 21.8  |
+| `py-clean` | 1.0 | 0.7 | 2.4 | 1.6 | 30.0 | 21.8 | 30.0 | 17.4  |
+| `py-insight` | 5.3 | 1.9 | 10.5 | 3.1 | 21.5 | 23.5 | 25.8 | 13.7  |
+| `web-kanban` | 0.9 | 0.4 | 1.4 | 2.2 | 7.3 | 7.5 | 40.0 | 3.5  |
+| `web-landing-nursery` | 2.9 | 1.0 | 4.3 | 1.5 | 14.6 | 21.2 | 14.4 | 6.1  |
+| `web-landing-mars` | 3.3 | 0.8 | 4.8 | 2.6 | 17.4 | 21.9 | 12.0 | 6.3  |
+| `web-landing-tax` | 3.0 | 0.8 | 4.2 | 2.9 | 9.7 | 18.6 | 12.7 | 5.9  |
 
 Gemma timed out on 4 of 7 tasks (30 or 40 minute caps); on the three it finished it took 3.6 to 7.5 minutes. Muse timed out on Go and cleaning (30-minute caps) and took 7.3 to 21.5 minutes on the rest; see [the Muse report](muse-glimmer-30b.md). Qwen3.8 27B finished every task inside its cap, in 7.5 to 23.5 minutes.
 
