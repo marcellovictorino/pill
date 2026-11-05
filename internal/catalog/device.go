@@ -88,6 +88,7 @@ type Attempt struct {
 	Ctx         int
 	Status      string // StatusFailed or StatusRelaxed
 	Measurement *Measurement
+	Offered     bool // a catalog model someone can `pill pull`, not a tried-only record
 }
 
 // MaxAttempts is how many attempts the "tried" block shows.
@@ -103,18 +104,18 @@ func (c *Catalog) Attempts(d Device) []Attempt {
 		return nil
 	}
 	var out []Attempt
-	add := func(name string, ctx int, ms []Measurement) {
+	add := func(name string, ctx int, offered bool, ms []Measurement) {
 		if m := newestOn(d, ms, ctx); m != nil {
 			if st := verdict(m); st != StatusRecommended {
-				out = append(out, Attempt{Name: name, Ctx: ctx, Status: st, Measurement: m})
+				out = append(out, Attempt{Name: name, Ctx: ctx, Status: st, Measurement: m, Offered: offered})
 			}
 		}
 	}
 	for _, e := range c.Entries() {
-		add(e.Name, e.Variant.Ctx, e.Variant.Measurements)
+		add(e.Name, e.Variant.Ctx, true, e.Variant.Measurements)
 	}
 	for _, t := range c.Tried {
-		add(t.Name, 0, t.Measurements)
+		add(t.Name, 0, false, t.Measurements)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i].Measurement, out[j].Measurement

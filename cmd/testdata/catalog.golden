@@ -14,4 +14,4 @@ catalog[3]{name,size,ctx,recommended,local}:
   minicpm-v4-7-adiq2xsiq2xxs-64k,11.3 GB,65536,yes,no
 help[1]: download one: pill pull <name>
 help[2]: any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M
-help[3]: 14 more tried results are in the catalog records; the closest 5 are shown
+help[3]: 14 more tried results are in the catalog records; the closest 5 and every offered model are shown

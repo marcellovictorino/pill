@@ -70,8 +70,16 @@ func newCatalogCmd(a *App) *cobra.Command {
 			if len(recs) < catalog.MaxRecommendations {
 				attempts := cat.Attempts(dev)
 				if len(attempts) > catalog.MaxAttempts {
-					triedMore = len(attempts) - catalog.MaxAttempts
-					attempts = attempts[:catalog.MaxAttempts]
+					// The closest MaxAttempts, plus every offered model: a failed
+					// default must be visible even when it ranks low.
+					var shown []catalog.Attempt
+					for i, at := range attempts {
+						if i < catalog.MaxAttempts || at.Offered {
+							shown = append(shown, at)
+						}
+					}
+					triedMore = len(attempts) - len(shown)
+					attempts = shown
 				}
 				for _, at := range attempts {
 					tried = append(tried, attemptRow(at))
@@ -91,7 +99,7 @@ func newCatalogCmd(a *App) *cobra.Command {
 				chip = "unknown"
 			}
 			if triedMore > 0 {
-				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records; the closest %d are shown", triedMore, catalog.MaxAttempts))
+				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records; the closest %d and every offered model are shown", triedMore, catalog.MaxAttempts))
 			}
 			out := output.Obj{}.
 				Set("chip", chip).

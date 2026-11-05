@@ -80,6 +80,10 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	if !strings.Contains(r.out, "web-landing-mars 95") || !strings.Contains(r.out, "24% free, swap +0 MB") {
 		t.Errorf("tried rows must show Tier 3 scores and memory when recorded:\n%s", r.out)
 	}
+	// An offered model that failed here shows even when it ranks below the closest five.
+	if !strings.Contains(r.out, "minicpm-v4-7-adiq2xsiq2xxs-64k,failed,fail 31s") || !strings.Contains(r.out, "6% free, swap +845 MB") {
+		t.Errorf("the failed default must show its M2 Pro result:\n%s", r.out)
+	}
 	// Tried models hold results only: the download table lists catalog files.
 	table := r.out[strings.Index(r.out, "catalog["):]
 	if strings.Contains(table, "Qwen3.5 9B") {
