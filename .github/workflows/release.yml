@@ -1,0 +1,28 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Check tag matches version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          go build -o "$RUNNER_TEMP/pill" .
+          sh .github/scripts/check-release-tag.sh "$TAG" "$RUNNER_TEMP/pill"
+      - run: go test ./...
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --verify-tag --generate-notes

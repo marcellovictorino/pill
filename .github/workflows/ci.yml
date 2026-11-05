@@ -18,6 +18,10 @@ jobs:
         with:
           version: v2.14.0
       - run: go test ./...
+      - name: Test release tag check
+        run: |
+          go build -o "$RUNNER_TEMP/pill" .
+          sh .github/scripts/test-release-tag.sh "$RUNNER_TEMP/pill"
   vulncheck:
     # Known-vulnerability scan of the Go dependencies and standard library the binary actually calls.
     runs-on: ubuntu-latest
