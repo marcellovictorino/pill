@@ -100,3 +100,109 @@ func TestShortQuantIgnoresCaseOfThePrefix(t *testing.T) {
 		t.Errorf("a lowercase reference must find the catalog entry: %+v %v", e, ok)
 	}
 }
+
+// Intent (captain): short readable IDs, with the real source kept in the
+// catalog file. Every model needs an ID, and one ID + quant + context must name
+// exactly one record, or two rows of `pill catalog` would be indistinguishable.
+func TestEveryModelHasAShortIDAndTheKeyIsUnique(t *testing.T) {
+	c := mustLoad(t)
+	seen := map[string]string{}
+	add := func(id, quant string, ctx int, what string) {
+		key := id + "|" + ShortQuant(quant) + "|" + CtxLabel(ctx)
+		if id == "" || quant == "" {
+			t.Errorf("%s has no id or quant", what)
+		}
+		// The widest human table line (the heading, beside a 23 character
+		// Tier 3 cell and a 7 character Tier 1 word) is 88 characters with a
+		// 17 character ID.
+		if len(id) > MaxIDLen {
+			t.Errorf("%s: id %q is longer than %d characters and would wrap the list", what, id, MaxIDLen)
+		}
+		if prev, dup := seen[key]; dup {
+			t.Errorf("%s and %s share the key %s", what, prev, key)
+		}
+		seen[key] = what
+	}
+	for _, f := range c.Families {
+		for _, v := range f.Variants {
+			add(f.PublicID(), v.Quant, v.Ctx, f.Name+" "+v.Quant)
+		}
+	}
+	for _, tr := range c.Tried {
+		add(tr.ID, tr.Quant, tr.Ctx, tr.Name)
+	}
+	if e, ok := c.Resolve("minicpm"); !ok || e.Family.Repo == "" || e.Variant.File == "" {
+		t.Errorf("the ID minicpm must map to a repository and file: %+v", e)
+	}
+}
+
+// Intent (captain): the Tier 3 column has a fixed task order, so every task a
+// record names must have a place in it.
+func TestEveryTier3TaskHasAPlaceInTheColumn(t *testing.T) {
+	known := map[string]bool{}
+	for _, g := range Tier3Order {
+		for _, task := range g {
+			known[task] = true
+		}
+	}
+	c := mustLoad(t)
+	check := func(ms []Measurement) {
+		for _, m := range ms {
+			for _, t3 := range m.Tier3 {
+				if !known[t3.Task] {
+					t.Errorf("Tier 3 task %q is not in Tier3Order", t3.Task)
+				}
+			}
+		}
+	}
+	for _, f := range c.Families {
+		for _, v := range f.Variants {
+			check(v.Measurements)
+		}
+	}
+	for _, tr := range c.Tried {
+		check(tr.Measurements)
+	}
+}
+
+// Intent (captain): the QUANT column is the bit width; the exact quant only
+// where two files of one model share a bit width (Gemma 4 26B has two Q3 files).
+func TestQuantLabel(t *testing.T) {
+	c := mustLoad(t)
+	for _, tc := range []struct{ id, quant, want string }{
+		{"minicpm", "AD-IQ2_XS-IQ2_XXS", "Q2"},
+		{"gemma4-26b", "UD-IQ4_XS", "Q4"},
+		{"gemma4-26b", "UD-IQ3_S", "IQ3S"},
+		{"gemma4-26b", "UD-Q3_K_XL", "Q3KXL"},
+		{"lfm2.5-24b-a2b", "Q4_K_M", "Q4"},
+		{"lfm2.5-24b-a2b", "UD-Q3_K_XL", "Q3"},
+		{"qwen3.5-9b", "UD-Q4_K_XL", "Q4"},
+	} {
+		if got := c.QuantLabel(tc.id, tc.quant); got != tc.want {
+			t.Errorf("%s %s: %s, want %s", tc.id, tc.quant, got, tc.want)
+		}
+	}
+}
+
+// Intent (captain): commands take the short ID, id:quant when an ID has two
+// files, and the old long names keep working as aliases.
+func TestResolveShortIDs(t *testing.T) {
+	c := mustLoad(t)
+	for _, tc := range []struct{ in, wantName string }{
+		{"minicpm", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
+		{"minicpm:ad-iq2_xs-iq2_xxs", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
+		{"minicpm-v4-7", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
+		{"gemma4-26b", "gemma4-26b-iq4xs-64k"},
+		{"gemma4-26b:q3kxl", "gemma4-26b-q3kxl-64k"},
+		{"gemma4-26b:UD-Q3_K_XL", "gemma4-26b-q3kxl-64k"},
+	} {
+		if e, ok := c.Resolve(tc.in); !ok || e.Name != tc.wantName {
+			t.Errorf("%s: %+v %v, want %s", tc.in, e, ok, tc.wantName)
+		}
+	}
+	for _, bad := range []string{"gemma4-26b:iq3s", "minicpm:q8", "nope:q4"} {
+		if _, ok := c.Resolve(bad); ok {
+			t.Errorf("%s must not resolve (tried-only or unknown quant)", bad)
+		}
+	}
+}

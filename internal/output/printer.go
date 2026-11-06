@@ -203,7 +203,7 @@ func (p *Printer) humanTable(rows []Obj, pad string) {
 	tw := tabwriter.NewWriter(p.Out, 0, 0, 2, ' ', 0)
 	var head []string
 	for _, kv := range rows[0] {
-		head = append(head, strings.ToUpper(kv.Key))
+		head = append(head, headerLabel(kv.Key))
 	}
 	fmt.Fprintf(tw, "%s%s\n", pad, strings.Join(head, "\t"))
 	for _, row := range rows {
@@ -217,6 +217,15 @@ func (p *Printer) humanTable(rows []Obj, pad string) {
 	// Colour is applied after alignment would be ideal, but ANSI codes break
 	// tabwriter widths; tables stay plain and status words are coloured in
 	// key/value blocks only.
+}
+
+// headerLabel is a table column heading: the key in capitals with underscores
+// as spaces (free_mem -> FREE MEM). tok_s reads as TOK/S, the unit it holds.
+func headerLabel(key string) string {
+	if key == "tok_s" {
+		return "TOK/S"
+	}
+	return strings.ToUpper(strings.ReplaceAll(key, "_", " "))
 }
 
 func scalarText(v any) string {

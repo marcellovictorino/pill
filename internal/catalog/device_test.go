@@ -224,10 +224,12 @@ func TestChampionOnTestedMacOnly(t *testing.T) {
 
 // Intent (captain): on a device where nothing passes, the best available is
 // still shown, closest to a pass first, and only from that exact device.
-func TestAttemptsOrderByCloseness(t *testing.T) {
+func TestRowsOrderByCloseness(t *testing.T) {
 	const data = `
 [[tried]]
 name = "far"
+id = "far"
+quant = "Q4_K_M"
 [[tried.measurement]]
 chip = "Apple M9"
 ram_gb = 16
@@ -235,6 +237,8 @@ tier1 = "fail"
 tok_per_s = 90
 [[tried]]
 name = "close-slow"
+id = "close-slow"
+quant = "Q4_K_M"
 [[tried.measurement]]
 chip = "Apple M9"
 ram_gb = 16
@@ -245,6 +249,8 @@ tier2_total = 22
 tok_per_s = 10
 [[tried]]
 name = "closer"
+id = "closer"
+quant = "Q4_K_M"
 [[tried.measurement]]
 chip = "Apple M9"
 ram_gb = 16
@@ -254,6 +260,8 @@ tier2_score = 21
 tier2_total = 22
 [[tried]]
 name = "elsewhere"
+id = "elsewhere"
+quant = "Q4_K_M"
 [[tried.measurement]]
 chip = "Apple M9"
 ram_gb = 32
@@ -266,15 +274,16 @@ tier2_total = 22
 	if _, err := toml.Decode(data, &c); err != nil {
 		t.Fatal(err)
 	}
+	rows, hidden, _ := c.Rows(Device{"Apple M9", 16})
 	var names []string
-	for _, a := range c.Attempts(Device{"Apple M9", 16}) {
-		names = append(names, a.Name)
+	for _, r := range rows {
+		names = append(names, r.ID)
 	}
-	if got := strings.Join(names, ","); got != "closer,close-slow,far" {
-		t.Errorf("want closer,close-slow,far (other memory excluded), got %s", got)
+	if got := strings.Join(names, ","); got != "closer,close-slow,far" || hidden != 0 {
+		t.Errorf("want closer,close-slow,far (other memory excluded), got %s (%d hidden)", got, hidden)
 	}
-	if c.Attempts(Device{}) != nil {
-		t.Error("an undetected device has no attempts")
+	if rows, _, _ := c.Rows(Device{}); len(rows) != 0 {
+		t.Error("an undetected device measures nothing, and this catalog offers nothing")
 	}
 }
 

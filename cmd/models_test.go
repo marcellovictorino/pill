@@ -25,76 +25,114 @@ func gemmaHub(t *testing.T) *testutil.Hub {
 	})
 }
 
-// Intent (captain): recommendations are per device, from measurements on that
-// exact chip and memory, with explicit empty and unverified states.
+// Intent (captain): the list is per device, from measurements on that exact
+// chip and memory, with explicit empty and unverified states.
 func TestCatalogRecommendsPerDevice(t *testing.T) {
 	e := newEnv(t)
 	r := e.run("catalog").ok(t)
 	golden(t, "catalog", r.out)
 
-	// A 16 GB Mac: nothing fits, so nothing is recommended and the table says why.
+	// A 16 GB Mac: no catalog file fits, so none is offered for download and
+	// the footer says how many were left out. Measured runs still show.
 	e.sys.RAM = 16 << 30
 	r = e.run("catalog").ok(t)
-	for _, want := range []string{"recommendations[0]:", "gemma4-26b-q3kxl-64k,12.9 GB,65536,too-small,no", "no catalog model fits"} {
+	for _, want := range []string{"models[", "catalog models that need more memory than this Mac has: 3", "no catalog model fits"} {
 		if !strings.Contains(r.out, want) {
 			t.Errorf("16 GB output lacks %q:\n%s", want, r.out)
 		}
 	}
-	if strings.Contains(r.out, ",yes,") {
-		t.Errorf("nothing may be recommended on 16 GB:\n%s", r.out)
+	if strings.Contains(r.out, "unmeasured") {
+		t.Errorf("a model that does not fit must not be listed as untested:\n%s", r.out)
 	}
 
-	// Same memory as the tested Mac but another chip: its results are not borrowed.
+	// Same memory as the tested Mac but another chip: its results are not
+	// borrowed. The fitting catalog models list with dashes, nothing is tried.
 	e.sys.RAM, e.sys.Chip = 24<<30, "Apple M3 Max"
 	r = e.run("catalog").ok(t)
-	if strings.Contains(r.out, ",yes,") || !strings.Contains(r.out, "minicpm-v4-7-adiq2xsiq2xxs-64k,11.3 GB,65536,unmeasured,no") || !strings.Contains(r.out, "recommendations[0]:") {
-		t.Errorf("another chip must show unmeasured, not the M4 result:\n%s", r.out)
+	if !strings.Contains(r.out, "models[3]") || !strings.Contains(r.out, `minicpm,Q2,64k,"-","-","-","-","-",`) || strings.Contains(r.out, "22/22") {
+		t.Errorf("another chip must show dashes, not the M4 result:\n%s", r.out)
 	}
 
-	// Detection failed: explicit unverified state, no recommendation, still exit 0.
+	// Detection failed: explicit state, nothing measured, still exit 0.
 	e.sys.Chip, e.sys.ChipErr = "", errors.New("no sysctl")
 	r = e.run("catalog").ok(t)
-	if !strings.Contains(r.out, "chip: unknown") || !strings.Contains(r.out, ",unverified,") || strings.Contains(r.out, ",yes,") || !strings.Contains(r.out, "could not detect") {
-		t.Errorf("failed detection must be unverified:\n%s", r.out)
+	if !strings.Contains(r.out, "chip: unknown") || strings.Contains(r.out, "22/22") || !strings.Contains(r.out, "could not detect") {
+		t.Errorf("failed detection must be explicit and measure nothing:\n%s", r.out)
 	}
 }
 
 // Intent (captain): on a 16 GB Mac, where nothing passes, `pill catalog`
-// shows the best that was tried there, with time, score and reason, closest to
-// a pass first, and never offers a tried model as a download.
+// shows the best that was tried there, closest to a pass first, one row per
+// model with its short ID, and never offers a tried model as a download.
 func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	e := newEnv(t)
 	e.sys.RAM, e.sys.Chip = 16<<30, "Apple M2 Pro"
 	r := e.run("catalog").ok(t)
 	golden(t, "catalog_16gb_m2pro", r.out)
-	if !strings.Contains(r.out, "recommendations[0]:") || !strings.Contains(r.out, "tried_on_this_mac[") {
-		t.Fatalf("nothing passes on 16 GB, so the tried block must follow an empty shortlist:\n%s", r.out)
-	}
 	// Qwen3.5 9B (21/22) is closer to a pass than Ornith 1.5 9B (18/22).
-	i21, i18 := strings.Index(r.out, "Qwen3.5 9B UD-Q4_K_XL"), strings.Index(r.out, "Ornith 1.5 9B Q6_K")
+	i21, i18 := strings.Index(r.out, "qwen3.5-9b,Q4,32k"), strings.Index(r.out, "ornith1.5-9b,Q6")
 	if i21 < 0 || i18 < 0 || i21 > i18 || !strings.Contains(r.out, "21/22") {
 		t.Errorf("tried models must be ordered by Tier 2 score:\n%s", r.out)
 	}
-	// Tier 3 and memory show when a record has them, so a 9B model that wins
-	// landing pages but fails multi-step tasks is visible before downloading it.
-	if !strings.Contains(r.out, "web-landing-mars 95") || !strings.Contains(r.out, "24% free, swap +0 MB") {
-		t.Errorf("tried rows must show Tier 3 scores and memory when recorded:\n%s", r.out)
+	// Landing pages group in brackets, so a 9B model that wins them but fails
+	// multi-step tasks is visible before downloading it.
+	if !strings.Contains(r.out, "15|21|0|2|(90,95,76)") {
+		t.Errorf("Tier 3 must read Go|cleaning|insight|Kanban|(nursery,Mars,tax):\n%s", r.out)
 	}
 	// An offered model that failed here shows even when it ranks below the closest five.
-	if !strings.Contains(r.out, "minicpm-v4-7-adiq2xsiq2xxs-64k,failed,fail 31s") || !strings.Contains(r.out, "6% free, swap +845 MB") {
+	if !strings.Contains(r.out, "minicpm,Q2,64k,fail,") || !strings.Contains(r.out, ",6%,") {
 		t.Errorf("the failed default must show its M2 Pro result:\n%s", r.out)
 	}
-	// Tried models hold results only: the download table lists catalog files.
-	table := r.out[strings.Index(r.out, "catalog["):]
-	if strings.Contains(table, "Qwen3.5 9B") {
-		t.Errorf("a tried model must not appear as a download:\n%s", table)
+	// Agents get the source of an offered model; a tried model has none to give.
+	if !strings.Contains(r.out, "hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS") {
+		t.Errorf("an offered row must carry its Hugging Face reference:\n%s", r.out)
 	}
+	// The row counts follow the cap: the closest five tried models and the offered ones.
+	if !strings.Contains(r.out, "models[7]") || !strings.Contains(r.out, "more tried results are in the catalog records") {
+		t.Errorf("seven rows and a note on the rest:\n%s", r.out)
+	}
+}
 
-	// Three passes fill the shortlist, so the tried block is not shown.
-	e.sys.RAM, e.sys.Chip = 24<<30, "Apple M4"
-	r = e.run("catalog").ok(t)
-	if !strings.Contains(r.out, "tried_on_this_mac[5]") || !strings.Contains(r.out, "tried results are in the catalog records") {
-		t.Errorf("M4 has two passes, so the tried block shows five and says there are more:\n%s", r.out)
+// Intent (captain): no wrapped lines. Every row of the human list stays under
+// 90 characters on the Macs the records cover, and the default is marked *.
+func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
+	for _, dev := range []struct {
+		chip string
+		gb   int64
+	}{{"Apple M4", 24}, {"Apple M2 Pro", 16}} {
+		e := newEnv(t)
+		e.sys.RAM, e.sys.Chip = dev.gb<<30, dev.chip
+		r := e.run("catalog", "--format", "human").ok(t)
+		for _, line := range strings.Split(r.out, "\n") {
+			if strings.HasPrefix(line, "hint:") {
+				continue // hints are sentences, not rows
+			}
+			if len([]rune(line)) >= 90 {
+				t.Errorf("%s: a %d character line would wrap:\n%s", dev.chip, len([]rune(line)), line)
+			}
+		}
+		for _, head := range []string{"ID", "QUANT", "CTX", "TIER 1", "TIER 2", "TIER 3", "TOK/S", "FREE MEM"} {
+			if !strings.Contains(r.out, head) {
+				t.Errorf("%s: no %s column:\n%s", dev.chip, head, r.out)
+			}
+		}
+		if strings.Contains(r.out, "REASON") || strings.Contains(r.out, "NOTE") {
+			t.Errorf("%s: no reason or note column:\n%s", dev.chip, r.out)
+		}
+	}
+}
+
+// Intent (captain): the default is marked in the list, by its short ID.
+func TestCatalogMarksTheDefault(t *testing.T) {
+	e := newEnv(t)
+	e.gguf("MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf")
+	e.run("add", "minicpm", "--unverified").ok(t)
+	e.run("default", "minicpm").ok(t)
+	if r := e.run("catalog", "--format", "human").ok(t); !strings.Contains(r.out, "minicpm*") {
+		t.Errorf("the default must carry a *:\n%s", r.out)
+	}
+	if r := e.run("catalog").ok(t); !strings.Contains(r.out, "default: minicpm\n") {
+		t.Errorf("agents get a default field:\n%s", r.out)
 	}
 }
 
@@ -107,7 +145,7 @@ func TestChampionShortNamePullsRecordedFile(t *testing.T) {
 	hub := testutil.NewHub(t, map[string]map[string][]byte{
 		"AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF": {file: []byte("pretend-champion-weights")},
 	})
-	r := e.run("pull", "minicpm-v4-7").ok(t)
+	r := e.run("pull", "minicpm").ok(t) // the short ID; "minicpm-v4-7" still works as an alias
 	if !strings.Contains(r.out, "status: downloaded") || !strings.Contains(r.out, "file: "+file) {
 		t.Errorf("pull:\n%s", r.out)
 	}

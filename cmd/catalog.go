@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -31,166 +31,133 @@ func newCatalogCmd(a *App) *cobra.Command {
 			if chip, err := a.deps.Sys.ChipName(); err == nil {
 				dev.Chip = chip
 			}
-			cat := a.reg.Catalog
-			var table []output.Obj
-			fits := false
-			for _, e := range cat.Entries() {
-				local := "no"
-				if _, err := os.Stat(filepath.Join(a.settings.ModelsDir, e.Variant.File)); err == nil {
-					local = "yes"
+			rows, hidden, tooSmall := a.reg.Catalog.Rows(dev)
+			var models []output.Obj
+			defaultID := ""
+			for _, r := range rows {
+				isDefault := r.Entry != nil && r.Entry.Name == a.settings.Default
+				if isDefault {
+					defaultID = r.ID
 				}
-				if st := cat.Assess(dev, e).Status; st != catalog.StatusTooSmall {
-					fits = true
-				}
-				table = append(table, output.Obj{}.
-					Set("name", e.Name).
-					Set("size", fmt.Sprintf("%.1f GB", e.Variant.SizeGB)).
-					Set("ctx", e.Ctx).
-					Set("recommended", cat.Assess(dev, e).Status).
-					Set("local", local))
+				models = append(models, catalogRow(r, a.printer.Human, isDefault))
 			}
-			var recs []output.Obj
-			for _, r := range cat.Shortlist(dev) {
-				m := r.Measurement
-				recs = append(recs, output.Obj{}.
-					Set("name", r.Entry.Name).
-					Set("strengths", strings.Join(r.Entry.Family.Strengths, ", ")).
-					Set("tier1", m.Tier1).
-					Set("tier2", m.Tier2).
-					Set("tok_per_s", m.TokPerS).
-					Set("memory", memoryLabel(m)).
-					Set("tier3", tier3Label(m)).
-					Set("measured", measuredLabel(m)).
-					Set("note", m.Note))
-			}
-			// Fewer than three passes: show what else was tried on this device,
-			// closest to a pass first, so the best available is still visible.
-			var tried []output.Obj
-			var triedMore int
-			if len(recs) < catalog.MaxRecommendations {
-				attempts := cat.Attempts(dev)
-				if len(attempts) > catalog.MaxAttempts {
-					// The closest MaxAttempts, plus every offered model: a failed
-					// default must be visible even when it ranks low.
-					var shown []catalog.Attempt
-					for i, at := range attempts {
-						if i < catalog.MaxAttempts || at.Offered {
-							shown = append(shown, at)
-						}
-					}
-					triedMore = len(attempts) - len(shown)
-					attempts = shown
-				}
-				for _, at := range attempts {
-					tried = append(tried, attemptRow(at))
-				}
-			}
-			help := []string{"download one: pill pull <name>", "any Hugging Face GGUF works too: pill pull hf.co/owner/repo:Q4_K_M"}
+			var help []string
 			switch {
 			case !dev.Known():
-				help = append([]string{"could not detect this Mac's chip or memory, so nothing is recommended; pill pull <name> still works"}, help...)
-			case !fits:
-				help = append([]string{"no catalog model fits this Mac's memory; try a smaller GGUF from Hugging Face and test it with pill bench run"}, help...)
-			case len(recs) == 0:
-				help = append([]string{"no catalog model has passed both standard benchmark tiers on this exact chip and memory yet; unmeasured rows fit but are untested here (pill bench run <name> tests one)"}, help...)
+				help = append(help, "could not detect this Mac's chip or memory, so nothing is measured here; pill pull <id> still works")
+			case len(rows) == 0:
+				help = append(help, "no catalog model fits this Mac's memory; try a smaller GGUF from Hugging Face and test it with pill bench run")
+			case !hasStatus(rows, catalog.StatusRecommended):
+				help = append(help, "no model has passed both standard benchmark tiers on this exact chip and memory yet")
+			}
+			help = append(help,
+				"test one on this Mac: pill bench run <id> (a Q3KXL style quant goes after a colon: <id>:q3kxl)",
+				"make one your default: pill default <id>")
+			if hidden > 0 {
+				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records", hidden))
+			}
+			if tooSmall > 0 {
+				help = append(help, fmt.Sprintf("catalog models that need more memory than this Mac has: %d", tooSmall))
 			}
 			chip := dev.Chip
 			if chip == "" {
 				chip = "unknown"
 			}
-			if triedMore > 0 {
-				help = append(help, fmt.Sprintf("%d more tried results are in the catalog records; the closest %d and every offered model are shown", triedMore, catalog.MaxAttempts))
+			out := output.Obj{}.Set("chip", chip).Set("ram_gb", dev.RAMGB)
+			if !a.printer.Human && defaultID != "" {
+				out = out.Set("default", defaultID) // agents get the default as a field; people see the * in the table
 			}
-			out := output.Obj{}.
-				Set("chip", chip).
-				Set("ram_gb", dev.RAMGB).
-				Set("recommendations", recs)
-			if len(recs) < catalog.MaxRecommendations && dev.Known() {
-				out = out.Set("tried_on_this_mac", tried)
-			}
-			a.printer.Emit(out.
-				Set("catalog", table).
-				Set("help", help))
+			a.printer.Emit(out.Set("models", models).Set("help", help))
 			return nil
 		},
 	}
 }
 
-// attemptRow is one line of the "tried on this Mac" block. Values that were
-// not measured print as "-", never as zero.
-func attemptRow(at catalog.Attempt) output.Obj {
-	m := at.Measurement
-	t1 := m.Tier1
-	if t1 == "" {
-		t1 = "-"
-	}
-	if m.Tier1Seconds > 0 {
-		t1 += fmt.Sprintf(" %gs", m.Tier1Seconds)
-	}
-	t2 := "-"
-	if m.Tier2Total > 0 {
-		t2 = fmt.Sprintf("%d/%d", m.Tier2Score, m.Tier2Total)
-		if m.Tier2Minutes > 0 {
-			t2 += fmt.Sprintf(" in %g min", m.Tier2Minutes)
-		}
-		if m.Tier2TimedOut {
-			t2 += ", cap hit"
+func hasStatus(rows []catalog.Row, status string) bool {
+	for _, r := range rows {
+		if r.Status == status {
+			return true
 		}
 	}
+	return false
+}
+
+// catalogRow is one model: ID, QUANT, CTX, then the results as short as they
+// can be read (README: "Catalog columns"). Values that were not measured print
+// as "-", never as zero. Agents also get the Hugging Face source, which would
+// only wrap a terminal table.
+func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
+	m := r.Measurement
+	id := r.ID
+	if human && isDefault {
+		id += "*"
+	}
+	ctx := "-"
+	if r.Ctx > 0 {
+		ctx = catalog.CtxLabel(r.Ctx)
+	}
+	t1, t2, free, t3 := "-", "-", "-", "-"
 	var tok any = "-"
-	if m.TokPerS > 0 {
-		tok = m.TokPerS
+	if m != nil {
+		if m.Tier1 != "" {
+			t1 = m.Tier1
+		}
+		if m.Tier2Total > 0 {
+			t2 = fmt.Sprintf("%d/%d", m.Tier2Score, m.Tier2Total)
+		}
+		if m.TokPerS > 0 {
+			tok = m.TokPerS
+		}
+		if m.MinFreePct != nil {
+			free = fmt.Sprintf("%g%%", *m.MinFreePct)
+		}
+		t3 = tier3Label(m)
 	}
-	reason := m.FailReason
-	if reason == "" {
-		reason = "-"
+	row := output.Obj{}.
+		Set("id", id).
+		Set("quant", r.Quant).
+		Set("ctx", ctx).
+		Set("tier_1", t1).
+		Set("tier_2", t2).
+		Set("tier_3", t3).
+		Set("tok_s", tok).
+		Set("free_mem", free)
+	if !human {
+		source := r.Source
+		if source == "" {
+			source = "-"
+		}
+		row = row.Set("source", source)
 	}
-	return output.Obj{}.
-		Set("name", at.Name).
-		Set("verdict", at.Status).
-		Set("tier1", t1).
-		Set("tier2", t2).
-		Set("tok_per_s", tok).
-		Set("memory", memoryLabel(m)).
-		Set("tier3", tier3Label(m)).
-		Set("reason", reason)
+	return row
 }
 
-// memoryLabel is the lowest free memory and swap growth of a run, or "-" when
-// neither was recorded. Zero swap is a result, so it prints as "+0 MB".
-func memoryLabel(m *catalog.Measurement) string {
-	var parts []string
-	if m.MinFreePct != nil {
-		parts = append(parts, fmt.Sprintf("%g%% free", *m.MinFreePct))
-	}
-	if m.SwapMB != nil {
-		parts = append(parts, fmt.Sprintf("swap +%g MB", *m.SwapMB))
-	}
-	if len(parts) == 0 {
-		return "-"
-	}
-	return strings.Join(parts, ", ")
-}
-
-// tier3Label lists the Tier 3 score of each task ("-" when Tier 3 did not run).
-// Tier 3 has no pass mark, so these are informational scores out of 100.
+// tier3Label joins the Tier 3 scores out of 100 in the fixed catalog.Tier3Order,
+// with the three landing pages in brackets: 88|91|40|90|(93,95,98). A task
+// that was not run prints "-", and "-" alone when Tier 3 did not run at all.
 func tier3Label(m *catalog.Measurement) string {
 	if len(m.Tier3) == 0 {
 		return "-"
 	}
-	var parts []string
+	score := map[string]string{}
 	for _, t := range m.Tier3 {
-		parts = append(parts, fmt.Sprintf("%s %g", t.Task, t.Median))
+		score[t.Task] = strconv.FormatFloat(math.Round(t.Median), 'f', 0, 64)
 	}
-	return strings.Join(parts, ", ")
-}
-
-// measuredLabel is "date, pill version, N runs", leaving out what the record
-// does not hold (backfilled records carry no pill version).
-func measuredLabel(m *catalog.Measurement) string {
-	parts := []string{m.Date}
-	if m.Pill != "" {
-		parts = append(parts, "pill "+m.Pill)
+	var parts []string
+	for _, group := range catalog.Tier3Order {
+		var cells []string
+		for _, task := range group {
+			v, ok := score[task]
+			if !ok {
+				v = "-"
+			}
+			cells = append(cells, v)
+		}
+		if len(cells) == 1 {
+			parts = append(parts, cells[0])
+		} else {
+			parts = append(parts, "("+strings.Join(cells, ",")+")")
+		}
 	}
-	return strings.Join(append(parts, fmt.Sprintf("%d runs", m.Runs)), ", ")
+	return strings.Join(parts, "|")
 }

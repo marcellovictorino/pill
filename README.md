@@ -52,6 +52,23 @@ If you already have the GGUF files, skip `pill pull` and move them into place:
 mkdir -p ~/.pill/models && mv ~/models/*.gguf ~/.pill/models/
 ```
 
+## Reading `pill catalog`
+
+```
+ID                   QUANT  CTX  TIER 1   TIER 2  TIER 3                   TOK/S  FREE MEM
+minicpm*             Q2     64k  pass     22/22   88|91|40|90|(93,95,98)   25     22%
+```
+
+- **ID** is the short name every command accepts (`pill bench run minicpm`, `pill default minicpm`). `*` marks your default. A variant gets a suffix (`qwen3.5-9b-mtp`). The old long names keep working. `internal/catalog/catalog.toml` maps each ID to its Hugging Face repository and file; the agent format (`--format toon`) also prints that reference as `source`.
+- **QUANT** is the bit width (`Q2` to `Q8`). When two files of one model share a bit width, it shows the exact quant (`IQ3S`, `Q3KXL`) and commands take it after a colon: `pill bench run gemma4-26b:q3kxl`.
+- **CTX** is the context window the result was measured at.
+- **TIER 1** is `pass`, `fail`, or `relaxed` (passed only with looser limits than the default). **TIER 2** is hidden tests passed out of the task's total.
+- **TIER 3** is the score out of 100 for each task, in this fixed order: Go notes | data cleaning | data insight | Kanban | (landing pages: nursery, Mars, tax). Higher is better; there is no pass mark. `-` means that task was not run.
+- **TOK/S** is decoding speed.
+- **FREE MEM** is the lowest share of memory left free during the run. Near 0% means the Mac was starved.
+
+`-` always means "not measured", never zero. Models that were tried but are not offered for download have no source yet, so `pill bench run` does not accept their IDs.
+
 ## Use the models from another agent
 
 `pill serve` starts the router and returns. Any client that speaks the OpenAI API can then use your registered models, with or without Pi.
@@ -92,9 +109,9 @@ Things to know:
 | `pill stop [--all]` | Unload the loaded model; `--all` also stops the router. |
 | `pill ps` | Router state, port, loaded model and its memory. |
 | `pill ls` | Local models: name, state (`pulled`, `unverified`, `passed`, `failed`, `missing`), size, default. |
-| `pill pull <name>` | Download a GGUF (catalog name or Hugging Face reference). Resumes, verifies sha256, never registers. |
+| `pill pull <id>` | Download a GGUF (catalog ID, long name or Hugging Face reference). Resumes, verifies sha256, never registers. |
 | `pill rm <name>` | Remove the entry and its Pi registration; delete the GGUF when no other entry uses it. |
-| `pill catalog` | Built-in models, plus up to three measured on this exact chip and memory (strengths, tiers, tok/s). When fewer than three pass, a `tried_on_this_mac` block lists the closest failed or relaxed runs with time, score and reason. Nothing is guessed: no result means no recommendation. |
+| `pill catalog` | One row per model that was measured on this exact chip and memory, plus catalog models that fit but were not measured (see [Reading `pill catalog`](#reading-pill-catalog)). Nothing is guessed: no result shows `-`. |
 | `pill bench run <name> [--runs N]` | Gate a model: cold-start agent-sized request, Pi tool-calling turn, then a Tier 2 coding task scored by a hidden verifier (needs Node). A failure exits 1 and removes the model from Pi. |
 | `pill bench summary [--all]` | Rank benchmarked models by Tier 2 score, speed and memory headroom. |
 | `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the unverified ones. |
