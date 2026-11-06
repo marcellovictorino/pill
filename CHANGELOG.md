@@ -6,20 +6,16 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
-### Changed
-
-- `pill catalog` reads as a report for people: it opens with `Chip` and `Memory` (`24GB RAM`) instead of `chip` and `ram_gb`, marks the default with `*` to the left of its ID, and shows Tier 1 as `pass (29s)`. On a terminal those facts, the column headings and the verdict marks (`✓` green, `✗` red) are in colour; piped output and `NO_COLOR` stay plain. The agent format keeps its field names.
-- `pill catalog` no longer has a relaxed verdict. A run that passed only with looser limits than pill's is a fail: Tier 1 reads `fail (111s)`, the mark is `✗` and the agent `verdict` is `FAIL`.
-
 ## [0.6.0] - 2026-11-06
 
 ### Changed
 
-- `pill catalog` is one table with one row per model and short IDs. The columns are `id`, `quant`, `ctx`, `tier_1`, `tier_2` (x/22), `tier_3` (Go|cleaning|insight|Kanban|(nursery,Mars,tax)), `tok_s` and `free_mem`; the default is marked `*`. Rows stay under 90 characters. The reasons, notes, run counts, Tier 1 seconds, swap, the separate download table and the `recommendations` and `tried_on_this_mac` blocks are gone, and the agent format adds a `source` field with the Hugging Face reference. A model measured on this Mac now shows its result even when its memory minimum says it is too small, so a failed run no longer appears as `too-small` in one place and `failed` in another.
+- `pill catalog` is one table with one row per model and short IDs. The columns are `id`, `quant`, `ctx`, `tier_1`, `tier_2` (x/22), `tier_3` (Go|cleaning|insight|Kanban|(nursery,Mars,tax)), `tok_s` and `free_mem`; the default is marked `*` to the left of its ID. Rows stay under 90 characters. The reasons, notes, run counts, swap, the separate download table and the `recommendations` and `tried_on_this_mac` blocks are gone, and the agent format adds a `source` field with the Hugging Face reference. A model measured on this Mac now shows its result even when its memory minimum says it is too small, so a failed run no longer appears as `too-small` in one place and `failed` in another.
 - Catalog models have short IDs (`minicpm` for MiniCPM-V 4.7). `pill pull`, `pill add`, `pill bench run`, `pill default` and `pill rm` accept the ID, `id:quant` for a model with two files (`gemma4-26b:q3kxl`), and the old long names as before. The ID-to-source mapping lives in `catalog.toml`.
-
-- `pill catalog` shows the measured Tier 1 time and Tier 2 time again, inside the existing columns (`pass 48s`, `22/22 4.9m`), and marks each measured model with its verdict after the ID (`✓` passed, `~` relaxed, `✗` failed), so a run that failed on swap growth no longer reads as a pass. The agent format adds a `verdict` field. Tables print one space between columns, which keeps rows under 90 characters.
+- `pill catalog` shows the measured Tier 1 time and Tier 2 time again, inside the existing columns (`pass (48s)`, `22/22 4.9m`), and marks each measured model with its verdict after the ID (`✓` passed, `✗` failed), so a run that failed on swap growth no longer reads as a pass. The agent format adds a `verdict` field. Tables print one space between columns, which keeps rows under 90 characters.
 - `pill catalog` prints the human table by default, also when piped. The agent format is now `--format agent` (`--format toon` still works) and is accepted by every command. Callers that parsed the piped TOON of `pill catalog` must pass `--format agent`; the pill skill now says so.
+- `pill catalog` reads as a report for people: it opens with `Chip` and `Memory` (`24GB RAM`) instead of `chip` and `ram_gb`, marks the default with `*` to the left of its ID, and shows Tier 1 as `pass (29s)`. On a terminal those facts, the column headings and the verdict marks (`✓` green, `✗` red) are in colour; piped output and `NO_COLOR` stay plain. The agent format keeps its field names.
+- `pill catalog` has no relaxed verdict. A run that passed only with looser limits than pill's is a fail: Tier 1 reads `fail (111s)`, the mark is `✗` and the agent `verdict` is `FAIL`.
 
 ## [0.5.0] - 2026-11-06
 
