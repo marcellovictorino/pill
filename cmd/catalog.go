@@ -89,8 +89,11 @@ func hasStatus(rows []catalog.Row, status string) bool {
 func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
 	m := r.Measurement
 	id := r.ID
-	if human && isDefault {
-		id += "*"
+	if human {
+		if isDefault {
+			id += "*"
+		}
+		id += verdictMark(r) // glued to the ID: a column of its own would push rows past 90 characters
 	}
 	ctx := "-"
 	if r.Ctx > 0 {
@@ -101,9 +104,18 @@ func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
 	if m != nil {
 		if m.Tier1 != "" {
 			t1 = m.Tier1
+			if t1 == "relaxed" {
+				t1 = "relax" // matches the verdict, and keeps the row short
+			}
+			if m.Tier1Seconds > 0 {
+				t1 += fmt.Sprintf(" %.0fs", m.Tier1Seconds) // "pass 48s"
+			}
 		}
 		if m.Tier2Total > 0 {
 			t2 = fmt.Sprintf("%d/%d", m.Tier2Score, m.Tier2Total)
+			if m.Tier2Minutes > 0 {
+				t2 += " " + minutesLabel(m.Tier2Minutes) // "22/22 4.9m"
+			}
 		}
 		if m.TokPerS > 0 {
 			tok = m.TokPerS
@@ -123,6 +135,7 @@ func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
 		Set("tok_s", tok).
 		Set("free_mem", free)
 	if !human {
+		row = row.Set("verdict", verdictLabel(r)) // agents read words, people read the mark after the ID
 		source := r.Source
 		if source == "" {
 			source = "-"
@@ -130,6 +143,46 @@ func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
 		row = row.Set("source", source)
 	}
 	return row
+}
+
+// minutesLabel keeps one decimal under 10 minutes (4.9m) and none above (13m).
+func minutesLabel(min float64) string {
+	if min < 9.95 {
+		return fmt.Sprintf("%.1fm", min)
+	}
+	return fmt.Sprintf("%.0fm", min)
+}
+
+// verdictLabel is the overall result of a measured model, so a row whose times
+// look fine is still not read as a pass when it failed (for example on swap
+// growth). Models nobody measured print "-".
+func verdictLabel(r catalog.Row) string {
+	if r.Measurement == nil {
+		return "-"
+	}
+	switch r.Status {
+	case catalog.StatusRecommended:
+		return "ok"
+	case catalog.StatusRelaxed:
+		return "relax"
+	case catalog.StatusFailed:
+		return "FAIL"
+	}
+	return "-"
+}
+
+// verdictMark is the same verdict as one character for the human table:
+// ✓ passed, ~ passed only the relaxed gate, ✗ failed, nothing when unmeasured.
+func verdictMark(r catalog.Row) string {
+	switch verdictLabel(r) {
+	case "ok":
+		return "✓"
+	case "relax":
+		return "~"
+	case "FAIL":
+		return "✗"
+	}
+	return ""
 }
 
 // tier3Label joins the Tier 3 scores out of 100 in the fixed catalog.Tier3Order,

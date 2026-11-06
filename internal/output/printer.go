@@ -200,7 +200,7 @@ func (p *Printer) humanTable(rows []Obj, pad string) {
 		fmt.Fprintf(p.Out, "%s%s\n", pad, p.dim("(none)"))
 		return
 	}
-	tw := tabwriter.NewWriter(p.Out, 0, 0, 2, ' ', 0)
+	tw := tabwriter.NewWriter(p.Out, 0, 0, 1, ' ', 0) // one space between columns keeps wide tables under 90 characters
 	var head []string
 	for _, kv := range rows[0] {
 		head = append(head, headerLabel(kv.Key))

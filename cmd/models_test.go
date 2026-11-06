@@ -80,7 +80,7 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 		t.Errorf("Tier 3 must read Go|cleaning|insight|Kanban|(nursery,Mars,tax):\n%s", r.out)
 	}
 	// An offered model that failed here shows even when it ranks below the closest five.
-	if !strings.Contains(r.out, "minicpm,Q2,64k,fail,") || !strings.Contains(r.out, ",6%,") {
+	if !strings.Contains(r.out, "minicpm,Q2,64k,fail 31s,") || !strings.Contains(r.out, ",6%,") {
 		t.Errorf("the failed default must show its M2 Pro result:\n%s", r.out)
 	}
 	// Agents get the source of an offered model; a tried model has none to give.
@@ -122,13 +122,41 @@ func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
 	}
 }
 
+// Intent (captain): side by side, a model's Tier 1 time and Tier 2 time are
+// the point of the table ("it took 48 seconds ... almost 5 minutes"), and a
+// failed run must not read as a pass. gemma4-26b Q3KXL passed both tiers but
+// pushed 4.75 GB to swap, so only the verdict tells it from a real pass.
+func TestCatalogShowsTimesAndVerdict(t *testing.T) {
+	e := newEnv(t)
+	human := e.run("catalog", "--format", "human").ok(t).out
+	var q3 string
+	for _, line := range strings.Split(human, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "gemma4-26b") && strings.Contains(line, "Q3KXL") {
+			q3 = line
+		}
+	}
+	if !strings.Contains(q3, "pass 48s") || !strings.Contains(q3, "22/22 4.9m") {
+		t.Errorf("Tier 1 and Tier 2 times must show on the row:\n%s", human)
+	}
+	if !strings.Contains(q3, "gemma4-26b✗") {
+		t.Errorf("a failed row must carry the ✗ mark:\n%s", q3)
+	}
+	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "muse-30b-dflash~") {
+		t.Errorf("a pass carries ✓ and a relaxed pass ~:\n%s", human)
+	}
+	agent := e.run("catalog").ok(t).out
+	if !strings.Contains(agent, "gemma4-26b,Q3KXL,64k,pass 48s,22/22 4.9m,") || !strings.Contains(agent, ",11%,FAIL,") {
+		t.Errorf("agents get the times and a verdict word:\n%s", agent)
+	}
+}
+
 // Intent (captain): the default is marked in the list, by its short ID.
 func TestCatalogMarksTheDefault(t *testing.T) {
 	e := newEnv(t)
 	e.gguf("MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf")
 	e.run("add", "minicpm", "--unverified").ok(t)
 	e.run("default", "minicpm").ok(t)
-	if r := e.run("catalog", "--format", "human").ok(t); !strings.Contains(r.out, "minicpm*") {
+	if r := e.run("catalog", "--format", "human").ok(t); !strings.Contains(r.out, "minicpm*✓") {
 		t.Errorf("the default must carry a *:\n%s", r.out)
 	}
 	if r := e.run("catalog").ok(t); !strings.Contains(r.out, "default: minicpm\n") {
