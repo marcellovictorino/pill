@@ -2,11 +2,11 @@ chip: Apple M4
 ram_gb: 24
 models[7]{id,quant,ctx,tier_1,tier_2,tier_3,tok_s,free_mem,verdict,source}:
   minicpm,Q2,64k,pass,22/22,"88|91|40|90|(93,95,98)",25,22%,ok,"hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS"
-  gemma4-26b,IQ3S,64k,pass 29s,22/22 15m,"-|-|-|100|(92,-,-)",24,19%,FAIL,"-"
-  gemma4-26b,Q3KXL,64k,pass 48s,22/22 4.9m,"-",22.4,11%,FAIL,"hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q3_K_XL"
-  muse-30b-dflash,Q2,64k,relax 111s,22/22 13m,"77|53|35|84|(99,100,90)",12.8,11%,relax,"-"
-  muse-30b,Q2,64k,fail 140s,22/22 11m,"-",5,14%,FAIL,"-"
-  qwen3.8-27b,Q4,32k,relax 135s,21/22 24m,"-",6.4,8%,FAIL,"-"
+  gemma4-26b,IQ3S,64k,pass (29s),22/22 15m,"-|-|-|100|(92,-,-)",24,19%,FAIL,"-"
+  gemma4-26b,Q3KXL,64k,pass (48s),22/22 4.9m,"-",22.4,11%,FAIL,"hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q3_K_XL"
+  muse-30b-dflash,Q2,64k,fail (111s),22/22 13m,"77|53|35|84|(99,100,90)",12.8,11%,FAIL,"-"
+  muse-30b,Q2,64k,fail (140s),22/22 11m,"-",5,14%,FAIL,"-"
+  qwen3.8-27b,Q4,32k,fail (135s),21/22 24m,"-",6.4,8%,FAIL,"-"
   gemma4-26b,Q4,64k,"-","-","-","-","-","-","hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-IQ4_XS"
 help[1]: test one on this Mac: pill bench run <id> (a Q3KXL style quant goes after a colon: <id>:q3kxl)
 help[2]: make one your default: pill default <id>

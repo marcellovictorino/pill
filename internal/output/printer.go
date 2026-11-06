@@ -11,8 +11,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
-	"text/tabwriter"
+	"unicode/utf8"
 
 	"golang.org/x/term"
 )
@@ -186,7 +187,7 @@ func (p *Printer) humanObj(o Obj, depth int) {
 			p.humanObj(v, depth+1)
 		case []Obj:
 			fmt.Fprintf(p.Out, "%s%s\n", pad, p.paint("1", kv.Key+":"))
-			p.humanTable(v, pad+"  ")
+			p.humanTable(v, pad+"  ", false)
 		case []string:
 			fmt.Fprintf(p.Out, "%s%-*s  %s\n", pad, width+1, p.paint("1", kv.Key+":"), strings.Join(v, ", "))
 		default:
@@ -195,29 +196,76 @@ func (p *Printer) humanObj(o Obj, depth int) {
 	}
 }
 
-func (p *Printer) humanTable(rows []Obj, pad string) {
+func (p *Printer) humanTable(rows []Obj, pad string, boldHead bool) {
 	if len(rows) == 0 {
 		fmt.Fprintf(p.Out, "%s%s\n", pad, p.dim("(none)"))
 		return
 	}
-	tw := tabwriter.NewWriter(p.Out, 0, 0, 1, ' ', 0) // one space between columns keeps wide tables under 90 characters
 	var head []string
 	for _, kv := range rows[0] {
 		head = append(head, headerLabel(kv.Key))
 	}
-	fmt.Fprintf(tw, "%s%s\n", pad, strings.Join(head, "\t"))
+	lines := [][]string{head}
 	for _, row := range rows {
 		cells := make([]string, len(row))
 		for i, kv := range row {
 			cells[i] = scalarText(kv.Val)
 		}
-		fmt.Fprintf(tw, "%s%s\n", pad, strings.Join(cells, "\t"))
+		lines = append(lines, cells)
 	}
-	_ = tw.Flush()
-	// Colour is applied after alignment would be ideal, but ANSI codes break
-	// tabwriter widths; tables stay plain and status words are coloured in
-	// key/value blocks only.
+	// Columns are aligned by visible width, so a cell may carry colour (see
+	// Paint): text/tabwriter would count the escape codes as characters.
+	widths := make([]int, len(head))
+	for _, cells := range lines {
+		for i, c := range cells {
+			widths[i] = max(widths[i], visibleWidth(c))
+		}
+	}
+	for n, cells := range lines {
+		var b strings.Builder
+		for i, c := range cells {
+			if n == 0 && boldHead && c != "" {
+				c = p.paint("1", c) // the heading row is bold
+			}
+			b.WriteString(c)
+			if i < len(cells)-1 {
+				gap := 1 // one space between columns keeps wide tables under 90 characters
+				if rows[0][i].Key == "" {
+					gap = 0 // a column with no key is a gutter for a mark, flush with the next column
+				}
+				b.WriteString(strings.Repeat(" ", widths[i]-visibleWidth(cells[i])+gap))
+			}
+		}
+		fmt.Fprintf(p.Out, "%s%s\n", pad, b.String())
+	}
 }
+
+// Report prints a person's report: a block of labelled facts, a blank line,
+// a table and dim hints. Labels are coloured so the facts read apart from the
+// table below them. Agents get Emit instead.
+func (p *Printer) Report(facts Obj, rows []Obj, help []string) {
+	width := 0
+	for _, kv := range facts {
+		width = max(width, len(kv.Key))
+	}
+	for _, kv := range facts {
+		fmt.Fprintf(p.Out, "%s%s  %s\n", p.paint("1;36", kv.Key), strings.Repeat(" ", width-len(kv.Key)), p.paint("1", scalarText(kv.Val)))
+	}
+	fmt.Fprintln(p.Out)
+	p.humanTable(rows, "", true)
+	for _, h := range help {
+		fmt.Fprintln(p.Out, p.dim("hint: "+h))
+	}
+}
+
+// Paint colours s with an ANSI SGR code ("32" green, "31" red, "1" bold)
+// when colour is on, and returns it unchanged otherwise.
+func (p *Printer) Paint(code, s string) string { return p.paint(code, s) }
+
+var ansiCode = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+// visibleWidth is the number of characters a terminal shows for s.
+func visibleWidth(s string) int { return utf8.RuneCountInString(ansiCode.ReplaceAllString(s, "")) }
 
 // headerLabel is a table column heading: the key in capitals with underscores
 // as spaces (free_mem -> FREE MEM). tok_s reads as TOK/S, the unit it holds.

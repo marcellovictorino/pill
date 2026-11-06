@@ -106,3 +106,27 @@ func TestHumanTable(t *testing.T) {
 		}
 	}
 }
+
+// Intent (captain): colour in the catalog report must not cost alignment.
+// The same report with colour on, once the escape codes are removed, is the
+// plain report, so a coloured mark does not push its row's columns along.
+func TestReportColourKeepsColumnsAligned(t *testing.T) {
+	report := func(color bool) string {
+		p, out, _ := newTestPrinter(t, "human", false)
+		p.Color = color
+		rows := []Obj{
+			Obj{}.Set("", p.Paint("1;33", "*")).Set("id", "minicpm"+p.Paint("32", "✓")).Set("tier_1", "pass"),
+			Obj{}.Set("", " ").Set("id", "muse-30b-dflash"+p.Paint("31", "✗")).Set("tier_1", "fail (111s)"),
+		}
+		p.Report(Obj{}.Set("Chip", "Apple M4").Set("Memory", "24GB RAM"), rows, []string{"make one your default"})
+		return out.String()
+	}
+	plain, colour := report(false), report(true)
+	if colour == plain || ansiCode.ReplaceAllString(colour, "") != plain {
+		t.Errorf("coloured report must equal the plain one without its colour codes:\n%s\n---\n%s", colour, plain)
+	}
+	want := "Chip    Apple M4\nMemory  24GB RAM\n\n ID               TIER 1\n*minicpm✓         pass\n muse-30b-dflash✗ fail (111s)\nhint: make one your default\n"
+	if plain != want {
+		t.Errorf("got:\n%s\nwant:\n%s", plain, want)
+	}
+}

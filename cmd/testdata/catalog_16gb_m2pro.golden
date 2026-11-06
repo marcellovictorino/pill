@@ -1,12 +1,12 @@
 chip: Apple M2 Pro
 ram_gb: 16
 models[7]{id,quant,ctx,tier_1,tier_2,tier_3,tok_s,free_mem,verdict,source}:
-  qwen3.5-9b,Q4,32k,pass 31s,21/22 15m,"15|21|0|2|(90,95,76)",24,24%,FAIL,"-"
-  nemotron3.5-e4b,Q8,32k,pass 28s,20/22 7.1m,"-",25,22%,FAIL,"-"
-  qwen3.6-35b-a3b,Q1,16k,pass 27s,19/22 5.0m,"-",43,11%,FAIL,"-"
-  qwen3.5-9b-mtp,Q4,32k,pass 33s,18/22 15m,"-",43,32%,FAIL,"-"
-  ornith1.5-9b,Q6,32k,pass 38s,18/22 11m,"-",23,16%,FAIL,"-"
-  minicpm,Q2,64k,fail 31s,"-","-",30,6%,FAIL,"hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS"
+  qwen3.5-9b,Q4,32k,pass (31s),21/22 15m,"15|21|0|2|(90,95,76)",24,24%,FAIL,"-"
+  nemotron3.5-e4b,Q8,32k,pass (28s),20/22 7.1m,"-",25,22%,FAIL,"-"
+  qwen3.6-35b-a3b,Q1,16k,pass (27s),19/22 5.0m,"-",43,11%,FAIL,"-"
+  qwen3.5-9b-mtp,Q4,32k,pass (33s),18/22 15m,"-",43,32%,FAIL,"-"
+  ornith1.5-9b,Q6,32k,pass (38s),18/22 11m,"-",23,16%,FAIL,"-"
+  minicpm,Q2,64k,fail (31s),"-","-",30,6%,FAIL,"hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS"
   gemma4-26b,Q3KXL,64k,fail,"-","-","-","-",FAIL,"hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q3_K_XL"
 help[1]: no model has passed both standard benchmark tiers on this exact chip and memory yet
 help[2]: test one on this Mac: pill bench run <id> (a Q3KXL style quant goes after a colon: <id>:q3kxl)
