@@ -125,9 +125,11 @@ func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
 // Intent (captain): side by side, a model's Tier 1 time and Tier 2 time are
 // the point of the table ("it took 48 seconds ... almost 5 minutes"), read as
 // "pass (29s)", and a failed run must not read as a pass. gemma4-26b Q3KXL
-// passed both tiers but pushed 4.75 GB to swap, so only the verdict tells it
-// from a real pass. "There should be no relax option": muse-30b-dflash passed
-// Tier 1 only with looser limits (111 s against the 60 s cutoff), so it fails.
+// passed both tiers but pushed 4.75 GB to swap: it gets no ✓, and agents read
+// FAIL. "The red cross should be only for the models marked as fail", so it
+// gets no ✗ either. "There should be no relax option": muse-30b-dflash passed
+// Tier 1 only with looser limits (111 s against the 60 s cutoff), so it reads
+// fail and carries the ✗.
 func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 	e := newEnv(t)
 	human := e.run("catalog", "--format", "human").ok(t).out
@@ -140,8 +142,13 @@ func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 	if !strings.Contains(q3, "pass (48s)") || !strings.Contains(q3, "22/22 4.9m") {
 		t.Errorf("Tier 1 and Tier 2 times must show on the row:\n%s", human)
 	}
-	if !strings.Contains(q3, "gemma4-26b✗") {
-		t.Errorf("a failed row must carry the ✗ mark:\n%s", q3)
+	if strings.Contains(q3, "✗") || strings.Contains(q3, "✓") {
+		t.Errorf("a row whose Tier 1 reads pass but failed on swap carries no mark:\n%s", q3)
+	}
+	for _, line := range strings.Split(human, "\n") {
+		if strings.Contains(line, "✗") != strings.Contains(line, " fail (") {
+			t.Errorf("the ✗ belongs on exactly the rows marked fail:\n%s", line)
+		}
 	}
 	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "muse-30b-dflash✗") || !strings.Contains(human, "fail (111s)") {
 		t.Errorf("a pass carries ✓, and a run over the Tier 1 cutoff fails with ✗:\n%s", human)
@@ -201,7 +208,7 @@ func TestCatalogMarksTheDefault(t *testing.T) {
 	e.run("add", "minicpm", "--unverified").ok(t)
 	e.run("default", "minicpm").ok(t)
 	r := e.run("catalog", "--format", "human").ok(t)
-	if !strings.Contains(r.out, "\n*minicpm✓ ") || !strings.Contains(r.out, "\n ID ") || !strings.Contains(r.out, "\n gemma4-26b✗ ") {
+	if !strings.Contains(r.out, "\n*minicpm✓ ") || !strings.Contains(r.out, "\n ID ") || !strings.Contains(r.out, "\n muse-30b✗ ") {
 		t.Errorf("the default must carry a * to its left, aligned with the other IDs:\n%s", r.out)
 	}
 	if r := e.run("catalog", "--format", "agent").ok(t); !strings.Contains(r.out, "default: minicpm\n") {

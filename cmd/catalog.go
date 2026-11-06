@@ -186,14 +186,20 @@ func verdictLabel(r catalog.Row) string {
 	return "-"
 }
 
-// verdictMark is the same verdict as one character for the human table:
-// a green ✓ passed, a red ✗ failed, nothing when unmeasured.
+// verdictMark is the verdict as one character for the human table: a green ✓
+// passed, and a red ✗ only on a row whose Tier 1 reads fail, so the cross sits
+// next to the word it confirms. A run that passed Tier 1 but failed on another
+// limit (swap growth, the Tier 2 time cap) gets no mark: it is not a ✓, and
+// its failure is not shown as one. The agent verdict still says FAIL.
+// Unmeasured rows get nothing.
 func verdictMark(r catalog.Row, p *output.Printer) string {
 	switch verdictLabel(r) {
 	case "ok":
 		return p.Paint("32", "✓")
 	case "FAIL":
-		return p.Paint("31", "✗")
+		if t1 := r.Measurement.Tier1; t1 == "fail" || t1 == "relaxed" {
+			return p.Paint("31", "✗")
+		}
 	}
 	return ""
 }
