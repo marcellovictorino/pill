@@ -270,28 +270,29 @@
         <header class="section-head reveal">
           <p class="eyebrow"><span class="pill-chip" aria-hidden="true"></span>05 · Install</p>
           <h2 id="install-title">Take your first pill.</h2>
-          <p class="section-lede">Apple Silicon Mac, Homebrew and Go. Six steps from nothing to a local coding agent.</p>
+          <p class="section-lede">Apple Silicon Mac and Homebrew. Five steps from nothing to a local coding agent.</p>
         </header>
 
         <ol class="install">
           <li class="install-step reveal">
-            <h3><span class="num">1</span>Requirements</h3>
+            <h3><span class="num">1</span>Install pill</h3>
             <div class="code">
-              <pre><code class="multi">brew install llama.cpp &amp;&amp; \
-brew install pi-coding-agent</code></pre>
-              <button class="copy" type="button" aria-label="Copy requirements commands">Copy</button>
+              <pre><code>brew install marcellovictorino/tap/pill</code></pre>
+              <button class="copy" type="button" aria-label="Copy install command">Copy</button>
             </div>
-          </li>
-          <li class="install-step reveal">
-            <h3><span class="num">2</span>Install pill</h3>
-            <div class="code">
-              <pre><code class="multi">go install github.com/marcellovictorino/pill@latest
+            <p class="note">Homebrew installs llama.cpp and Pi with pill. Available from the first release, v0.5.0.</p>
+            <details class="note">
+              <summary>Build from source with Go instead</summary>
+              <div class="code">
+                <pre><code class="multi">brew install llama.cpp pi-coding-agent go
+go install github.com/marcellovictorino/pill@latest
 echo 'export PATH="$HOME/go/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
-              <button class="copy" type="button" aria-label="Copy install commands">Copy</button>
-            </div>
+                <button class="copy" type="button" aria-label="Copy Go install commands">Copy</button>
+              </div>
+            </details>
           </li>
           <li class="install-step reveal">
-            <h3><span class="num">3</span>Turn on tab completion (zsh) <span class="optional">optional</span></h3>
+            <h3><span class="num">2</span>Turn on tab completion (zsh) <span class="optional">optional</span></h3>
             <div class="code">
               <pre><code>echo 'source &lt;(pill completion zsh)' &gt;&gt; ~/.zshrc</code></pre>
               <button class="copy" type="button" aria-label="Copy completion command">Copy</button>
@@ -299,15 +300,15 @@ echo 'export PATH="$HOME/go/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
             <p class="note">Open a new terminal, then <code>pill bench run mini</code> and Tab fills in the model name.</p>
           </li>
           <li class="install-step reveal">
-            <h3><span class="num">4</span>Check the setup</h3>
+            <h3><span class="num">3</span>Check the setup</h3>
             <div class="code">
               <pre><code>pill doctor</code></pre>
               <button class="copy" type="button" aria-label="Copy doctor command">Copy</button>
             </div>
-            <p class="note">Confirms llama.cpp and Pi are found. pill never installs them for you.</p>
+            <p class="note">Confirms llama.cpp and Pi are found. pill never installs them itself; Homebrew or your own install does.</p>
           </li>
           <li class="install-step reveal">
-            <h3><span class="num">5</span>Pull, test and register the champion</h3>
+            <h3><span class="num">4</span>Pull, test and register the champion</h3>
             <div class="code">
               <pre><code>pill bench run minicpm-v4-7</code></pre>
               <button class="copy" type="button" aria-label="Copy benchmark command">Copy</button>
@@ -315,7 +316,7 @@ echo 'export PATH="$HOME/go/bin:$PATH"' &gt;&gt; ~/.zshrc</code></pre>
             <p class="note">Downloads <a href="https://huggingface.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF" rel="noopener" target="_blank">MiniCPM-V 4.7 IQ2</a> (11.3 GB), runs the tier 1 and 2 gate on your Mac and registers it with Pi only if it passes. A run can take up to about 25 minutes. Run <code>pill catalog</code> to see what is measured on your device.</p>
           </li>
           <li class="install-step reveal">
-            <h3><span class="num">6</span>Have fun!</h3>
+            <h3><span class="num">5</span>Have fun!</h3>
             <div class="code">
               <pre><code>pill</code></pre>
               <button class="copy" type="button" aria-label="Copy pill command">Copy</button>
