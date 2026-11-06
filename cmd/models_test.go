@@ -29,13 +29,13 @@ func gemmaHub(t *testing.T) *testutil.Hub {
 // chip and memory, with explicit empty and unverified states.
 func TestCatalogRecommendsPerDevice(t *testing.T) {
 	e := newEnv(t)
-	r := e.run("catalog").ok(t)
+	r := e.run("catalog", "--format", "agent").ok(t)
 	golden(t, "catalog", r.out)
 
 	// A 16 GB Mac: no catalog file fits, so none is offered for download and
 	// the footer says how many were left out. Measured runs still show.
 	e.sys.RAM = 16 << 30
-	r = e.run("catalog").ok(t)
+	r = e.run("catalog", "--format", "agent").ok(t)
 	for _, want := range []string{"models[", "catalog models that need more memory than this Mac has: 3", "no catalog model fits"} {
 		if !strings.Contains(r.out, want) {
 			t.Errorf("16 GB output lacks %q:\n%s", want, r.out)
@@ -48,14 +48,14 @@ func TestCatalogRecommendsPerDevice(t *testing.T) {
 	// Same memory as the tested Mac but another chip: its results are not
 	// borrowed. The fitting catalog models list with dashes, nothing is tried.
 	e.sys.RAM, e.sys.Chip = 24<<30, "Apple M3 Max"
-	r = e.run("catalog").ok(t)
+	r = e.run("catalog", "--format", "agent").ok(t)
 	if !strings.Contains(r.out, "models[3]") || !strings.Contains(r.out, `minicpm,Q2,64k,"-","-","-","-","-",`) || strings.Contains(r.out, "22/22") {
 		t.Errorf("another chip must show dashes, not the M4 result:\n%s", r.out)
 	}
 
 	// Detection failed: explicit state, nothing measured, still exit 0.
 	e.sys.Chip, e.sys.ChipErr = "", errors.New("no sysctl")
-	r = e.run("catalog").ok(t)
+	r = e.run("catalog", "--format", "agent").ok(t)
 	if !strings.Contains(r.out, "chip: unknown") || strings.Contains(r.out, "22/22") || !strings.Contains(r.out, "could not detect") {
 		t.Errorf("failed detection must be explicit and measure nothing:\n%s", r.out)
 	}
@@ -67,7 +67,7 @@ func TestCatalogRecommendsPerDevice(t *testing.T) {
 func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	e := newEnv(t)
 	e.sys.RAM, e.sys.Chip = 16<<30, "Apple M2 Pro"
-	r := e.run("catalog").ok(t)
+	r := e.run("catalog", "--format", "agent").ok(t)
 	golden(t, "catalog_16gb_m2pro", r.out)
 	// Qwen3.5 9B (21/22) is closer to a pass than Ornith 1.5 9B (18/22).
 	i21, i18 := strings.Index(r.out, "qwen3.5-9b,Q4,32k"), strings.Index(r.out, "ornith1.5-9b,Q6")
@@ -144,9 +144,29 @@ func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "muse-30b-dflash~") {
 		t.Errorf("a pass carries ✓ and a relaxed pass ~:\n%s", human)
 	}
-	agent := e.run("catalog").ok(t).out
+	agent := e.run("catalog", "--format", "agent").ok(t).out
 	if !strings.Contains(agent, "gemma4-26b,Q3KXL,64k,pass 48s,22/22 4.9m,") || !strings.Contains(agent, ",11%,FAIL,") {
 		t.Errorf("agents get the times and a verdict word:\n%s", agent)
+	}
+}
+
+// Intent (captain): "The format human should be the default. If it's better
+// for an agent, add that format agent." The test env's stdout is a pipe, so
+// the bare command proves human wins even when piped; --format agent and the
+// older --format toon still give TOON; other commands keep their piped TOON.
+func TestCatalogDefaultsToHumanEvenWhenPiped(t *testing.T) {
+	e := newEnv(t)
+	bare := e.run("catalog").ok(t).out
+	if !strings.Contains(bare, "ID ") || !strings.Contains(bare, "TIER 1") || strings.Contains(bare, "models[") {
+		t.Errorf("a bare, piped pill catalog must print the table:\n%s", bare)
+	}
+	for _, f := range []string{"agent", "toon"} {
+		if out := e.run("catalog", "--format", f).ok(t).out; !strings.Contains(out, "models[7]{id,") {
+			t.Errorf("--format %s must give TOON:\n%s", f, out)
+		}
+	}
+	if out := e.run("ls").ok(t).out; strings.Contains(out, "NAME") {
+		t.Errorf("other commands keep TOON when piped:\n%s", out)
 	}
 }
 
@@ -159,7 +179,7 @@ func TestCatalogMarksTheDefault(t *testing.T) {
 	if r := e.run("catalog", "--format", "human").ok(t); !strings.Contains(r.out, "minicpm*✓") {
 		t.Errorf("the default must carry a *:\n%s", r.out)
 	}
-	if r := e.run("catalog").ok(t); !strings.Contains(r.out, "default: minicpm\n") {
+	if r := e.run("catalog", "--format", "agent").ok(t); !strings.Contains(r.out, "default: minicpm\n") {
 		t.Errorf("agents get a default field:\n%s", r.out)
 	}
 }

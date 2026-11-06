@@ -12,6 +12,7 @@ All notable changes to pill are documented here. The format follows
 - Catalog models have short IDs (`minicpm` for MiniCPM-V 4.7). `pill pull`, `pill add`, `pill bench run`, `pill default` and `pill rm` accept the ID, `id:quant` for a model with two files (`gemma4-26b:q3kxl`), and the old long names as before. The ID-to-source mapping lives in `catalog.toml`.
 
 - `pill catalog` shows the measured Tier 1 time and Tier 2 time again, inside the existing columns (`pass 48s`, `22/22 4.9m`), and marks each measured model with its verdict after the ID (`✓` passed, `~` relaxed, `✗` failed), so a run that failed on swap growth no longer reads as a pass. The agent format adds a `verdict` field. Tables print one space between columns, which keeps rows under 90 characters.
+- `pill catalog` prints the human table by default, also when piped. The agent format is now `--format agent` (`--format toon` still works) and is accepted by every command. Callers that parsed the piped TOON of `pill catalog` must pass `--format agent`; the pill skill now says so.
 
 ## [0.5.0] - 2026-11-06
 

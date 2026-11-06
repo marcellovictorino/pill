@@ -66,9 +66,9 @@ func NewPrinter(out, errOut io.Writer, format string, stdoutIsTTY bool) (*Printe
 		p.Human = stdoutIsTTY
 	case "human":
 		p.Human = true
-	case "toon":
+	case "toon", "agent": // "agent" is the friendlier name for TOON
 	default:
-		return nil, fmt.Errorf("unknown --format %q (valid: toon, human)", format)
+		return nil, fmt.Errorf("unknown --format %q (valid: toon, agent, human)", format)
 	}
 	// NO_COLOR is the community convention: any non-empty value disables colour.
 	p.Color = p.Human && stdoutIsTTY && os.Getenv("NO_COLOR") == ""

@@ -9,7 +9,9 @@ description: Manage local LLMs for the Pi coding agent with the pill CLI (llama.
 `127.0.0.1:11435`. Every command is non-interactive when piped and prints
 compact [TOON](https://github.com/toon-format/toon); each result ends with a
 `help[n]:` list of next commands. Exit codes: `0` ok, `1` failure,
-`2` usage error (the valid flags or commands are listed).
+`2` usage error (the valid flags or commands are listed). The exception is
+`pill catalog`, which prints a table even when piped: pass `--format agent`
+to get the TOON.
 
 ## Common tasks
 
@@ -18,7 +20,7 @@ compact [TOON](https://github.com/toon-format/toon); each result ends with a
 | What is installed, and is it proven here? | `pill ls` (state: `pulled`, `unverified`, `passed`, `failed`, `missing`) |
 | Is the router up, what is loaded? | `pill ps` |
 | Something is wrong | `pill doctor` (fix the `fail` and `warn` rows first) |
-| Models pill can download | `pill catalog` |
+| Models pill can download | `pill catalog --format agent` (plain `pill catalog` prints a table) |
 | Download a model | `pill pull <name>` (catalog name or `hf.co/owner/repo:Q4_K_M`); resumes and verifies sha256 |
 | Offer it to Pi | `pill add <name> --unverified` |
 | Prove it works on this Mac | `pill bench run <name>` (about 25 minutes; exit `1` means it failed the gate) |

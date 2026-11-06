@@ -21,8 +21,9 @@ func newRoot(deps Deps) (*cobra.Command, *App) {
 		Long: `pill opens the Pi coding agent on a local model.
 
 Running "pill" starts the llama.cpp router if needed and opens Pi on your
-default model. Pipe any command (or pass --format toon) to get compact,
-agent-friendly TOON output instead of tables.`,
+default model. Pipe any command (or pass --format agent) to get compact,
+agent-friendly TOON output instead of tables. pill catalog is the exception:
+it prints the table everywhere, and --format agent gives the TOON.`,
 		SilenceUsage:  true, // we print our own errors
 		SilenceErrors: true,
 		Args:          cobra.NoArgs,
@@ -33,9 +34,13 @@ agent-friendly TOON output instead of tables.`,
 			return launchPi(cmd.Context(), app, nil)
 		},
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			p, err := output.NewPrinter(deps.Out, deps.Err, app.format, deps.StdoutTTY)
+			format := app.format
+			if cmd.Name() == "catalog" && (format == "" || format == "auto") {
+				format = "human" // the catalog is read by people first; agents ask with --format agent
+			}
+			p, err := output.NewPrinter(deps.Out, deps.Err, format, deps.StdoutTTY)
 			if err != nil {
-				return output.Usage([]string{"valid formats: toon, human"}, "%v", err)
+				return output.Usage([]string{"valid formats: toon (or agent), human"}, "%v", err)
 			}
 			app.printer = p
 			return nil
@@ -43,7 +48,7 @@ agent-friendly TOON output instead of tables.`,
 	}
 	root.SetOut(deps.Out)
 	root.SetErr(deps.Err)
-	root.PersistentFlags().StringVar(&app.format, "format", "", "output format: toon or human (default: human on a terminal, toon otherwise)")
+	root.PersistentFlags().StringVar(&app.format, "format", "", "output format: human, or toon (also agent) (default: human on a terminal, toon otherwise; pill catalog: human)")
 
 	// Flag and argument mistakes become exit-code-2 usage errors that list
 	// what would have been valid.
