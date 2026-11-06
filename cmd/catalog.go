@@ -39,7 +39,7 @@ func newCatalogCmd(a *App) *cobra.Command {
 				if isDefault {
 					defaultID = r.ID
 				}
-				models = append(models, catalogRow(r, a.printer.Human, isDefault))
+				models = append(models, catalogRow(r, a.printer, isDefault))
 			}
 			var help []string
 			switch {
@@ -63,8 +63,17 @@ func newCatalogCmd(a *App) *cobra.Command {
 			if chip == "" {
 				chip = "unknown"
 			}
+			if a.printer.Human {
+				// People read a report: plain labels and units, then the table.
+				memory := "unknown"
+				if dev.RAMGB > 0 {
+					memory = fmt.Sprintf("%dGB RAM", dev.RAMGB)
+				}
+				a.printer.Report(output.Obj{}.Set("Chip", chip).Set("Memory", memory), models, help)
+				return nil
+			}
 			out := output.Obj{}.Set("chip", chip).Set("ram_gb", dev.RAMGB)
-			if !a.printer.Human && defaultID != "" {
+			if defaultID != "" {
 				out = out.Set("default", defaultID) // agents get the default as a field; people see the * in the table
 			}
 			a.printer.Emit(out.Set("models", models).Set("help", help))
@@ -86,14 +95,21 @@ func hasStatus(rows []catalog.Row, status string) bool {
 // can be read (README: "Catalog columns"). Values that were not measured print
 // as "-", never as zero. Agents also get the Hugging Face source, which would
 // only wrap a terminal table.
-func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
+func catalogRow(r catalog.Row, p *output.Printer, isDefault bool) output.Obj {
+	human := p.Human
 	m := r.Measurement
 	id := r.ID
+	row := output.Obj{}
 	if human {
+		// A gutter column (no key, so no heading and no gap) holds "*" for the
+		// default, just left of its ID. The verdict mark is glued to the ID: a
+		// column of its own would push rows past 90 characters.
+		mark := " "
 		if isDefault {
-			id += "*"
+			mark = p.Paint("1;33", "*")
 		}
-		id += verdictMark(r) // glued to the ID: a column of its own would push rows past 90 characters
+		row = row.Set("", mark)
+		id += verdictMark(r, p)
 	}
 	ctx := "-"
 	if r.Ctx > 0 {
@@ -105,10 +121,10 @@ func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
 		if m.Tier1 != "" {
 			t1 = m.Tier1
 			if t1 == "relaxed" {
-				t1 = "relax" // matches the verdict, and keeps the row short
+				t1 = "fail" // passed only with looser limits: its time is over pill's cutoff
 			}
 			if m.Tier1Seconds > 0 {
-				t1 += fmt.Sprintf(" %.0fs", m.Tier1Seconds) // "pass 48s"
+				t1 += fmt.Sprintf(" (%.0fs)", m.Tier1Seconds) // "pass (48s)"
 			}
 		}
 		if m.Tier2Total > 0 {
@@ -125,7 +141,7 @@ func catalogRow(r catalog.Row, human, isDefault bool) output.Obj {
 		}
 		t3 = tier3Label(m)
 	}
-	row := output.Obj{}.
+	row = row.
 		Set("id", id).
 		Set("quant", r.Quant).
 		Set("ctx", ctx).
@@ -155,7 +171,8 @@ func minutesLabel(min float64) string {
 
 // verdictLabel is the overall result of a measured model, so a row whose times
 // look fine is still not read as a pass when it failed (for example on swap
-// growth). Models nobody measured print "-".
+// growth). A run that passed only with looser limits than pill's is a fail:
+// there is no in-between verdict. Models nobody measured print "-".
 func verdictLabel(r catalog.Row) string {
 	if r.Measurement == nil {
 		return "-"
@@ -163,24 +180,20 @@ func verdictLabel(r catalog.Row) string {
 	switch r.Status {
 	case catalog.StatusRecommended:
 		return "ok"
-	case catalog.StatusRelaxed:
-		return "relax"
-	case catalog.StatusFailed:
+	case catalog.StatusRelaxed, catalog.StatusFailed:
 		return "FAIL"
 	}
 	return "-"
 }
 
 // verdictMark is the same verdict as one character for the human table:
-// ✓ passed, ~ passed only the relaxed gate, ✗ failed, nothing when unmeasured.
-func verdictMark(r catalog.Row) string {
+// a green ✓ passed, a red ✗ failed, nothing when unmeasured.
+func verdictMark(r catalog.Row, p *output.Printer) string {
 	switch verdictLabel(r) {
 	case "ok":
-		return "✓"
-	case "relax":
-		return "~"
+		return p.Paint("32", "✓")
 	case "FAIL":
-		return "✗"
+		return p.Paint("31", "✗")
 	}
 	return ""
 }

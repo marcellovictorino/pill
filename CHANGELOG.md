@@ -6,6 +6,11 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `pill catalog` reads as a report for people: it opens with `Chip` and `Memory` (`24GB RAM`) instead of `chip` and `ram_gb`, marks the default with `*` to the left of its ID, and shows Tier 1 as `pass (29s)`. On a terminal those facts, the column headings and the verdict marks (`✓` green, `✗` red) are in colour; piped output and `NO_COLOR` stay plain. The agent format keeps its field names.
+- `pill catalog` no longer has a relaxed verdict. A run that passed only with looser limits than pill's is a fail: Tier 1 reads `fail (111s)`, the mark is `✗` and the agent `verdict` is `FAIL`.
+
 ## [0.6.0] - 2026-11-06
 
 ### Changed

@@ -55,14 +55,19 @@ mkdir -p ~/.pill/models && mv ~/models/*.gguf ~/.pill/models/
 ## Reading `pill catalog`
 
 ```
-ID                QUANT CTX TIER 1     TIER 2     TIER 3                  TOK/S FREE MEM
-minicpm*✓         Q2    64k pass 31s   22/22 4.9m 88|91|40|90|(93,95,98)  25    22%
+Chip    Apple M4
+Memory  24GB RAM
+
+ ID               QUANT CTX TIER 1      TIER 2     TIER 3                  TOK/S FREE MEM
+*minicpm✓         Q2    64k pass (31s)  22/22 4.9m 88|91|40|90|(93,95,98)  25    22%
 ```
 
-- **ID** is the short name every command accepts (`pill bench run minicpm`, `pill default minicpm`). `*` marks your default. The last character is the verdict: `✓` passed both tiers, `~` passed only the relaxed gate, `✗` failed (including a run that pushed more than 4 GB to swap, whatever its times say), nothing when not measured. A variant gets a suffix (`qwen3.5-9b-mtp`). The old long names keep working. `internal/catalog/catalog.toml` maps each ID to its Hugging Face repository and file; the agent format (`--format agent`) also prints that reference as `source`.
+On a terminal the facts at the top, the column headings and the verdict marks are in colour; piped output and `NO_COLOR` print plain text.
+
+- **ID** is the short name every command accepts (`pill bench run minicpm`, `pill default minicpm`). `*` to its left marks your default. The last character is the verdict: `✓` passed both tiers, `✗` failed (including a run that passed only with looser limits than pill's, or that pushed more than 4 GB to swap, whatever its times say), nothing when not measured. A variant gets a suffix (`qwen3.5-9b-mtp`). The old long names keep working. `internal/catalog/catalog.toml` maps each ID to its Hugging Face repository and file; the agent format (`--format agent`) also prints that reference as `source`.
 - **QUANT** is the bit width (`Q2` to `Q8`). When two files of one model share a bit width, it shows the exact quant (`IQ3S`, `Q3KXL`) and commands take it after a colon: `pill bench run gemma4-26b:q3kxl`.
 - **CTX** is the context window the result was measured at.
-- **TIER 1** is `pass`, `fail`, or `relax` (passed only with looser limits than the default), then the seconds to the first reply (`pass 48s`). **TIER 2** is hidden tests passed out of the task's total, then the minutes the run took (`22/22 4.9m`). The agent format (`--format agent`) adds a `verdict` field: `ok`, `relax`, `FAIL` or `-`.
+- **TIER 1** is `pass` or `fail`, then the seconds to the first reply in brackets (`pass (48s)`). A run over the Tier 1 time limit reads `fail` with its time, such as `fail (111s)`. **TIER 2** is hidden tests passed out of the task's total, then the minutes the run took (`22/22 4.9m`). The agent format (`--format agent`) adds a `verdict` field: `ok`, `FAIL` or `-`.
 - **TIER 3** is the score out of 100 for each task, in this fixed order: Go notes | data cleaning | data insight | Kanban | (landing pages: nursery, Mars, tax). Higher is better; there is no pass mark. `-` means that task was not run.
 - **TOK/S** is decoding speed.
 - **FREE MEM** is the lowest share of memory left free during the run. Near 0% means the Mac was starved.

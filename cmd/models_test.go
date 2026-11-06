@@ -80,7 +80,7 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 		t.Errorf("Tier 3 must read Go|cleaning|insight|Kanban|(nursery,Mars,tax):\n%s", r.out)
 	}
 	// An offered model that failed here shows even when it ranks below the closest five.
-	if !strings.Contains(r.out, "minicpm,Q2,64k,fail 31s,") || !strings.Contains(r.out, ",6%,") {
+	if !strings.Contains(r.out, "minicpm,Q2,64k,fail (31s),") || !strings.Contains(r.out, ",6%,") {
 		t.Errorf("the failed default must show its M2 Pro result:\n%s", r.out)
 	}
 	// Agents get the source of an offered model; a tried model has none to give.
@@ -123,9 +123,11 @@ func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
 }
 
 // Intent (captain): side by side, a model's Tier 1 time and Tier 2 time are
-// the point of the table ("it took 48 seconds ... almost 5 minutes"), and a
-// failed run must not read as a pass. gemma4-26b Q3KXL passed both tiers but
-// pushed 4.75 GB to swap, so only the verdict tells it from a real pass.
+// the point of the table ("it took 48 seconds ... almost 5 minutes"), read as
+// "pass (29s)", and a failed run must not read as a pass. gemma4-26b Q3KXL
+// passed both tiers but pushed 4.75 GB to swap, so only the verdict tells it
+// from a real pass. "There should be no relax option": muse-30b-dflash passed
+// Tier 1 only with looser limits (111 s against the 60 s cutoff), so it fails.
 func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 	e := newEnv(t)
 	human := e.run("catalog", "--format", "human").ok(t).out
@@ -135,18 +137,38 @@ func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 			q3 = line
 		}
 	}
-	if !strings.Contains(q3, "pass 48s") || !strings.Contains(q3, "22/22 4.9m") {
+	if !strings.Contains(q3, "pass (48s)") || !strings.Contains(q3, "22/22 4.9m") {
 		t.Errorf("Tier 1 and Tier 2 times must show on the row:\n%s", human)
 	}
 	if !strings.Contains(q3, "gemma4-26b✗") {
 		t.Errorf("a failed row must carry the ✗ mark:\n%s", q3)
 	}
-	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "muse-30b-dflash~") {
-		t.Errorf("a pass carries ✓ and a relaxed pass ~:\n%s", human)
+	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "muse-30b-dflash✗") || !strings.Contains(human, "fail (111s)") {
+		t.Errorf("a pass carries ✓, and a run over the Tier 1 cutoff fails with ✗:\n%s", human)
 	}
 	agent := e.run("catalog", "--format", "agent").ok(t).out
-	if !strings.Contains(agent, "gemma4-26b,Q3KXL,64k,pass 48s,22/22 4.9m,") || !strings.Contains(agent, ",11%,FAIL,") {
+	if !strings.Contains(agent, "gemma4-26b,Q3KXL,64k,pass (48s),22/22 4.9m,") || !strings.Contains(agent, ",11%,FAIL,") {
 		t.Errorf("agents get the times and a verdict word:\n%s", agent)
+	}
+	for _, out := range []string{human, agent} {
+		if strings.Contains(out, "relax") || strings.Contains(out, "~") {
+			t.Errorf("no relaxed verdict, in either format:\n%s", out)
+		}
+	}
+}
+
+// Intent (captain): the catalog reads "more polished. Like it presents a
+// report, without underscore": the facts above the table say Memory and
+// "24GB RAM", not ram_gb: 24. Agents keep their field names.
+func TestCatalogReadsAsAReport(t *testing.T) {
+	e := newEnv(t)
+	human := e.run("catalog", "--format", "human").ok(t).out
+	if !strings.HasPrefix(human, "Chip    Apple M4\nMemory  24GB RAM\n\n") || strings.Contains(human, "_") {
+		t.Errorf("the report opens with Chip and Memory and has no underscores:\n%s", human)
+	}
+	agent := e.run("catalog", "--format", "agent").ok(t).out
+	if !strings.Contains(agent, "chip: Apple M4\nram_gb: 24\n") {
+		t.Errorf("agents keep chip and ram_gb:\n%s", agent)
 	}
 }
 
@@ -170,14 +192,17 @@ func TestCatalogDefaultsToHumanEvenWhenPiped(t *testing.T) {
 	}
 }
 
-// Intent (captain): the default is marked in the list, by its short ID.
+// Intent (captain): the default is marked in the list, by its short ID, with
+// an * to its left ("I think that is common practice"), and the IDs still
+// line up under the heading.
 func TestCatalogMarksTheDefault(t *testing.T) {
 	e := newEnv(t)
 	e.gguf("MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf")
 	e.run("add", "minicpm", "--unverified").ok(t)
 	e.run("default", "minicpm").ok(t)
-	if r := e.run("catalog", "--format", "human").ok(t); !strings.Contains(r.out, "minicpm*✓") {
-		t.Errorf("the default must carry a *:\n%s", r.out)
+	r := e.run("catalog", "--format", "human").ok(t)
+	if !strings.Contains(r.out, "\n*minicpm✓ ") || !strings.Contains(r.out, "\n ID ") || !strings.Contains(r.out, "\n gemma4-26b✗ ") {
+		t.Errorf("the default must carry a * to its left, aligned with the other IDs:\n%s", r.out)
 	}
 	if r := e.run("catalog", "--format", "agent").ok(t); !strings.Contains(r.out, "default: minicpm\n") {
 		t.Errorf("agents get a default field:\n%s", r.out)
