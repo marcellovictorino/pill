@@ -27,7 +27,7 @@ Run `go test ./...` and `golangci-lint run ./...` before every commit.
 
 ## Agent-facing output (axi)
 
-When stdout is not a terminal, output is TOON on stdout: minimal fields, `help[n]:` next steps, definitive empty states (`models[0]:`), errors as `error:` plus `help[n]:` on stdout. Exit codes: 0 ok, 1 failure, 2 usage error (unknown flag or command, with the valid choices listed). No prompts, ever; repeating a command is a no-op, not an error. `--format toon|human` overrides detection; `NO_COLOR` is respected; the logo only appears on a terminal with no agent environment variable set.
+When stdout is not a terminal, output is TOON on stdout: minimal fields, `help[n]:` next steps, definitive empty states (`models[0]:`), errors as `error:` plus `help[n]:` on stdout. Exit codes: 0 ok, 1 failure, 2 usage error (unknown flag or command, with the valid choices listed). No prompts, ever; repeating a command is a no-op, not an error. `--format agent|toon|human` overrides detection (`agent` is TOON; `pill catalog` is the exception and prints the human table everywhere unless asked for `--format agent`); `NO_COLOR` is respected; the logo only appears on a terminal with no agent environment variable set.
 
 ## Layout
 
