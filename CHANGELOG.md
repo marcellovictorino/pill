@@ -6,6 +6,8 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-06
+
 ### Changed
 
 - `pill catalog` is one table with one row per model and short IDs. The columns are `id`, `quant`, `ctx`, `tier_1`, `tier_2` (x/22), `tier_3` (Go|cleaning|insight|Kanban|(nursery,Mars,tax)), `tok_s` and `free_mem`; the default is marked `*`. Rows stay under 90 characters. The reasons, notes, run counts, Tier 1 seconds, swap, the separate download table and the `recommendations` and `tried_on_this_mac` blocks are gone, and the agent format adds a `source` field with the Hugging Face reference. A model measured on this Mac now shows its result even when its memory minimum says it is too small, so a failed run no longer appears as `too-small` in one place and `failed` in another.

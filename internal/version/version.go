@@ -5,7 +5,7 @@ import "runtime/debug"
 
 // Version is bumped by hand with every meaningful feature (see CHANGELOG.md).
 // Keep it in sync with the top released section of the changelog.
-const Version = "0.5.0"
+const Version = "0.6.0"
 
 // buildCommit can be set with -ldflags when building from a source archive.
 var buildCommit string
