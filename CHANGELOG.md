@@ -6,6 +6,11 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `pill catalog` is one table with one row per model and short IDs. The columns are `id`, `quant`, `ctx`, `tier_1`, `tier_2` (x/22), `tier_3` (Go|cleaning|insight|Kanban|(nursery,Mars,tax)), `tok_s` and `free_mem`; the default is marked `*`. Rows stay under 90 characters. The reasons, notes, run counts, Tier 1 seconds, swap, the separate download table and the `recommendations` and `tried_on_this_mac` blocks are gone, and the agent format adds a `source` field with the Hugging Face reference. A model measured on this Mac now shows its result even when its memory minimum says it is too small, so a failed run no longer appears as `too-small` in one place and `failed` in another.
+- Catalog models have short IDs (`minicpm` for MiniCPM-V 4.7). `pill pull`, `pill add`, `pill bench run`, `pill default` and `pill rm` accept the ID, `id:quant` for a model with two files (`gemma4-26b:q3kxl`), and the old long names as before. The ID-to-source mapping lives in `catalog.toml`.
+
 ## [0.5.0] - 2026-11-06
 
 ### Added

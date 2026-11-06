@@ -49,7 +49,8 @@ func (a *App) completeModels(src modelSources) func(*cobra.Command, []string, st
 				offer(e.Name, fmt.Sprintf("catalog: %s, %dK context", e.Variant.Quant, e.Ctx/1024))
 			}
 			for _, f := range a.reg.Catalog.Families {
-				offer(f.Name, "catalog: recommended variant")
+				offer(f.PublicID(), "catalog: recommended variant")
+				offer(f.Name, "catalog: recommended variant") // the long name, kept as an alias
 			}
 		}
 		if src.files {

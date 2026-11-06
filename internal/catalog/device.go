@@ -81,54 +81,9 @@ func verdict(m *Measurement) string {
 	return StatusFailed
 }
 
-// Attempt is a model that was run on this device and did not pass the
-// standard tiers: a failed or relaxed result, with the numbers behind it.
-type Attempt struct {
-	Name        string
-	Ctx         int
-	Status      string // StatusFailed or StatusRelaxed
-	Measurement *Measurement
-	Offered     bool // a catalog model someone can `pill pull`, not a tried-only record
-}
-
-// MaxAttempts is how many attempts the "tried" block shows.
+// MaxAttempts is how many failed or relaxed runs of models that are not
+// offered `pill catalog` shows.
 const MaxAttempts = 5
-
-// Attempts lists failed and relaxed runs on exactly this device, closest to a
-// pass first: more Tier 2 tests passed, then a better Tier 1 result, then
-// faster decoding. It looks at catalog variants (even ones too large to be
-// offered, since a measured failure is a result) and tried models. A model
-// measured only on other devices is absent.
-func (c *Catalog) Attempts(d Device) []Attempt {
-	if !d.Known() {
-		return nil
-	}
-	var out []Attempt
-	add := func(name string, ctx int, offered bool, ms []Measurement) {
-		if m := newestOn(d, ms, ctx); m != nil {
-			if st := verdict(m); st != StatusRecommended {
-				out = append(out, Attempt{Name: name, Ctx: ctx, Status: st, Measurement: m, Offered: offered})
-			}
-		}
-	}
-	for _, e := range c.Entries() {
-		add(e.Name, e.Variant.Ctx, true, e.Variant.Measurements)
-	}
-	for _, t := range c.Tried {
-		add(t.Name, 0, false, t.Measurements)
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		a, b := out[i].Measurement, out[j].Measurement
-		if sa, sb := a.tier2Fraction(), b.tier2Fraction(); sa != sb {
-			return sa > sb
-		}
-		if ra, rb := tier1Rank(a.Tier1), tier1Rank(b.Tier1); ra != rb {
-			return ra > rb
-		}
-		return a.TokPerS > b.TokPerS
-	})
-	return out
-}
 
 // tier2Fraction is the share of Tier 2 tests passed; 0 when it did not score.
 func (m *Measurement) tier2Fraction() float64 {

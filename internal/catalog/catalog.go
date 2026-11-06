@@ -83,14 +83,21 @@ type Tier3Task struct {
 // download reference, so it never appears as something to pull. It exists to
 // hold its measurements, so `pill catalog` can show what a device cannot do.
 type Tried struct {
-	Name         string        `toml:"name"` // display name, e.g. "Qwen3-8B Q4_K_M"
-	Ctx          int           `toml:"ctx"`  // 0 when not recorded
+	Name string `toml:"name"` // full description, e.g. "Qwen3-8B Q4_K_M"
+	// ID and Quant are what `pill catalog` shows: a short model ID (variants
+	// such as MTP get a suffix, as in qwen3.5-9b-mtp) and the exact quant.
+	ID           string        `toml:"id"`
+	Quant        string        `toml:"quant"`
+	Ctx          int           `toml:"ctx"` // 0 when not recorded
 	Measurements []Measurement `toml:"measurement"`
 }
 
 // Family is one model with its variants.
 type Family struct {
-	Name string `toml:"name"`
+	Name string `toml:"name"` // long name; still accepted as an alias of ID
+	// ID is the short name people type and read ("minicpm"). It maps to Repo
+	// and each variant's File below. Empty means Name is the ID.
+	ID   string `toml:"id"`
 	Repo string `toml:"repo"`
 	// Source is where the weights come from. The catalog only ever holds
 	// references (source, repo, file), never the weights. "huggingface" is the
@@ -101,6 +108,15 @@ type Family struct {
 	MaxTokens int            `toml:"max_tokens"`
 	Preset    map[string]any `toml:"preset"`
 	Variants  []Variant      `toml:"variant"`
+}
+
+// PublicID is the short model ID shown by `pill catalog` and accepted by the
+// commands that take a model.
+func (f *Family) PublicID() string {
+	if f.ID != "" {
+		return f.ID
+	}
+	return f.Name
 }
 
 // Catalog is the parsed catalog.toml.
@@ -157,16 +173,28 @@ func NameFor(family, quant string, ctx int) string {
 // 1024 tokens) or "-9000tok" (an exact count, see CtxLabel).
 var ctxSuffix = regexp.MustCompile(`^(.*)-(\d+)(k|tok)$`)
 
-// Resolve maps a user-supplied name to a catalog entry. It accepts the full
-// name (gemma4-26b-iq4xs-64k), a full name with a different context
-// (gemma4-26b-iq4xs-32k, same file) and the short family name (gemma4-26b,
-// meaning the default variant).
+// Resolve maps a user-supplied name to a catalog entry. It accepts the short
+// ID (minicpm, meaning the default variant), the ID with a quant
+// (gemma4-26b:q3kxl, the same form as a Hugging Face reference), and the older
+// long names kept as aliases: the family name, the full name
+// (gemma4-26b-iq4xs-64k) and a full name with a different context
+// (gemma4-26b-iq4xs-32k, same file).
 func (c *Catalog) Resolve(name string) (Entry, bool) {
+	base, quant, hasQuant := strings.Cut(name, ":")
 	for i := range c.Families {
 		f := &c.Families[i]
-		if name == f.Name {
-			v := f.DefaultVariant()
-			return Entry{Name: NameFor(f.Name, v.Quant, v.Ctx), Family: f, Variant: v, Ctx: v.Ctx}, true
+		if base == f.PublicID() || base == f.Name {
+			for j := range f.Variants {
+				v := &f.Variants[j]
+				if hasQuant && ShortQuant(v.Quant) == ShortQuant(quant) {
+					return Entry{Name: NameFor(f.Name, v.Quant, v.Ctx), Family: f, Variant: v, Ctx: v.Ctx}, true
+				}
+			}
+			if !hasQuant {
+				v := f.DefaultVariant()
+				return Entry{Name: NameFor(f.Name, v.Quant, v.Ctx), Family: f, Variant: v, Ctx: v.Ctx}, true
+			}
+			continue
 		}
 		for j := range f.Variants {
 			v := &f.Variants[j]
