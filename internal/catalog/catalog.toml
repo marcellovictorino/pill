@@ -135,8 +135,11 @@ llama_cpp = "build 11960"
 gate = "tier 1 60 s, tier 2 15 min, free memory 10%"
 source = "evals/reports/summary.md"
 note = "lowest free memory 22%, no swap; thinking off"
+# The times come from the 29 Oct run that passed (one run, not the five-run summary above).
+tier1_seconds = 36.1
 tier2_score = 22
 tier2_total = 22
+tier2_minutes = 3.6
 min_free_pct = 22
 swap_mb = 0
 
