@@ -268,6 +268,45 @@ func listenerPID(port int) (int, bool) {
 	return pid, err == nil && pid > 0
 }
 
+// RemovedBinary reports whether pill's router is running from a llama-server
+// file that no longer exists, and returns that file's path. llama-server's
+// router starts every model from its own resolved path, so after a Homebrew
+// upgrade deletes the old Cellar folder every model load fails until the
+// router is restarted. lsof still names a deleted executable, which is what
+// makes the check possible without cgo.
+func (r *Router) RemovedBinary() (string, bool) {
+	proc, ok := r.Find()
+	if !ok || !proc.Owned {
+		return "", false
+	}
+	path := executableOf(proc.PID)
+	if path == "" {
+		return "", false
+	}
+	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		return path, true
+	}
+	return path, false
+}
+
+// executableOf returns the resolved path of a process's program: the first
+// "txt" (program text) file lsof lists for it. A time limit keeps a stuck
+// lsof from hanging the command that asked.
+func executableOf(pid int) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "lsof", "-p", strconv.Itoa(pid), "-a", "-d", "txt", "-Fn").Output()
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if p, ok := strings.CutPrefix(line, "n"); ok {
+			return p
+		}
+	}
+	return ""
+}
+
 // PortBusy reports whether anything is listening on the port (health or not).
 func (r *Router) PortBusy() bool {
 	_, ok := listenerPID(r.Settings.Port)

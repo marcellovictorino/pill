@@ -80,7 +80,10 @@ func runDoctor(ctx context.Context, a *App) error {
 		add("port", "fail", fmt.Sprintf("%d is in use by another process (pid %d)", a.settings.Port, proc.PID))
 		help = append(help, "free the port or set PILL_PORT / port in config.toml")
 	}
-	if healthy {
+	if path, gone := a.rt.RemovedBinary(); healthy && gone {
+		add("router", "fail", removedBinaryMsg(path))
+		help = append(help, restartRouterHelp)
+	} else if healthy {
 		add("router", "ok", "answering /health")
 	} else {
 		add("router", "ok", "not running (it starts on demand)")

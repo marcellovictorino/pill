@@ -28,12 +28,13 @@ Risk is the risk of the port itself.
 | OS version | `sysinfo_darwin.go:33`, `config/result.go:10` | `sw_vers`, stored under JSON key `macos` | `/etc/os-release`; add an `os` field | low |
 | Process owner check | `router/router.go:249-255` | `ps -p PID -o command=` | `/proc/PID/cmdline` (BusyBox `ps` lacks `-p` and `-o`) | medium |
 | Port listener | `router/router.go:257-264` | `lsof -nP -iTCP:PORT -sTCP:LISTEN -t` | `ss -ltnpH` or `/proc/net/tcp`; `lsof` is often not installed | medium |
+| Router executable | `router/router.go:298` | `lsof -p PID -a -d txt -Fn`, then a stat of that path | `readlink /proc/PID/exe`, which ends in ` (deleted)` when the file is gone | medium |
 | Service | `internal/service/service.go:43,55,67`, `cmd/service.go:27` | LaunchAgent plist, `launchctl bootstrap/bootout/kickstart` | `~/.config/systemd/user/pill.service`, `systemctl --user enable --now / disable --now / restart`, `Restart=always`; start at boot needs `loginctl enable-linger` | high |
 | Service PATH | `cmd/service.go:132` | adds `/opt/homebrew/bin` | `/usr/local/bin`, `~/.local/bin`, the Linuxbrew prefix | low |
 | Stale-service parser | `service.go:117` | reads the plist back | parse `ExecStart=` | medium |
 | Install hints | `doctor.go:58,64`, `service.go:61`, `pi.go:59`, `bench.go:108,111` | `brew install ...` | OS-aware hints | low |
-| Pi and Node lookup | `pi/launch.go:15-23`, `doctor.go:248` | `exec.LookPath` | works as is if `pi` and `node` are on PATH | low |
-| POSIX calls | `config/lock.go:42`, `router.go:356,434-450,458`, `bench/pirun.go:65-66`, `pi/launch.go:52` | `flock`, `Setsid`, `Setpgid`, `Kill`, `Exec` | valid on Linux; they compile | low |
+| Pi and Node lookup | `pi/launch.go:15-23`, `doctor.go:251` | `exec.LookPath` | works as is if `pi` and `node` are on PATH | low |
+| POSIX calls | `config/lock.go:42`, `router.go:399,472-488,505`, `bench/pirun.go:65-66`, `pi/launch.go:52` | `flock`, `Setsid`, `Setpgid`, `Kill`, `Exec` | valid on Linux; they compile | low |
 | Config paths | `config/paths.go:27-37` | `~/.config/pill` (XDG honoured), `~/.pill` | works as is | low |
 | GPU wording | `cmd/ps.go:58`, `sysinfo.go:17` | "Metal buffers" | wording only | low |
 
@@ -56,7 +57,7 @@ Risk is the risk of the port itself.
 
 ### llama.cpp
 
-- Router mode (`--models-preset`, `--models-max`, `--sleep-idle-seconds`) needs a recent llama.cpp. Distro packages may be older. `llamaVersion` parses the `version:` line (`doctor.go:226`).
+- Router mode (`--models-preset`, `--models-max`, `--sleep-idle-seconds`) needs a recent llama.cpp. Distro packages may be older. `llamaVersion` parses the `version:` line (`doctor.go:229`).
 - `ngl = 99`, `flash-attn = on` and the q8_0 KV cache (`preset.go:19-27`) were chosen for Metal. Check each on CPU, CUDA, ROCm and Vulkan builds.
 
 ### Containers

@@ -40,6 +40,9 @@ func (a *App) ensureRouter(ctx context.Context, applied registry.Applied) (route
 	// Best effort: a log that cannot be trimmed must not stop the router.
 	_, _ = rt.TrimLog()
 	if rt.Healthy(ctx) {
+		if err := a.requireRouterBinary(); err != nil {
+			return st, err
+		}
 		if !a.routerStale(ctx, applied) && !a.serviceOutdated(ctx) {
 			return st, nil
 		}
@@ -60,6 +63,25 @@ func (a *App) ensureRouter(ctx context.Context, applied registry.Applied) (route
 	}
 	st.Started = started
 	return st, nil
+}
+
+// restartRouterHelp is the fix for a router running from a removed
+// llama-server: it works the same for a detached router and the service.
+const restartRouterHelp = "restart the router: pill stop --all, then pill serve"
+
+// removedBinaryMsg explains a router whose llama-server file is gone.
+func removedBinaryMsg(path string) string {
+	return fmt.Sprintf("the router is running from %s, which no longer exists (llama.cpp was upgraded or removed), so every model load fails", path)
+}
+
+// requireRouterBinary refuses to use a router whose llama-server file was
+// removed: it can no longer start any model, and each load would only time
+// out. It does not restart the router itself, since a model may be in use.
+func (a *App) requireRouterBinary() error {
+	if path, gone := a.rt.RemovedBinary(); gone {
+		return output.Fail([]string{restartRouterHelp}, "%s", removedBinaryMsg(path))
+	}
+	return nil
 }
 
 // routerStale reports whether the running router was started before the
