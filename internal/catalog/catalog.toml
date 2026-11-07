@@ -850,6 +850,63 @@ tier2_score = 14
 tier2_total = 22
 fail_reason = "Tier 1 failed once then passed; Tier 2 scored 14/22"
 
+# Arete-27B (Nous Research fine-tune of Qwen3.8 27B), 7 Nov 2026, from evals/reports/arete-27b.md.
+# bartowski imatrix quants, thinking off. The MTP row borrows the base model's head (Unsloth, 1.4 GB), as Nous ships none.
+[[tried]]
+name = "Arete-27B IQ4_XS, thinking off"
+id = "arete-27b"
+quant = "IQ4_XS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "fail"
+tier2 = "pass"
+tok_per_s = 6.2
+runs = 3
+date = "2026-11-07"
+pill = "0.6.0"
+llama_cpp = "build 12110"
+gate = "tier 1 240 s, tier 2 30 min, free memory 7%"
+source = "evals/reports/arete-27b.md"
+note = "22/22 in all three Tier 2 runs; Tier 3 not run; at the default 10% floor Tier 1 also failed on memory in 3 of 3 runs"
+tier1_seconds = 144
+tier2_score = 22
+tier2_total = 22
+tier2_minutes = 11.0
+min_free_pct = 8
+swap_mb = 500
+fail_reason = "Tier 1 took 129-144 s against the 60 s limit and free memory fell to 8% (limit 10%)"
+
+[[tried]]
+name = "Arete-27B IQ3_XXS, thinking off, MTP"
+id = "arete-27b-mtp"
+quant = "IQ3_XXS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "fail"
+tier2 = "fail"
+tok_per_s = 15.2
+runs = 3
+date = "2026-11-07"
+pill = "0.6.0"
+llama_cpp = "build 12110"
+gate = "tier 1 240 s, tier 2 30 min"
+source = "evals/reports/arete-27b.md"
+note = "Tier 2 scored 21, 22 and 20 of 22; MTP head borrowed from Qwen3.8 27B, 84.6% of drafted tokens accepted; Tier 3 not run"
+tier1_seconds = 145
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 30
+tier2_timed_out = true
+min_free_pct = 10
+swap_mb = 2300
+fail_reason = "Tier 1 took 135-145 s against the 60 s limit; Tier 2 run 3 hit the 30 min cap at 20/22"
+
 # BEGIN m2pro-16gb-2026-11-04 (backfilled by hand from evals/reports/m2-pro-16gb-2026-11-04.md)
 [[tried]]
 name = "Qwen3.6 35B-A3B UD-IQ1_M, 16k context"

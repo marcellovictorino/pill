@@ -6,6 +6,10 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `pill catalog` lists Nous Research Arete-27B on the 24 GB M4: `arete-27b` (IQ4_XS, Tier 2 22/22 in all three runs but Tier 1 129-144 s) and `arete-27b-mtp` (IQ3_XXS with the base model's MTP head, Tier 2 21, 22 and 20 of 22). Neither passes the default gate; MiniCPM stays the default. See `evals/reports/arete-27b.md`.
+
 ### Changed
 
 - `pill catalog` shows the default MiniCPM model's Tier 1 and Tier 2 times again (`pass (36s)`, `22/22 3.6m`), taken from its 29 October 2026 benchmark run.
