@@ -6,6 +6,10 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `pill catalog` shows the default MiniCPM model's Tier 1 and Tier 2 times again (`pass (36s)`, `22/22 3.6m`), taken from its 29 October 2026 benchmark run.
+
 ## [0.6.0] - 2026-11-06
 
 ### Changed
