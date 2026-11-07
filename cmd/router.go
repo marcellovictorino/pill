@@ -37,6 +37,8 @@ func (a *App) syncAndEnsureRouter(ctx context.Context) (routerStatus, error) {
 func (a *App) ensureRouter(ctx context.Context, applied registry.Applied) (routerStatus, error) {
 	var st routerStatus
 	rt := a.rt
+	// Best effort: a log that cannot be trimmed must not stop the router.
+	_, _ = rt.TrimLog()
 	if rt.Healthy(ctx) {
 		if !a.routerStale(ctx, applied) && !a.serviceOutdated(ctx) {
 			return st, nil

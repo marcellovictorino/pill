@@ -89,6 +89,7 @@ func runServiceInstall(ctx context.Context, a *App) error {
 		}
 		a.rt.WaitDown(ctx)
 	}
+	_, _ = a.rt.TrimLog() // best effort, as in ensureRouter
 	plist, err := a.svc.Install(ctx, bin, a.rt.Args(), launchPath(bin))
 	if err != nil {
 		return output.Fail([]string{"check the log: " + a.paths.ServerLog(), "undo with `pill service uninstall`"}, "%v", err)

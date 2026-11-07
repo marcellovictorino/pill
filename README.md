@@ -143,7 +143,7 @@ dev tooling, not part of the binary:
 | Path | Purpose |
 |---|---|
 | `~/.config/pill/` (or `$XDG_CONFIG_HOME/pill`) | Portable, small: `config.toml`, `models.toml`. Safe to keep in dotfiles. |
-| `~/.pill/` | Machine-local: `models/` (GGUFs), generated `models.ini`, `results.json`, `benchmark/`, `logs/`, `run/`. |
+| `~/.pill/` | Machine-local: `models/` (GGUFs), generated `models.ini`, `results.json`, `benchmark/`, `logs/` (the router's `server.log`, trimmed to its newest 16 MiB in `server.log.1` once over 64 MiB), `run/`. |
 
 pill only ever writes its own `pill` provider into `~/.pi/agent/models.json` (after backing the file up to `models.json.bak`). Other providers are never touched.
 
