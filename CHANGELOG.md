@@ -10,6 +10,10 @@ All notable changes to pill are documented here. The format follows
 
 - `pill catalog` shows the default MiniCPM model's Tier 1 and Tier 2 times again (`pass (36s)`, `22/22 3.6m`), taken from its 29 October 2026 benchmark run.
 
+### Fixed
+
+- The router log `~/.pill/logs/server.log` no longer grows without limit. Whenever pill starts or checks the router (`pill serve`, `pill`, `pill bench run`, `pill add`, `pill rm`, `pill sync`, `pill service install`), a log over 64 MiB has its newest 16 MiB kept in `server.log.1` and is emptied in place, which also works while a router (detached or the launchd service) keeps running. An existing oversized log is trimmed the first time.
+
 ## [0.6.0] - 2026-11-06
 
 ### Changed

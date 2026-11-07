@@ -350,3 +350,35 @@ func TestAddKeepsDistinctEntriesForDifferentContextSizes(t *testing.T) {
 		}
 	}
 }
+
+// A router log over the limit is trimmed the next time pill brings up the
+// router, so benchmark output cannot grow it until the disk is full.
+func TestServeTrimsAnOversizedRouterLog(t *testing.T) {
+	e := newEnv(t)
+	e.register()
+	log := filepath.Join(e.dir, "pill", "logs", "server.log")
+	if err := os.MkdirAll(filepath.Dir(log), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	old := strings.Repeat("old request line\n", int(router.LogLimit/17)+1)
+	if err := os.WriteFile(log, []byte(old), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	e.run("serve").ok(t)
+
+	info, err := os.Stat(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Size() >= router.LogKeep {
+		t.Errorf("server.log is %d bytes after serve, want it emptied before the router wrote to it", info.Size())
+	}
+	kept, err := os.Stat(log + ".1")
+	if err != nil {
+		t.Fatalf("the newest output should be kept in server.log.1: %v", err)
+	}
+	if kept.Size() == 0 || kept.Size() > router.LogKeep {
+		t.Errorf("server.log.1 is %d bytes, want up to %d", kept.Size(), router.LogKeep)
+	}
+}
