@@ -382,3 +382,75 @@ func TestServeTrimsAnOversizedRouterLog(t *testing.T) {
 		t.Errorf("server.log.1 is %d bytes, want up to %d", kept.Size(), router.LogKeep)
 	}
 }
+
+// installLlamaBuild copies the fake llama-server into a Homebrew-style Cellar
+// folder for one version and points pill's llama-server symlink at it, the
+// way `brew upgrade llama.cpp` does. It returns the version's folder.
+func (e *env) installLlamaBuild(t *testing.T, version string) string {
+	t.Helper()
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(self)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(e.dir, "Cellar", "llama.cpp", version)
+	bin := filepath.Join(dir, "bin", "llama-server")
+	if err := os.MkdirAll(filepath.Dir(bin), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bin, data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(e.dir, "bin", "llama-server")
+	_ = os.Remove(link)
+	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(bin, link); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PILL_LLAMA_SERVER", link)
+	return dir
+}
+
+// The bug this guards against: a Homebrew upgrade deleted the llama.cpp build
+// the running router was started from, every model load then failed and a
+// benchmark timed out and marked the default model failed, while doctor said
+// the router was ok. pill must name the cause and the fix instead.
+func TestRouterRunningFromARemovedLlamaBuildIsReported(t *testing.T) {
+	e := newEnv(t)
+	e.register()
+	old := e.installLlamaBuild(t, "0.7.0")
+	e.run("serve").ok(t)
+	if d := e.run("doctor").ok(t); !strings.Contains(d.out, "router,ok") {
+		t.Fatalf("doctor before the upgrade:\n%s", d.out)
+	}
+
+	e.installLlamaBuild(t, "0.8.0")
+	if err := os.RemoveAll(old); err != nil { // brew upgrade removes the old version's folder
+		t.Fatal(err)
+	}
+
+	d := e.run("doctor").fails(t, 1, "which no longer exists")
+	if !strings.Contains(d.out, "router,fail") || !strings.Contains(d.out, "Cellar/llama.cpp/0.7.0/bin/llama-server") || !strings.Contains(d.out, restartRouterHelp) {
+		t.Errorf("doctor should fail the router check with the removed path and the fix:\n%s", d.out)
+	}
+	r := e.run("bench", "run", "gemma4-26b-iq4xs-64k").fails(t, 1, "which no longer exists")
+	if !strings.Contains(r.out, restartRouterHelp) {
+		t.Errorf("bench should name the fix:\n%s", r.out)
+	}
+	if ls := e.run("ls").ok(t); strings.Contains(ls.out, "failed") {
+		t.Errorf("a refused bench must not mark the model failed:\n%s", ls.out)
+	}
+	e.run().fails(t, 1, "which no longer exists") // pill launching Pi
+
+	// The fix it names works.
+	e.run("stop", "--all").ok(t)
+	e.run("serve").ok(t)
+	if d := e.run("doctor").ok(t); !strings.Contains(d.out, "router,ok") {
+		t.Errorf("doctor after the restart:\n%s", d.out)
+	}
+}
