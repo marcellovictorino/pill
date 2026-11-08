@@ -907,6 +907,60 @@ min_free_pct = 10
 swap_mb = 2300
 fail_reason = "Tier 1 took 135-145 s against the 60 s limit; Tier 2 run 3 hit the 30 min cap at 20/22"
 
+# Gemma 4 26B-A4B and Qwen3.6 35B-A3B at larger quants, 8 Nov 2026, from evals/reports/bigger-models-overnight.md.
+[[tried]]
+name = "Gemma 4 26B-A4B UD-Q4_K_S"
+id = "gemma4-26b-q4ks"
+quant = "UD-Q4_K_S"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 24.6
+runs = 3
+date = "2026-11-08"
+pill = "0.6.0"
+llama_cpp = "build 12110"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/bigger-models-overnight.md"
+source_row = "Gemma 4 26B-A4B UD-Q4_K_S (unsloth, 16.5 GB), 32k"
+note = "Tier 1 time and answers passed in all three runs; Tier 2 not run"
+tier1_seconds = 27
+min_free_pct = 6
+swap_mb = 729
+fail_reason = "Tier 1 free memory fell below the limit: minimum 6% (limit 10%)"
+
+[[tried]]
+name = "Qwen3.6 35B-A3B UD-Q3_K_S"
+id = "qwen3.6-35b-q3ks"
+quant = "UD-Q3_K_S"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tok_per_s = 29
+runs = 3
+date = "2026-11-08"
+pill = "0.6.0"
+llama_cpp = "build 12110"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/bigger-models-overnight.md"
+source_row = "Qwen3.6 35B-A3B UD-Q3_K_S (unsloth, 15.4 GB), 32k"
+note = "Tier 2 scored 22, 22 and 20 of 22 in 14.6, 9.0 and 15.0 minutes; Tier 3 not run"
+tier1_seconds = 21
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 15
+tier2_timed_out = true
+min_free_pct = 9
+swap_mb = 0
+fail_reason = "Tier 2 run 3 hit the 15 min cap at 20/22"
+
 # BEGIN m2pro-16gb-2026-11-04 (backfilled by hand from evals/reports/m2-pro-16gb-2026-11-04.md)
 [[tried]]
 name = "Qwen3.6 35B-A3B UD-IQ1_M, 16k context"
