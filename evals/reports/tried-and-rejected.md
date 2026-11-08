@@ -35,6 +35,8 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | Meta Muse Glimmer 30B UD-IQ2_XXS (unsloth, 10.7 GB), 64k, dense | Failed, 9 runs, build 11960, 29 Oct (3 standard, 6 relaxed at 300 s / 30 min) | 113–140 s | Not run in 8 of 9; one relaxed run 22/22 in 11.1 min | 5–7 | 14–17% | Latency; thinking: empty visible reply in 8 of 9 runs |
 | Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template | Failed relaxed gate, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 108–127 s | 22/22, 20/22, 22/22 in 17.7–18.2 min | 7 | 14–16% | Latency (about double the default limits); accuracy on run 2 |
 | Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template, DFlash drafter | Passed relaxed gate only, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 107–111 s | 22/22 in 5.9, 6.3 and 13.2 min | 12.8 in a 300-token probe (6.8 without) | 11% | Latency: Tier 1 still about twice the 60 s limit; memory close to the 10% floor; Tier 1 answer wrong in every run (informational) |
+| Gemma 4 26B-A4B UD-Q4_K_S (unsloth, 16.5 GB), 32k | Failed, 3 runs, build 12110, 8 Nov ([report](bigger-models-overnight.md)) | 26–27 s | Not run (Tier 1 memory gate) | 24.6 | 6–7% | Memory: 17.4 GB on the GPU; swap up to 729 MB |
+| Qwen3.6 35B-A3B UD-Q3_K_S (unsloth, 15.4 GB), 32k | Failed, 3 runs, build 12110, 8 Nov ([report](bigger-models-overnight.md)) | 20–21 s | 22/22 in 14.6 min; 22/22 in 9.0 min; 20/22 at the 15-min cap | 29–30 | 9–11% | Latency and accuracy: one run at the cap; 0 swap |
 
 ## Qwen3.8-27B: thinking and MTP
 
