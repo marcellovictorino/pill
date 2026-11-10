@@ -961,6 +961,31 @@ min_free_pct = 9
 swap_mb = 0
 fail_reason = "Tier 2 run 3 hit the 15 min cap at 20/22"
 
+# Nemotron 3.5 Lightning 30B-A3B Q4_0 (ggml-org), 10 Nov 2026, from evals/reports/tried-and-rejected.md.
+[[tried]]
+name = "Nemotron 3.5 Lightning 30B-A3B Q4_0, thinking off"
+id = "nemotron3.5-30b"
+quant = "Q4_0"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 23.5
+runs = 3
+date = "2026-11-10"
+pill = "0.6.0"
+llama_cpp = "build 12110"
+gate = "tier 1 60 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Nemotron 3.5 Lightning 30B-A3B Q4_0 (ggml-org, 18.9 GB), 32k"
+note = "Tier 1 time and answers passed in all three runs; Tier 2 and Tier 3 not run"
+tier1_seconds = 27
+min_free_pct = 3
+swap_mb = 728
+fail_reason = "Tier 1 free memory fell below the limit: minimum 3% (limit 10%)"
+
 # BEGIN m2pro-16gb-2026-11-04 (backfilled by hand from evals/reports/m2-pro-16gb-2026-11-04.md)
 [[tried]]
 name = "Qwen3.6 35B-A3B UD-IQ1_M, 16k context"

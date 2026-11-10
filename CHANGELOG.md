@@ -9,6 +9,7 @@ All notable changes to pill are documented here. The format follows
 ### Added
 
 - `pill catalog` records two more 24 GB M4 results: Gemma 4 26B-A4B UD-Q4_K_S failed Tier 1 on memory (6% free) and Qwen3.6 35B-A3B UD-Q3_K_S passed Tier 1 but Tier 2 scored 22, 22 and 20 of 22 with one run at the cap. Neither replaces MiniCPM. See `evals/reports/bigger-models-overnight.md`.
+- `pill catalog` records Nemotron 3.5 Lightning 30B-A3B Q4_0 (ggml-org) on the 24 GB M4 as `nemotron3.5-30b`: it failed Tier 1 on memory in all three runs (3 to 4% free against the 10% floor), so Tier 2 was not run. See `evals/reports/tried-and-rejected.md`.
 - `pill catalog` lists Nous Research Arete-27B on the 24 GB M4: `arete-27b` (IQ4_XS, Tier 2 22/22 in all three runs but Tier 1 129-144 s) and `arete-27b-mtp` (IQ3_XXS with the base model's MTP head, Tier 2 21, 22 and 20 of 22). Neither passes the default gate; MiniCPM stays the default. See `evals/reports/arete-27b.md`.
 
 ### Changed
