@@ -185,6 +185,38 @@ def chat(eng, model_id, content, max_tokens, timeout, extra=None):
         return {"ok": False, "seconds": time.time() - start, "error": str(e)[:300]}
 
 
+DECODE_PROMPT = "Write an essay of at least 400 words on how bicycles changed the cities of Europe."
+
+
+def decode_speed(eng, model_id, timeout):
+    """Decode tok/s from a streamed reply, timed from the first to the last content token, so prompt
+    processing and the request round trip are left out. Same probe for both engines. ignore_eos asks
+    llama.cpp for the full length; mlx-lm ignores it and stops at its own end token, so the token
+    count is recorded next to the rate."""
+    payload = {"model": model_id, "messages": [{"role": "user", "content": DECODE_PROMPT}],
+               "max_tokens": DECODE_TOKENS, "stream": True, "stream_options": {"include_usage": True},
+               "ignore_eos": True, "chat_template_kwargs": {"enable_thinking": False}}
+    req = urllib.request.Request(eng.base + "/v1/chat/completions", data=json.dumps(payload).encode(),
+                                 headers={"Content-Type": "application/json"})
+    stamps, usage_tokens, engine_tps = [], None, None
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        for raw in r:
+            line = raw.decode(errors="replace").strip()
+            if not line.startswith("data:") or line == "data: [DONE]":
+                continue
+            event = json.loads(line[len("data:"):])
+            usage_tokens = (event.get("usage") or {}).get("completion_tokens", usage_tokens)
+            engine_tps = (event.get("timings") or {}).get("predicted_per_second", engine_tps)
+            for choice in event.get("choices") or []:
+                if (choice.get("delta") or {}).get("content"):
+                    stamps.append(time.time())
+    tokens = usage_tokens or len(stamps)
+    if len(stamps) < 2 or tokens < 2:
+        raise RuntimeError(f"too few tokens to time ({tokens})")
+    return {"decode_tokens": tokens, "decode_tok_per_sec": round((tokens - 1) / (stamps[-1] - stamps[0]), 1),
+            "decode_tok_per_sec_engine": engine_tps}
+
+
 def write_agent_dir(d, base_url, model_id):
     """Same provider block internal/pi/models.go writes for pill, in a scratch Pi config directory."""
     d.mkdir(parents=True, exist_ok=True)
@@ -272,14 +304,10 @@ def run_once(engine_name, n, out_dir, gguf_path):
 
         # --- Decode speed on the warm model (informational, as in pill) ---
         if chat1["ok"]:
-            dec = chat(eng, cfg["model_id"], "Count upwards from 1, one number per line.", DECODE_TOKENS,
-                       timeout=TIER1_MAX_SECONDS, extra={"ignore_eos": True})
-            if dec["ok"] and dec["gen_tokens"]:
-                rr["decode_tok_per_sec_wall"] = round(dec["gen_tokens"] / dec["seconds"], 1)
-                rr["decode_tokens"] = dec["gen_tokens"]
-                rr["decode_tok_per_sec_engine"] = dec.get("engine_tok_per_sec")
-            else:
-                rr["decode_error"] = dec.get("error", "no tokens")
+            try:
+                rr.update(decode_speed(eng, cfg["model_id"], timeout=TIER1_MAX_SECONDS))
+            except Exception as e:  # HTTP errors, timeouts, too few tokens: recorded, the run goes on
+                rr["decode_error"] = str(e)[:300]
 
         # --- Tier 1b: a real Pi turn that needs a tool call ---
         token = "PILL-CMP-" + os.urandom(3).hex().upper()
