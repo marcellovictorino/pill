@@ -10,4 +10,4 @@ models[7]{id,quant,ctx,tier_1,tier_2,tier_3,tok_s,free_mem,verdict,source}:
   gemma4-26b,Q4,64k,"-","-","-","-","-","-","hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-IQ4_XS"
 help[1]: test one on this Mac: pill bench run <id> (a Q3KXL style quant goes after a colon: <id>:q3kxl)
 help[2]: make one your default: pill default <id>
-help[3]: 19 more tried results are in the catalog records
+help[3]: 20 more tried results are in the catalog records
