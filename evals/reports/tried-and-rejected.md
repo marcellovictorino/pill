@@ -208,3 +208,15 @@ caveats in [the report](m2-pro-16gb-2026-11-04.md). Every GGUF was deleted after
 - **Tier 3 for Qwen3.5 9B UD-Q4_K_XL (one run each):** Go 15, cleaning 21, insight 0, Kanban 2, nursery 90, Mars 95, tax 76. Good on landing pages, poor on multi-step tool tasks; MiniCPM's medians on the M4 are far higher on four tasks. Details in [the report](m2-pro-16gb-2026-11-04.md).
 - **Re-test only after:** a smaller KV cache or quant for Qwen3.6 35B (16k got 19/22 in 5 min), an MTP file for a 9B model that
   scores 22/22 without it, or a 24 GB Mac.
+## Ornith 1.5 and Qwen3.6 35B re-run on build 12110, 11 November (no result)
+
+The re-run of the two 35B models from the 14 October table did not finish on the 24 GB M4, so neither has a new
+result. The table rows above still stand as the build 11429 results.
+
+- **Ornith, two attempts:** each load pushed free memory to 13–14% (memory pressure at warning) within about 25–50 seconds.
+  The run was stopped by the memory gate both times, so nothing was recorded. Swap was 3.6 GB before each start, and it
+  did not fall while the machine was idle.
+- **Qwen3.6 35B:** not run. The sweep stops after the first interrupted model.
+- **MiniCPM control, 10 November, build 12110:** Tier 1 passed in all six runs. Tier 2 scored 22, 17 and 22 at the start of
+  the batch and 17, 22 and 22 at the end, so two of six runs missed the 22/22 record. The record in the catalog is kept
+  as measured, with a note, and MiniCPM stays the recommendation by a maintainer decision.

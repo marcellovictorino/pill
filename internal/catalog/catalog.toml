@@ -120,7 +120,11 @@ ctx = 65536
 min_ram_gb = 24
 default = true
 
-# The tested champion: 5 of 5 gate runs, Tier 2 22/22 every time.
+# The tested champion: 5 of 5 gate runs, Tier 2 22/22 every time. A control
+# on 10 November (build 12110) passed Tier 1 in all six runs but scored 17/22
+# on Tier 2 in two of them (two batches of three), so that control failed the
+# gate. This record is kept as it was measured; MiniCPM stays recommended on
+# the 24 GB M4 by a maintainer decision, and the control is noted here.
 [[model.variant.measurement]]
 chip = "Apple M4"
 ram_gb = 24
