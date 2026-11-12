@@ -1,0 +1,39 @@
+{
+  "name": "pill",
+  "about": "A Go CLI that runs the Pi coding agent on local models served by llama.cpp's router, on Apple Silicon Macs.",
+  "groups": [
+    { "name": "The pill binary", "why": "Compiled into the one program people install" },
+    { "name": "Around the binary", "why": "Kept in the project but never built into pill" }
+  ],
+  "parts": [
+    { "name": "commands", "path": "cmd", "about": "One cobra command per file: pull, add, bench, serve, stop and the rest", "group": "The pill binary" },
+    { "name": "internal", "path": "internal", "about": "The packages that do the work: models, router, Pi, downloads, benchmarks", "group": "The pill binary" },
+    { "name": "agent skill", "path": "skills", "about": "The SKILL.md that teaches an agent to drive pill, embedded in the binary", "group": "The pill binary" },
+    { "name": "evals", "path": "evals", "about": "Tier 3 model evaluations: tasks, fixtures, a runner and reports", "group": "Around the binary" },
+    { "name": "landing page", "path": "site", "about": "The project's static web page", "group": "Around the binary" },
+    { "name": "CI and release", "path": ".github", "about": "Workflows that test every change, publish releases and deploy the landing page", "group": "Around the binary" }
+  ],
+  "outside": [
+    { "name": "llama-server", "about": "llama.cpp's server in router mode, serving the local models" },
+    { "name": "Pi", "about": "The Pi coding agent, its models.json and skills folder, and the Node it ships with" },
+    { "name": "Hugging Face", "about": "Where the GGUF model files are downloaded from" },
+    { "name": "macOS", "about": "launchd, and the system tools that report memory and processes" },
+    { "name": "cloud agents", "about": "Claude Code and Codex, the baselines evals compare local models with" },
+    { "name": "GitHub", "about": "Runs the workflows, hosts releases and the landing page" }
+  ],
+  "links": [
+    { "from": "commands", "to": "internal", "why": "does the work each command names" },
+    { "from": "commands", "to": "agent skill", "why": "installs the embedded skill" },
+    { "from": "commands", "to": "Pi", "why": "writes the skill into Pi's skills folder" },
+    { "from": "internal", "to": "llama-server", "why": "writes models.ini, starts, probes and stops the router, sends chat requests" },
+    { "from": "internal", "to": "Pi", "why": "merges the pill provider into models.json, launches pi" },
+    { "from": "internal", "to": "Hugging Face", "why": "looks up and downloads GGUF files" },
+    { "from": "internal", "to": "macOS", "why": "reads memory and processes, manages the LaunchAgent" },
+    { "from": "evals", "to": "commands", "why": "pulls, adds and stops models through the CLI" },
+    { "from": "evals", "to": "Pi", "why": "runs each task with a local model" },
+    { "from": "evals", "to": "cloud agents", "why": "runs the same tasks as baselines" },
+    { "from": "CI and release", "to": "commands", "why": "vets, lints and tests the module, checks the release tag" },
+    { "from": "CI and release", "to": "landing page", "why": "deploys it" },
+    { "from": "CI and release", "to": "GitHub", "why": "runs there, publishes releases and pages" }
+  ]
+}

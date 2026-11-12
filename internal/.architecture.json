@@ -1,0 +1,116 @@
+{
+  "name": "internal",
+  "about": "The packages behind pill's commands: model book-keeping, wrappers for outside programs, and benchmarks.",
+  "groups": [
+    { "name": "Model book-keeping", "why": "Know which models exist, where they came from and how they are served" },
+    { "name": "Outside programs", "why": "Each wraps one program or service pill does not own" },
+    { "name": "Support", "why": "Used across pill; owns no models" }
+  ],
+  "parts": [
+    { "name": "config", "path": "internal/config", "about": "Paths, config.toml, models.toml and results.json, with locking and atomic writes", "group": "Model book-keeping" },
+    { "name": "catalog", "path": "internal/catalog", "about": "The embedded list of known models and their Hugging Face sources", "group": "Model book-keeping" },
+    { "name": "registry", "path": "internal/registry", "about": "Joins models.toml with results.json and regenerates models.ini and Pi's provider", "group": "Model book-keeping" },
+    { "name": "preset", "path": "internal/preset", "about": "Renders models.ini, the router's per-model settings, and its fingerprints", "group": "Model book-keeping" },
+    { "name": "bench", "path": "internal/bench", "about": "Tier 1 and Tier 2 benchmarks, the memory sampler and the summary", "group": "Model book-keeping" },
+    { "name": "router", "path": "internal/router", "about": "Starts, probes and stops llama-server in router mode", "group": "Outside programs" },
+    { "name": "pi", "path": "internal/pi", "about": "Owns the pill provider key in Pi's models.json and launches pi", "group": "Outside programs" },
+    { "name": "hf", "path": "internal/hf", "about": "Hugging Face client: references, resumable downloads, sha256 checks", "group": "Outside programs" },
+    { "name": "service", "path": "internal/service", "about": "The optional launchd LaunchAgent that keeps the router running", "group": "Outside programs" },
+    { "name": "sysinfo", "path": "internal/sysinfo", "about": "Memory, chip and process facts about this Mac", "group": "Outside programs" },
+    { "name": "output", "path": "internal/output", "about": "TOON for agents, tables and colour for people, the logo and errors", "group": "Support" },
+    { "name": "version", "path": "internal/version", "about": "The version number and build details", "group": "Support" },
+    { "name": "testutil", "path": "internal/testutil", "about": "Fake llama-server, pi, launchctl and Hugging Face for tests", "group": "Support" }
+  ],
+  "outside": [
+    { "name": "commands", "path": "cmd", "about": "pill's cobra commands" },
+    { "name": "llama-server", "about": "llama.cpp's server in router mode" },
+    { "name": "Pi", "about": "The Pi coding agent and the Node it ships with" },
+    { "name": "Hugging Face", "about": "Where GGUF files are downloaded from" },
+    { "name": "macOS", "about": "launchctl, sysctl, ps, lsof and memory_pressure" }
+  ],
+  "links": [
+    { "from": "commands", "to": "registry", "why": "reads and updates models and their states" },
+    { "from": "commands", "to": "config", "why": "loads settings, paths and the state lock" },
+    { "from": "commands", "to": "catalog", "why": "lists and resolves catalog models" },
+    { "from": "commands", "to": "hf", "why": "downloads model files" },
+    { "from": "commands", "to": "router", "why": "starts, restarts and stops the router" },
+    { "from": "commands", "to": "pi", "why": "opens Pi on the default model" },
+    { "from": "commands", "to": "bench", "why": "runs benchmarks and summaries" },
+    { "from": "commands", "to": "service", "why": "installs and refreshes the LaunchAgent" },
+    { "from": "commands", "to": "sysinfo", "why": "shows the chip, memory and router process" },
+    { "from": "commands", "to": "preset", "why": "fingerprints a model's settings for its verdict" },
+    { "from": "commands", "to": "output", "why": "prints every result and error" },
+    { "from": "commands", "to": "version", "why": "prints the version" },
+    { "from": "commands", "to": "testutil", "why": "fakes outside programs in tests" },
+    { "from": "registry", "to": "config", "why": "reads and writes models.toml and results.json" },
+    { "from": "registry", "to": "catalog", "why": "turns catalog entries into model entries" },
+    { "from": "registry", "to": "hf", "why": "parses references and matches files" },
+    { "from": "registry", "to": "preset", "why": "renders models.ini" },
+    { "from": "registry", "to": "pi", "why": "merges the pill provider" },
+    { "from": "registry", "to": "llama-server", "why": "writes models.ini, which it reads" },
+    { "from": "preset", "to": "config", "why": "reads model entries" },
+    { "from": "bench", "to": "router", "why": "checks health and unloads models between runs" },
+    { "from": "bench", "to": "pi", "why": "writes a throwaway Pi config" },
+    { "from": "bench", "to": "sysinfo", "why": "samples free memory during a run" },
+    { "from": "bench", "to": "config", "why": "thresholds and result types" },
+    { "from": "bench", "to": "llama-server", "why": "sends the Tier 1 chat requests" },
+    { "from": "bench", "to": "Pi", "why": "runs the tool-call turn and the Tier 2 build, then the verifier with Node" },
+    { "from": "bench", "to": "testutil", "why": "fakes outside programs in tests" },
+    { "from": "router", "to": "config", "why": "paths, port and the router state file" },
+    { "from": "router", "to": "llama-server", "why": "starts it, checks health, lists and unloads models" },
+    { "from": "router", "to": "macOS", "why": "finds the router process with ps and lsof" },
+    { "from": "router", "to": "testutil", "why": "fakes llama-server in tests" },
+    { "from": "pi", "to": "config", "why": "paths and model entries" },
+    { "from": "pi", "to": "Pi", "why": "writes models.json and runs pi" },
+    { "from": "hf", "to": "Hugging Face", "why": "lists repositories and downloads files" },
+    { "from": "service", "to": "config", "why": "paths and settings for the plist" },
+    { "from": "service", "to": "macOS", "why": "loads and unloads the LaunchAgent with launchctl" },
+    { "from": "service", "to": "llama-server", "why": "has launchd run it at login" },
+    { "from": "sysinfo", "to": "macOS", "why": "reads memory, chip and processes" }
+  ],
+  "machines": [
+    {
+      "name": "a model",
+      "in": "config",
+      "about": "One model's gate state on this Mac, kept in results.json",
+      "states": ["pulled", "unverified", "passed", "failed"],
+      "moves": [
+        { "from": "pulled", "to": "unverified", "why": "pill add --unverified or pill sync registers the file", "by": "commands" },
+        { "from": "unverified", "to": "passed", "why": "a benchmark meets every threshold", "by": "commands" },
+        { "from": "unverified", "to": "failed", "why": "a benchmark misses a threshold", "by": "commands" },
+        { "from": "failed", "to": "passed", "why": "a later benchmark passes", "by": "commands" },
+        { "from": "passed", "to": "failed", "why": "a later benchmark fails and the demotion is confirmed", "by": "commands" },
+        { "from": "failed", "to": "unverified", "why": "pill add overrides it, or the file is downloaded again", "by": "commands" },
+        { "from": "passed", "to": "unverified", "why": "its settings or its file changed since the verdict", "by": "config" }
+      ]
+    },
+    {
+      "name": "the router",
+      "in": "router",
+      "about": "The one llama-server process serving every registered model",
+      "states": ["stopped", "starting", "running", "stale"],
+      "moves": [
+        { "from": "stopped", "to": "starting", "why": "pill or pill serve needs it", "by": "commands" },
+        { "from": "stopped", "to": "starting", "why": "launchd starts it at login", "by": "service" },
+        { "from": "starting", "to": "running", "why": "the health check answers", "by": "router" },
+        { "from": "starting", "to": "stopped", "why": "it exits or the start times out", "by": "router" },
+        { "from": "running", "to": "stale", "why": "models.ini changed after it started", "by": "registry" },
+        { "from": "stale", "to": "starting", "why": "no model is loaded, so it is restarted", "by": "commands" },
+        { "from": "running", "to": "stopped", "why": "pill stop", "by": "commands" },
+        { "from": "stale", "to": "stopped", "why": "pill stop", "by": "commands" }
+      ]
+    },
+    {
+      "name": "a benchmark run",
+      "in": "bench",
+      "about": "One run of pill bench run against one model",
+      "states": ["tier 1", "tier 2", "passed", "failed"],
+      "moves": [
+        { "from": "tier 1", "to": "tier 2", "why": "fast first reply, working tool call and enough free memory", "by": "bench" },
+        { "from": "tier 1", "to": "failed", "why": "too slow, no tool call or memory starved", "by": "bench" },
+        { "from": "tier 2", "to": "passed", "why": "every hidden test passes within the time cap", "by": "bench" },
+        { "from": "tier 2", "to": "failed", "why": "a hidden test fails, the cap is hit or memory dipped", "by": "bench" }
+      ]
+    }
+  ]
+}
