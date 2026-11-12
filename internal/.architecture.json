@@ -72,7 +72,7 @@
     {
       "name": "a model",
       "in": "config",
-      "about": "One model's gate state on this Mac, kept in results.json",
+      "about": "One model's gate state on this Mac: pulled is a GGUF file with no entry yet, the rest are kept in results.json",
       "states": ["pulled", "unverified", "passed", "failed"],
       "moves": [
         { "from": "pulled", "to": "unverified", "why": "pill add --unverified or pill sync registers the file", "by": "commands" },
