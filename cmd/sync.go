@@ -21,7 +21,7 @@ keep in dotfiles). Every declared model whose GGUF is missing is downloaded and
 registered as unverified, so it is usable at once but still labelled as not
 proven on this Mac.
 
-With --bench, every declared model that is still unverified is then
+With --bench, every declared model that is still a candidate or unverified is then
 benchmarked (see 'pill bench run'); this takes about 25 minutes each.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -31,7 +31,7 @@ benchmarked (see 'pill bench run'); this takes about 25 minutes each.`,
 			return runSync(cmd.Context(), a, doBench, th)
 		},
 	}
-	c.Flags().BoolVar(&doBench, "bench", false, "benchmark the models that are still unverified afterwards")
+	c.Flags().BoolVar(&doBench, "bench", false, "benchmark the models that are still candidate or unverified afterwards")
 	return c
 }
 
