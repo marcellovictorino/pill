@@ -13,9 +13,9 @@ func newLsCmd(a *App) *cobra.Command {
 		Long: `List models known to pill on this machine.
 
 state is pulled (a downloaded GGUF with no entry), candidate (an entry not
-offered to Pi: being benchmarked, or failed before its settings or file
-changed), unverified, passed, failed, or missing (declared in models.toml but
-the file is not here).`,
+offered to Pi: being benchmarked, or a failed one whose settings or file have
+changed since), unverified, passed, failed, or missing (declared in models.toml
+but the file is not here).`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
