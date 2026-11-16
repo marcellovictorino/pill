@@ -384,17 +384,16 @@ func (r *Registry) Apply(s *Snapshot) (Applied, error) {
 	return out, nil
 }
 
-// PiModels lists what Pi should be offered: entries registered with Pi, not
-// failed, whose GGUF exists.
+// PiModels lists what Pi should be offered: entries whose state offers them
+// (see config.OfferedToPi) and whose GGUF exists.
 func (r *Registry) PiModels(s *Snapshot) []pi.Model {
 	var out []pi.Model
 	for _, m := range s.Models.Models {
 		if r.FileSize(m) == 0 {
 			continue
 		}
-		st := s.Results.Get(m.Name)
 		state := r.State(s, m)
-		if st != nil && st.InPi && state != config.StateFailed {
+		if config.OfferedToPi(state) {
 			out = append(out, pi.Model{
 				ID: m.Name, Reasoning: m.Reasoning, Ctx: m.Ctx, MaxTokens: m.MaxTokens,
 				Unverified: state == config.StateUnverified,
@@ -407,9 +406,8 @@ func (r *Registry) PiModels(s *Snapshot) []pi.Model {
 // Row is one line of `pill ls`.
 type Row struct {
 	Name    string
-	State   string // pulled, unverified, passed, failed
+	State   string // pulled, candidate, unverified, passed, failed
 	Default bool
-	InPi    bool
 	Missing bool // declared in models.toml but the GGUF is not here
 	Size    int64
 	File    string
@@ -423,9 +421,6 @@ func (r *Registry) Rows(s *Snapshot) []Row {
 		used[m.File] = true
 		size := r.FileSize(m)
 		row := Row{Name: m.Name, State: r.State(s, m), Default: m.Name == r.Settings.Default, Size: size, File: m.File, Missing: size == 0}
-		if st := s.Results.Get(m.Name); st != nil {
-			row.InPi = st.InPi && row.State != config.StateFailed
-		}
 		rows = append(rows, row)
 	}
 	files, _ := os.ReadDir(r.Settings.ModelsDir)

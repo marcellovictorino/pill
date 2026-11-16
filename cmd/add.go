@@ -72,19 +72,9 @@ func runAdd(ctx context.Context, a *App, arg string, ctxSize int) error {
 		changed = !existed || !sameModel(*before, m)
 		s.Models.Upsert(m)
 
-		st := s.Results.Get(m.Name)
-		switch {
-		case st == nil:
-			st = s.Results.Ensure(m.Name)
-			changed = true
-		case !st.InPi:
+		if registerEntry(a, s, m) {
 			changed = true
 		}
-		if a.reg.State(s, m) == config.StateFailed {
-			st.State = config.StateUnverified // the explicit override of a failed benchmark
-			changed = true
-		}
-		st.InPi = true
 		if !changed {
 			return registry.ErrNoChange // models.toml may live in dotfiles: do not rewrite it for nothing
 		}
@@ -115,6 +105,20 @@ func runAdd(ctx context.Context, a *App, arg string, ctxSize int) error {
 		Set("pi", "pill/"+m.Name).
 		Set("help", help))
 	return nil
+}
+
+// registerEntry applies the gate's register event to m's entry, creating it if
+// needed, and reports whether anything was written. A pass whose settings
+// drifted shows as unverified already and keeps its stored verdict.
+func registerEntry(a *App, s *snapshot, m config.Model) bool {
+	created := s.Results.Get(m.Name) == nil
+	st := s.Results.Ensure(m.Name)
+	cur := a.reg.State(s, m)
+	if next := config.Next(cur, config.EventRegister); next != cur {
+		st.State = next
+		return true
+	}
+	return created
 }
 
 func sameModel(a, b config.Model) bool {

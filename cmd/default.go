@@ -47,13 +47,12 @@ func runDefault(a *App, arg string) error {
 		return output.Fail([]string{"register it first: pill add " + arg + " --unverified", "list models: pill ls"}, "%s is not registered", arg)
 	}
 	state := a.reg.State(snap, *m)
-	st := snap.Results.Get(m.Name)
 	switch {
 	case a.reg.FileSize(*m) == 0:
 		return output.Fail([]string{"download it: pill pull " + m.Name}, "the file for %s (%s) is missing", m.Name, m.File)
 	case state == config.StateFailed:
 		return output.Fail([]string{"override the result: pill add " + m.Name + " --unverified"}, "%s failed its benchmark and cannot be the default", m.Name)
-	case st == nil || !st.InPi:
+	case !config.OfferedToPi(state):
 		return output.Fail([]string{"pill add " + m.Name + " --unverified"}, "%s is not registered with Pi", m.Name)
 	}
 	status := "set"

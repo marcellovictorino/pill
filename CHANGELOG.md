@@ -18,6 +18,8 @@ All notable changes to pill are documented here. The format follows
 
 ### Fixed
 
+- A model that failed its benchmark and then had its settings or file changed no longer shows as `unverified` while Pi hides it, and `pill` no longer launches Pi on it. `pill ls` now shows it, and a model whose benchmark never finished, as `candidate`: not offered to Pi until `pill add <name> --unverified` or a passing benchmark. Existing `results.json` files are migrated on first read.
+
 - pill is built with Go 1.27.4, which fixes a `net/http` vulnerability (GO-2026-6859) present in the Go 1.27.3 standard library that the router, Hugging Face and catalog downloads use.
 - The router log `~/.pill/logs/server.log` no longer grows without limit. Whenever pill starts or checks the router (`pill serve`, `pill`, `pill bench run`, `pill add`, `pill rm`, `pill sync`, `pill service install`), a log over 64 MiB has its newest 16 MiB kept in `server.log.1` and is emptied in place, which also works while a router (detached or the launchd service) keeps running. An existing oversized log is trimmed the first time.
 - When a llama.cpp upgrade removes the build the running router was started from, `pill doctor` now fails its `router` check and names the removed file, and `pill`, `pill serve`, `pill bench run`, `pill add`, `pill sync` and `pill rm` stop with the same message, instead of every model load timing out (which made `pill bench run` mark the model failed). The fix it gives is `pill stop --all`, then `pill serve`.

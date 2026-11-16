@@ -17,7 +17,7 @@ to get the TOON.
 
 | Goal | Command |
 |---|---|
-| What is installed, and is it proven here? | `pill ls` (state: `pulled`, `unverified`, `passed`, `failed`, `missing`) |
+| What is installed, and is it proven here? | `pill ls` (state: `pulled`, `candidate`, `unverified`, `passed`, `failed`, `missing`) |
 | Is the router up, what is loaded? | `pill ps` |
 | Something is wrong | `pill doctor` (fix the `fail` and `warn` rows first) |
 | Models pill can download | `pill catalog --format agent` (plain `pill catalog` prints a table) |
@@ -32,8 +32,8 @@ to get the TOON.
 
 ## Rules
 
-- A `failed` model never reaches Pi; a model that has not passed `pill bench run`
-  is labelled `(unverified)` everywhere. Do not describe an unverified model as
+- A `failed` or `candidate` model never reaches Pi; a model that has not passed
+  `pill bench run` is labelled `(unverified)` everywhere. Do not describe an unverified model as
   proven.
 - `pill bench run` takes a long time and loads a large model. Run it in the
   background and check the result with `pill bench summary`.

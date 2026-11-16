@@ -44,7 +44,7 @@ pill                                         # start the router if needed, open 
 
 Models outside the catalog work too: `pill pull hf.co/owner/repo:Q4_K_M`, then `pill add hf.co/owner/repo:Q4_K_M --unverified --ctx 32768`. Gated repos need `HF_TOKEN` in your environment (it is never stored).
 
-`--unverified` is explicit on purpose. A model that has not passed `pill bench run` on this machine shows `(unverified)` everywhere.
+`--unverified` is explicit on purpose. A model that has not passed `pill bench run` on this machine shows `(unverified)` everywhere. A `candidate` has an entry but is not offered to Pi: it is being benchmarked, or it failed and its settings or file changed since; `pill add <name> --unverified` offers it.
 
 If you already have the GGUF files, skip `pill pull` and move them into place:
 
@@ -113,13 +113,13 @@ Things to know:
 | `pill serve [--foreground]` | Start the router (no-op when running). |
 | `pill stop [--all]` | Unload the loaded model; `--all` also stops the router. |
 | `pill ps` | Router state, port, loaded model and its memory. |
-| `pill ls` | Local models: name, state (`pulled`, `unverified`, `passed`, `failed`, `missing`), size, default. |
+| `pill ls` | Local models: name, state (`pulled`, `candidate`, `unverified`, `passed`, `failed`, `missing`), size, default. |
 | `pill pull <id>` | Download a GGUF (catalog ID, long name or Hugging Face reference). Resumes, verifies sha256, never registers. |
 | `pill rm <name>` | Remove the entry and its Pi registration; delete the GGUF when no other entry uses it. |
 | `pill catalog` | One row per model that was measured on this exact chip and memory, plus catalog models that fit but were not measured (see [Reading `pill catalog`](#reading-pill-catalog)). Nothing is guessed: no result shows `-`. |
 | `pill bench run <name> [--runs N]` | Gate a model: cold-start agent-sized request, Pi tool-calling turn, then a Tier 2 coding task scored by a hidden verifier (needs Node). A failure exits 1 and removes the model from Pi. |
 | `pill bench summary [--all]` | Rank benchmarked models by Tier 2 score, speed and memory headroom. |
-| `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the unverified ones. |
+| `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the candidate and unverified ones. |
 | `pill service install\|uninstall` | Run the router as a launchd LaunchAgent (starts at login, restarts if it dies). |
 | `pill skill install [--dir]` | Install the pill skill for Pi (`~/.pi/agent/skills/pill/SKILL.md`). |
 | `pill add <name> --unverified` | Register a local GGUF (catalog name, `.gguf` file or Hugging Face reference). |
