@@ -54,8 +54,11 @@ func launchPi(ctx context.Context, a *App, userArgs []string) error {
 	if a.reg.FileSize(*m) == 0 {
 		return output.Fail([]string{"download it: pill pull " + name, "or copy the GGUF into " + a.settings.ModelsDir}, "the file for %s (%s) is missing", name, m.File)
 	}
-	if a.reg.State(snap, *m) == config.StateFailed {
+	switch state := a.reg.State(snap, *m); {
+	case state == config.StateFailed:
 		return output.Fail([]string{"pill default <other-model>", "pill add " + name + " --unverified to override"}, "default model %s failed its benchmark", name)
+	case !config.OfferedToPi(state):
+		return output.Fail([]string{"pill default <other-model>", "pill add " + name + " --unverified"}, "default model %s is not registered with Pi", name)
 	}
 	bin, err := pi.Binary()
 	if err != nil {

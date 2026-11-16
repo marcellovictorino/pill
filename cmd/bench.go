@@ -222,11 +222,11 @@ func (a *App) recordVerdict(ctx context.Context, m config.Model, res config.Resu
 		st.PresetHash = preset.SectionHash(m, a.settings.ModelsDir)
 		st.GGUFSize = a.reg.FileSize(m)
 		if res.Passed {
-			st.State, st.InPi = config.StatePassed, true
+			st.State = config.Next(st.State, config.EventPass)
 		} else if !demote {
 			note = "kept as passed: demotion declined"
 		} else {
-			st.State, st.InPi = config.StateFailed, false
+			st.State = config.Next(st.State, config.EventFail)
 		}
 		state = st.State
 		return nil

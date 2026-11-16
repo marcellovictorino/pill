@@ -72,16 +72,21 @@
     {
       "name": "a model",
       "in": "config",
-      "about": "One model's gate state on this Mac: pulled is a GGUF file with no entry yet, the rest are kept in results.json",
-      "states": ["pulled", "unverified", "passed", "failed"],
+      "about": "One model's gate state on this Mac: pulled is a GGUF file with no entry yet, the rest are kept in results.json; only unverified and passed are offered to Pi",
+      "states": ["pulled", "candidate", "unverified", "passed", "failed"],
       "moves": [
         { "from": "pulled", "to": "unverified", "why": "pill add --unverified or pill sync registers the file", "by": "commands" },
+        { "from": "pulled", "to": "candidate", "why": "pill bench run registers it for the benchmark only", "by": "commands" },
+        { "from": "candidate", "to": "unverified", "why": "pill add --unverified or a fresh download offers it to Pi", "by": "commands" },
+        { "from": "candidate", "to": "passed", "why": "a benchmark meets every threshold", "by": "commands" },
+        { "from": "candidate", "to": "failed", "why": "a benchmark misses a threshold", "by": "commands" },
         { "from": "unverified", "to": "passed", "why": "a benchmark meets every threshold", "by": "commands" },
         { "from": "unverified", "to": "failed", "why": "a benchmark misses a threshold", "by": "commands" },
         { "from": "failed", "to": "passed", "why": "a later benchmark passes", "by": "commands" },
         { "from": "passed", "to": "failed", "why": "a later benchmark fails and the demotion is confirmed", "by": "commands" },
         { "from": "failed", "to": "unverified", "why": "pill add overrides it, or the file is downloaded again", "by": "commands" },
-        { "from": "passed", "to": "unverified", "why": "its settings or its file changed since the verdict", "by": "config" }
+        { "from": "passed", "to": "unverified", "why": "its settings or its file changed since the verdict", "by": "config" },
+        { "from": "failed", "to": "candidate", "why": "its settings or its file changed since the verdict; it stays hidden from Pi", "by": "config" }
       ]
     },
     {

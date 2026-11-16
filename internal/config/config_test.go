@@ -194,11 +194,16 @@ func TestEffectiveState(t *testing.T) {
 		size int64
 		want string
 	}{
-		{"no state", nil, "h1", 100, StateUnverified},
+		{"no state", nil, "h1", 100, StateCandidate},
 		{"passed and matching", passed, "h1", 100, StatePassed},
 		{"preset changed", passed, "h2", 100, StateUnverified},
 		{"file changed", passed, "h1", 200, StateUnverified},
 		{"failed stays failed", &ModelState{State: StateFailed, PresetHash: "h1"}, "h1", 0, StateFailed},
+		// A failed verdict that no longer applies must not put the model in Pi.
+		{"failed, preset changed", &ModelState{State: StateFailed, PresetHash: "h1", GGUFSize: 100}, "h2", 100, StateCandidate},
+		{"failed, file changed", &ModelState{State: StateFailed, PresetHash: "h1", GGUFSize: 100}, "h1", 200, StateCandidate},
+		{"candidate has no verdict to drift", &ModelState{State: StateCandidate}, "h2", 5, StateCandidate},
+		{"unverified has no verdict to drift", &ModelState{State: StateUnverified}, "h2", 5, StateUnverified},
 		{"hash unknown yet", &ModelState{State: StatePassed}, "h2", 5, StatePassed},
 	}
 	for _, c := range cases {
@@ -208,19 +213,80 @@ func TestEffectiveState(t *testing.T) {
 	}
 }
 
+// Every state × event: registering is the explicit override of a fail but
+// never undoes a pass, and a benchmark verdict always wins.
+func TestNext(t *testing.T) {
+	states := []string{StateCandidate, StateUnverified, StatePassed, StateFailed}
+	want := map[string][]string{
+		EventRegister: {StateUnverified, StateUnverified, StatePassed, StateUnverified},
+		EventPass:     {StatePassed, StatePassed, StatePassed, StatePassed},
+		EventFail:     {StateFailed, StateFailed, StateFailed, StateFailed},
+	}
+	for event, wants := range want {
+		for i, from := range states {
+			if got := Next(from, event); got != wants[i] {
+				t.Errorf("Next(%s, %s) = %s, want %s", from, event, got, wants[i])
+			}
+		}
+	}
+}
+
+// Pi is offered exactly the states a person was told it can use.
+func TestOfferedToPi(t *testing.T) {
+	for state, want := range map[string]bool{StateCandidate: false, StateUnverified: true, StatePassed: true, StateFailed: false} {
+		if OfferedToPi(state) != want {
+			t.Errorf("OfferedToPi(%s) = %v", state, !want)
+		}
+	}
+}
+
+// A version 1 file kept Pi visibility in in_pi; loading it must keep every
+// model offered to Pi exactly as before.
+func TestLoadResultsMigratesInPi(t *testing.T) {
+	p := tempPaths(t)
+	if err := os.MkdirAll(p.Root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	v1 := `{"version": 1, "models": {
+  "added": {"state": "unverified", "in_pi": true},
+  "benchmarking": {"state": "unverified", "in_pi": false},
+  "proven": {"state": "passed", "in_pi": true, "preset_hash": "h1", "gguf_size": 43},
+  "rejected": {"state": "failed", "in_pi": false, "preset_hash": "h1", "gguf_size": 43}
+}}`
+	if err := os.WriteFile(p.ResultsFile(), []byte(v1), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r, err := LoadResults(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]string{"added": StateUnverified, "benchmarking": StateCandidate, "proven": StatePassed, "rejected": StateFailed} {
+		if got := r.Get(name).State; got != want {
+			t.Errorf("%s: got %s, want %s", name, got, want)
+		}
+	}
+	if err := SaveResults(p, r); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(p.ResultsFile())
+	if strings.Contains(string(data), "in_pi") || !strings.Contains(string(data), `"version": 2`) {
+		t.Errorf("saved file still carries version 1's shape:\n%s", data)
+	}
+}
+
 func TestResultsRoundTrip(t *testing.T) {
 	p := tempPaths(t)
 	r, err := LoadResults(p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r.Ensure("m").InPi = true
+	r.Ensure("m").State = StateUnverified
 	r.Files["f.gguf"] = FileInfo{Repo: "o/r", Quant: "Q4", Size: 7}
 	if err := SaveResults(p, r); err != nil {
 		t.Fatal(err)
 	}
 	got, err := LoadResults(p)
-	if err != nil || !got.Get("m").InPi || got.Files["f.gguf"].Repo != "o/r" {
+	if err != nil || got.Get("m").State != StateUnverified || got.Files["f.gguf"].Repo != "o/r" {
 		t.Errorf("round trip wrong: %+v %v", got, err)
 	}
 }

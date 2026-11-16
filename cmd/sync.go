@@ -21,7 +21,7 @@ keep in dotfiles). Every declared model whose GGUF is missing is downloaded and
 registered as unverified, so it is usable at once but still labelled as not
 proven on this Mac.
 
-With --bench, every declared model that is still unverified is then
+With --bench, every declared model that is still a candidate or unverified is then
 benchmarked (see 'pill bench run'); this takes about 25 minutes each.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -31,7 +31,7 @@ benchmarked (see 'pill bench run'); this takes about 25 minutes each.`,
 			return runSync(cmd.Context(), a, doBench, th)
 		},
 	}
-	c.Flags().BoolVar(&doBench, "bench", false, "benchmark the models that are still unverified afterwards")
+	c.Flags().BoolVar(&doBench, "bench", false, "benchmark the models that are still candidate or unverified afterwards")
 	return c
 }
 
@@ -86,16 +86,10 @@ func runSync(ctx context.Context, a *App, doBench bool, th config.Thresholds) er
 			if a.reg.FileSize(*m) == 0 {
 				continue
 			}
-			st := s.Results.Get(m.Name)
-			_, justPulled := pulled[m.Name]
-			switch {
-			case st == nil:
-				s.Results.Ensure(m.Name).InPi = true // usable at once, labelled unverified
-			case justPulled:
-				st.InPi = true
-				if a.reg.State(s, *m) == config.StateFailed {
-					st.State = config.StateUnverified // a fresh download is a fresh start
-				}
+			// A new entry is usable at once, labelled unverified; a fresh
+			// download is a fresh start for a failed one.
+			if _, justPulled := pulled[m.Name]; justPulled || s.Results.Get(m.Name) == nil {
+				registerEntry(a, s, *m)
 			}
 		}
 		return nil
@@ -119,7 +113,7 @@ func runSync(ctx context.Context, a *App, doBench bool, th config.Thresholds) er
 	allPassed := true
 	if doBench {
 		for _, m := range snap.Models.Models {
-			if a.reg.FileSize(m) == 0 || a.reg.State(snap, m) != config.StateUnverified {
+			if state := a.reg.State(snap, m); a.reg.FileSize(m) == 0 || (state != config.StateCandidate && state != config.StateUnverified) {
 				continue
 			}
 			out, err := a.benchModel(ctx, m.Name, 0, 1, th)

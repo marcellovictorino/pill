@@ -109,6 +109,46 @@ func TestBenchRunFailsTier1AndRemovesFromPi(t *testing.T) {
 	}
 }
 
+// A failed model whose settings change afterwards goes back to candidate:
+// hidden from Pi, and every command agrees, including pill itself.
+func TestBenchFailedThenSettingsChangedIsCandidate(t *testing.T) {
+	e := newEnv(t)
+	t.Setenv("PILL_FAKE_PI_TIER1", "wrong")
+	e.register()
+	e.run("bench", "run", "gemma4-26b-iq4xs-64k").fails(t, 1, "state: failed")
+
+	// A hand edit to the model's settings: the failed verdict no longer applies.
+	toml := filepath.Join(e.dir, "pill", "config", "models.toml")
+	data, _ := os.ReadFile(toml)
+	if err := os.WriteFile(toml, []byte(strings.Replace(string(data), "temp = 1.0", "temp = 0.8", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e.run("sync").ok(t)
+
+	if ls := e.run("ls").ok(t); !strings.Contains(ls.out, "gemma4-26b-iq4xs-64k,candidate,") {
+		t.Errorf("ls after settings change:\n%s", ls.out)
+	}
+	if prov, _, _ := pi.ReadProvider(e.piModels()); prov != nil {
+		t.Errorf("a candidate must not reach Pi: %s", prov)
+	}
+	e.run("default", "gemma4-26b-iq4xs-64k").fails(t, 1, "not registered with Pi")
+	launched := false
+	orig := pi.ExecFunc
+	pi.ExecFunc = func(string, []string, []string) error { launched = true; return nil }
+	defer func() { pi.ExecFunc = orig }()
+	e.run().fails(t, 1, "not registered with Pi")
+	if launched {
+		t.Error("pill launched Pi on a model Pi does not list")
+	}
+
+	// The explicit override still offers it to Pi.
+	e.run("add", "gemma4-26b-iq4xs-64k", "--unverified").ok(t)
+	if ls := e.run("ls").ok(t); !strings.Contains(ls.out, "gemma4-26b-iq4xs-64k,unverified,") {
+		t.Errorf("ls after override:\n%s", ls.out)
+	}
+	e.run("default", "gemma4-26b-iq4xs-64k").ok(t)
+}
+
 func TestBenchRunLowMemoryFailsGate(t *testing.T) {
 	e := newEnv(t)
 	e.sys.Samples = []sysinfo.Sample{{FreePct: 6, Pressure: 4, GPUUtilPct: -1}}
