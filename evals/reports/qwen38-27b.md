@@ -1,5 +1,41 @@
 # Qwen3.8 27B, UD-IQ3_XXS (10.9 GB), 32k context, thinking off, MTP
 
+## Update: Unsloth Dynamic 3.1 quants (UD-IQ4_XS and UD-Q3_K_XL) tested and not adopted
+
+**Verdict:** Not a good model on this machine (16–17 November, build 12359). Unsloth's Dynamic 3.1 files
+(posted 10–12 November) do not beat the 4–5 November UD-IQ4_XS result, and neither comes near MiniCPM. Tier 1
+still takes 137–155 s against the 60 s default, and no arm scored 22/22 in all three relaxed runs. MiniCPM stays
+the default. Tier 3 was not run.
+
+| Check | MiniCPM control (default) | UD-IQ4_XS, Dynamic 3.1 (14.4 GB) | UD-Q3_K_XL, Dynamic 3.1 (13.1 GB) | UD-IQ4_XS, 4–5 Nov (build 11960) |
+|---|---|---|---|---|
+| Default gate (60 s, 15 min, 10%) | Pass, 1 of 1 | Fail: Tier 1 155 s | Fail: Tier 1 152 s | Fail, 0 of 2 (memory) |
+| Tier 1, relaxed (limit 300 s) | 45 s at the default gate | 144, 137, 137 s | 152, 146, 146 s | 148, 140, 135 s |
+| Tier 2 (22 tasks; bar 22/22) | 22/22 in 4.9 min | 22, 22, 20; all three at the 30-min cap | 22 in 8.5 min, 21 in 25.4 min, 22 at the 30-min cap | 21 in 24.5 min, 21 at the cap, 22 in 28.3 min |
+| Decode | 27.5 tok/s | 5.8–6.1 tok/s | 6.3–6.6 tok/s | 6.3 tok/s |
+| Lowest free memory | 14% | 9–10% | 12–18% | 9–10% |
+| Swap growth | 7.9 GB | 3.8 GB at the default gate; 0.2–1.0 GB relaxed | 0 in every run | 0–0.9 GB |
+
+- **Setup:** Pi, thinking off (`chat-template-kwargs = '{"enable_thinking":false}'`), 32k context, no MTP, llama.cpp
+  build 12359, the same server settings as the 4–5 November run. Each arm had one run at the default gate, then
+  three runs at the relaxed gate (300 s, 30 min, memory floor 5%). MiniCPM ran once on the same build as the control.
+  The new UD-IQ4_XS is a different file from the 4 November one (other checksum, 14.35 GB against 14.25 GB).
+- **Misses:** UD-IQ4_XS run 3 failed `bestMove blocks` and `bestMove replies to centre with a corner`; UD-Q3_K_XL
+  run 2 failed `bestMove blocks`. No run repeated a tool call in a loop. The Tier 1 answer (informational) was right in two of four UD-IQ4_XS
+  runs; UD-Q3_K_XL wrote an explanation instead of the bare number in every run, which the check marks wrong.
+- **UD-Q3_K_XL fits better:** at least 12% free memory and no swap growth, against 9–10% for the 4-bit files. Its one
+  quick run (22/22 in 8.5 min) is the fastest Qwen3.8 27B Tier 2 result on this machine, but the other two took 25 and
+  30 minutes.
+- **Not run:** Tier 3, because no arm passed Tier 2 at 22/22 in every run. The UD-IQ4_XS arm with the MTP head was
+  skipped: MTP speeds up decoding only, and Tier 1 is bound by prompt processing on this dense model, so it could not
+  pass the default gate. The MiniCPM control swap growth (7.9 GB) came while other apps were in use at the start of
+  the night.
+- **Re-test only for** the reasons below: a faster machine or a pill change that relaxes Tier 1.
+
+Raw runs: `~/.pill/benchmark/` (not committed), folders `20261116T211724Z` (MiniCPM), `20261116T213822Z` and
+`20261116T215447Z` (UD-IQ4_XS), `20261116T215059Z` and `20261116T233501Z` (UD-Q3_K_XL). Rows:
+[`tried-and-rejected.md`](tried-and-rejected.md).
+
 ## Update: UD-IQ4_XS (4-bit, 14.3 GB) tested and discarded
 
 **Verdict:** Tested and discarded (PILL-47, 4–5 November, build 11960). The 4-bit quant from unsloth, 32k, thinking off,

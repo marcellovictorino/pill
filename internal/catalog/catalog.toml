@@ -477,6 +477,59 @@ swap_mb = 9900
 fail_reason = "Tier 1 took 135-183 s and Tier 2 took 24-30 min at 21-22/22"
 
 [[tried]]
+name = "Qwen3.8 27B UD-IQ4_XS, Unsloth Dynamic 3.1, thinking off"
+id = "qwen3.8-27b"
+quant = "UD3.1-IQ4_XS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "relaxed"
+tier2 = "fail"
+tok_per_s = 6.1
+runs = 4
+date = "2026-11-17"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 30 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.8 27B UD-IQ4_XS, Unsloth Dynamic 3.1 (14.4 GB), 32k, thinking off, no MTP"
+tier1_seconds = 137
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 30
+tier2_timed_out = true
+min_free_pct = 9
+swap_mb = 3800
+fail_reason = "Tier 1 took 137-155 s and every relaxed Tier 2 run hit the 30 min cap, one at 20/22"
+
+[[tried]]
+name = "Qwen3.8 27B UD-Q3_K_XL, Unsloth Dynamic 3.1, thinking off"
+id = "qwen3.8-27b"
+quant = "UD3.1-Q3_K_XL"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "relaxed"
+tier2 = "fail"
+tok_per_s = 6.3
+runs = 4
+date = "2026-11-17"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 30 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.8 27B UD-Q3_K_XL, Unsloth Dynamic 3.1 (13.1 GB), 32k, thinking off, no MTP"
+tier1_seconds = 146
+tier2_score = 21
+tier2_total = 22
+tier2_minutes = 25.4
+min_free_pct = 12
+swap_mb = 0
+fail_reason = "Tier 1 took 146-152 s; Tier 2 scored 22, 21 and 22 of 22, one run at the 30 min cap"
+
+[[tried]]
 name = "Qwen3.8 27B UD-IQ3_XXS, thinking off, MTP"
 id = "qwen3.8-27b-mtp"
 quant = "UD-IQ3_XXS"
