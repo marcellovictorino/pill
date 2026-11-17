@@ -479,7 +479,7 @@ fail_reason = "Tier 1 took 135-183 s and Tier 2 took 24-30 min at 21-22/22"
 [[tried]]
 name = "Qwen3.8 27B UD-IQ4_XS, Unsloth Dynamic 3.1, thinking off"
 id = "qwen3.8-27b"
-quant = "UD3.1-IQ4_XS"
+quant = "UD-IQ4_XS-v3.1"
 ctx = 32768
 [[tried.measurement]]
 chip = "Apple M4"
@@ -506,7 +506,7 @@ fail_reason = "Tier 1 took 137-155 s and every relaxed Tier 2 run hit the 30 min
 [[tried]]
 name = "Qwen3.8 27B UD-Q3_K_XL, Unsloth Dynamic 3.1, thinking off"
 id = "qwen3.8-27b"
-quant = "UD3.1-Q3_K_XL"
+quant = "UD-Q3_K_XL"
 ctx = 32768
 [[tried.measurement]]
 chip = "Apple M4"
