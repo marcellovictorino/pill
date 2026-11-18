@@ -208,7 +208,7 @@ func TestCatalogMarksTheDefault(t *testing.T) {
 	e.run("add", "minicpm", "--unverified").ok(t)
 	e.run("default", "minicpm").ok(t)
 	r := e.run("catalog", "--format", "human").ok(t)
-	if !strings.Contains(r.out, "\n*minicpm✓ ") || !strings.Contains(r.out, "\n ID ") || !strings.Contains(r.out, "\n muse-30b✗ ") {
+	if !strings.Contains(r.out, "\n*minicpm✓ ") || !strings.Contains(r.out, "\n ID ") || !strings.Contains(r.out, "\n gemma4-26b ") {
 		t.Errorf("the default must carry a * to its left, aligned with the other IDs:\n%s", r.out)
 	}
 	if r := e.run("catalog", "--format", "agent").ok(t); !strings.Contains(r.out, "default: minicpm\n") {
