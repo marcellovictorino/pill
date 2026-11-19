@@ -135,6 +135,22 @@ class PersonalRun(Env):
         self.assertFalse((copy / "extensions" / "hindsight").exists())
         self.assertTrue((copy / "extensions" / "footer.ts").exists())
 
+    def test_relative_links_survive_and_dangling_ones_are_skipped(self):
+        # copytree's own dangling check uses the launching directory; these must be judged from the link
+        (self.agent_src / "config").mkdir()
+        (self.agent_src / "config" / "settings.json").write_text(json.dumps({"theme": "dark"}))
+        (self.agent_src / "settings.json").unlink()
+        (self.agent_src / "settings.json").symlink_to("config/settings.json")
+        (self.agent_src / "skills" / "rel").symlink_to("one")
+        (self.agent_src / "skills" / "gone").symlink_to("missing")
+        before = tree_hash(self.agent_src)
+        self.go(personal=True)
+        copy = self.log / "agent_dir_copy"
+        self.assertEqual(json.loads((copy / "settings.json").read_text())["theme"], "dark")
+        self.assertEqual((copy / "skills" / "rel" / "SKILL.md").read_text(), "skill")
+        self.assertFalse((copy / "skills" / "gone").exists())
+        self.assertEqual(tree_hash(self.agent_src), before)
+
     def test_the_pill_model_is_cloned_into_the_copy_like_a_bare_run(self):
         self.go(personal=True, agent="pi:not-offered-to-pi")
         models = json.loads((self.log / "agent_dir_copy" / "models.json").read_text())["providers"]["pill"]["models"]

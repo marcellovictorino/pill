@@ -204,13 +204,16 @@ def _is_hindsight(entry):
 
 def _personal_ignore(src):
     def ignore(directory, names):
-        top = Path(directory) == src
-        if top:  # only the top level: node_modules and the like keep their own names
-            return [n for n in names if n in PERSONAL_SKIP or ".bak" in n or n.endswith("-backup")
-                    or ("hindsight" in n.lower() and n != "settings.json")]
-        if Path(directory) == src / "extensions":  # Pi loads this folder automatically
-            return [n for n in names if "hindsight" in n.lower()]
-        return []
+        d = Path(directory)
+        # Dangling links are skipped here, judged from the link's own folder: copytree's own flag
+        # checks relative targets against the launching directory and would drop valid links.
+        skip = [n for n in names if (d / n).is_symlink() and not (d / n).exists()]
+        if d == src:  # only the top level: node_modules and the like keep their own names
+            skip += [n for n in names if n in PERSONAL_SKIP or ".bak" in n or n.endswith("-backup")
+                     or ("hindsight" in n.lower() and n != "settings.json")]
+        elif d == src / "extensions":  # Pi loads this folder automatically
+            skip += [n for n in names if "hindsight" in n.lower()]
+        return skip
     return ignore
 
 
@@ -222,8 +225,8 @@ def copy_personal_pi(src, dest):
     """
     src = Path(src)
     # symlinks=False copies what a link points to, so nothing in the copy can write through to the
-    # original (settings.json and models.json are rewritten below); dangling links are dropped.
-    shutil.copytree(src, dest, symlinks=False, ignore_dangling_symlinks=True,
+    # original (settings.json and models.json are rewritten below).
+    shutil.copytree(src, dest, symlinks=False,
                     ignore=_personal_ignore(src), dirs_exist_ok=True)
     settings = Path(dest) / "settings.json"
     if settings.exists():
