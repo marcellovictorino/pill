@@ -51,11 +51,13 @@ func (r *Runner) runPi(ctx context.Context, timeout time.Duration, workspace, ag
 
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	args := []string{
-		"-p", "--mode", "json", "--no-session", "--offline",
-		"--no-extensions", "--no-skills", "--no-context-files",
-		"--model", "pill/" + model, "--thinking", "off", prompt,
+	// Bare: nothing of the user's, offline. Personal: the copied setup as the
+	// user runs it day to day, online.
+	args := []string{"-p", "--mode", "json", "--no-session"}
+	if r.PersonalSource == "" {
+		args = append(args, "--offline", "--no-extensions", "--no-skills", "--no-context-files")
 	}
+	args = append(args, "--model", "pill/"+model, "--thinking", "off", prompt)
 	cmd := exec.CommandContext(runCtx, r.PiBin, args...)
 	cmd.Dir = workspace
 	cmd.Env = append(os.Environ(), "PI_CODING_AGENT_DIR="+agentDir, "PI_SKIP_VERSION_CHECK=1")

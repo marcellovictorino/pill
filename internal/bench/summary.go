@@ -155,3 +155,97 @@ func summarizeOne(r config.Result, currentBuild string) SummaryRow {
 func scoreText(score, total int) string {
 	return strconv.Itoa(score) + "/" + strconv.Itoa(total)
 }
+
+// PersonalRow is one line of `pill bench summary --personal`: the latest
+// personal result of a model beside its latest bare result, the baseline. A
+// personal result is informational, so there is no pass or fail here.
+type PersonalRow struct {
+	Model     string
+	SetupHash string
+	Runs      int
+	ToolCheck string  // runs whose Pi tool-calling turn answered correctly, e.g. "3/3"
+	ToolSecs  float64 // mean length of that turn
+	ExtraSecs string  // ToolSecs minus the bare mean, "-" when the bare run did not record it
+	Tier2     string  // lowest Tier 2 score of the runs, "-" when none ran
+	Tier2Secs float64 // longest Tier 2 time
+	BareTier2 string  // the same for the latest bare result, "-" when there is none
+	BareSecs  float64
+	Date      string
+}
+
+// toolTurnPassed reports whether the run's Pi tool-calling turn answered correctly.
+func toolTurnPassed(run config.RunResult) bool {
+	for _, c := range run.Tier1Checks {
+		if c.Name == "Pi tool-calling turn returns the right answer" {
+			return c.Pass
+		}
+	}
+	return false
+}
+
+// tier2Of is the lowest Tier 2 score and longest Tier 2 time of a result.
+func tier2Of(r config.Result) (score string, secs float64) {
+	score = "-"
+	min, total := -1, 0
+	for _, run := range r.Runs {
+		if !run.Tier2Ran {
+			continue
+		}
+		if min < 0 || run.Tier2Score < min {
+			min, total = run.Tier2Score, run.Tier2Total
+		}
+		secs = max(secs, run.Tier2Seconds)
+	}
+	if min >= 0 {
+		score = scoreText(min, total)
+	}
+	return score, secs
+}
+
+func meanToolSecs(r config.Result) float64 {
+	var sum float64
+	for _, run := range r.Runs {
+		sum += run.Tier1ToolSeconds
+	}
+	if len(r.Runs) == 0 {
+		return 0
+	}
+	return sum / float64(len(r.Runs))
+}
+
+// SummarizePersonal pairs the latest personal result of each model with the
+// latest bare result of the same model, models in alphabetical order.
+func SummarizePersonal(personal []config.PersonalResult, bare []config.Result) []PersonalRow {
+	latestBare := map[string]config.Result{}
+	for _, r := range bare { // oldest first
+		latestBare[r.Model] = r
+	}
+	latest := map[string]config.PersonalResult{}
+	for _, r := range personal {
+		if cur, ok := latest[r.Model]; !ok || !r.Time.Before(cur.Time) {
+			latest[r.Model] = r
+		}
+	}
+	var rows []PersonalRow
+	for model, r := range latest {
+		row := PersonalRow{Model: model, SetupHash: r.SetupHash, Runs: len(r.Runs), Date: r.Time.Format("2006-01-02"),
+			ToolSecs: meanToolSecs(r.Result), ExtraSecs: "-", BareTier2: "-"}
+		ok := 0
+		for _, run := range r.Runs {
+			if toolTurnPassed(run) {
+				ok++
+			}
+		}
+		row.ToolCheck = strconv.Itoa(ok) + "/" + strconv.Itoa(len(r.Runs))
+		row.Tier2, row.Tier2Secs = tier2Of(r.Result)
+		if b, has := latestBare[model]; has {
+			row.BareTier2, row.BareSecs = tier2Of(b)
+			if bs := meanToolSecs(b); bs > 0 {
+				row.ExtraSecs = strconv.FormatFloat(row.ToolSecs-bs, 'f', 1, 64)
+			}
+		}
+		rows = append(rows, row)
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Model < rows[j].Model })
+	return rows
+}

@@ -119,6 +119,7 @@ Things to know:
 | `pill catalog` | One row per model that was measured on this exact chip and memory, plus catalog models that fit but were not measured (see [Reading `pill catalog`](#reading-pill-catalog)). Nothing is guessed: no result shows `-`. |
 | `pill bench run <name> [--runs N]` | Gate a model: cold-start agent-sized request, Pi tool-calling turn, then a Tier 2 coding task scored by a hidden verifier (needs Node). A failure exits 1 and removes the model from Pi. |
 | `pill bench summary [--all]` | Rank benchmarked models by Tier 2 score, speed and memory headroom. |
+| `pill bench run <name> --personal`, `pill bench summary --personal` | Run Tier 1 and 2 with a copy of your own Pi setup and compare with the bare run. Informational: no pass or fail, never changes the gate; results stay in `~/.pill/personal/results.json`. |
 | `pill sync [--bench]` | Restore a new machine from `~/.config/pill/models.toml`: download missing models and register them as unverified; `--bench` benchmarks the candidate and unverified ones. |
 | `pill service install\|uninstall` | Run the router as a launchd LaunchAgent (starts at login, restarts if it dies). |
 | `pill skill install [--dir]` | Install the pill skill for Pi (`~/.pi/agent/skills/pill/SKILL.md`). |
@@ -142,7 +143,14 @@ dev tooling, not part of the binary:
 
 The bare Pi run (no extensions, skills or context files) is the baseline, and the only one whose results belong in
 the repository or the catalog, so anyone can repeat it. To see whether your own Pi setup (skills, `AGENTS.md`,
-extensions) helps or is just noise, run the same Tier 3 tasks with a copy of it and compare:
+extensions) helps or is just noise, run the same tasks with a copy of it and compare. Tier 1 and 2:
+
+```bash
+pill bench run <model> --personal
+pill bench summary --personal
+```
+
+Tier 3:
 
 ```bash
 python3 evals/run.py run go-notes --agent pi:<model> --personal --runs 3
