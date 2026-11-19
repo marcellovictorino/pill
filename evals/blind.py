@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""Build blind human-rating pages for the web-landing-* runs.
+"""Build blind human-rating pages for the web-landing-* and web-kanban runs.
 
-  python3 evals/blind.py                 # every landing run in results/index.jsonl
-  python3 evals/blind.py --task web-landing-mars --seed 7
+  python3 evals/blind.py                 # every landing and kanban run in results/index.jsonl
+  python3 evals/blind.py --task web-kanban --seed 7
+  python3 evals/blind.py --also-index <path>/index.jsonl   # shuffle more runs into the same sheets
 
-For each landing task it rebuilds each kept workspace, takes 390px and 1440px full-page screenshots
-and writes results/blind/<stamp>/<task>.html: shuffled labels (A, B, C...), both screenshots per
-submission, Bad/Ok/Good/Excellent buttons and a button that downloads the ratings as JSON. The
+For each task it rebuilds each kept workspace and takes screenshots (landing: 390px and 1440px full page,
+via shot.mjs; kanban: the board after adding a few cards, via shot_kanban.mjs) and writes
+results/blind/<stamp>/<task>.html: shuffled labels (A, B, C...), the screenshots per submission,
+Bad/Ok/Good/Excellent buttons and a button that downloads the ratings as JSON. The
 label -> (agent, run) key goes to results/blind/<stamp>/key.json: do not open it before rating.
+Rows from --also-index (for example personal runs kept outside the repository) join the same shuffled
+sheet; the sheet never says where a row came from, and the key marks it ("personal": true when the
+row carries that stamp). Output stays under results/, which git ignores.
 """
 import argparse
 import base64
@@ -33,6 +38,7 @@ h1{font-size:1.2rem;margin:0 0 4px}.sub{color:#52525b;margin:0}
 section{margin:24px;padding:16px;background:#fff;border-radius:10px}
 h2{margin:0 0 8px}.shots{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
 .desk{flex:1 1 640px;max-height:80vh;overflow:auto;border:1px solid #d4d4d8}.desk img{width:100%;display:block}
+.board{flex:1 1 640px;border:1px solid #d4d4d8}.board img{width:100%;display:block}
 .mob{flex:0 0 390px;max-height:80vh;overflow:auto;border:1px solid #d4d4d8}.mob img{width:390px;display:block}
 .rate{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
 .rate label{border:2px solid #71717a;border-radius:8px;padding:8px 14px;cursor:pointer}
@@ -58,7 +64,47 @@ def b64(path):
     return "data:image/png;base64," + base64.b64encode(Path(path).read_bytes()).decode()
 
 
-def screenshot(ws_kept, shots):
+# task prefix -> how it is photographed and what the rater is asked to judge. Every task that has
+# an entry here is rated blind; the first matching prefix wins.
+TASKS = {
+    "web-landing": {"script": "shot.mjs", "files": ("1440.png", "390.png"), "brief": None},
+    "web-kanban": {"script": "shot_kanban.mjs", "files": ("kanban.png",),
+                   "brief": "A customer-facing kanban board, shown after adding five cards. Rate how good and polished it looks."},
+}
+
+
+def task_kind(task):
+    for prefix, cfg in TASKS.items():
+        if task.startswith(prefix):
+            return cfg
+    return None
+
+
+def read_rows(paths):
+    """Rows of every index file, in order; a missing file is an error, not an empty sheet."""
+    rows = []
+    for p in paths:
+        p = Path(p)
+        if not p.exists():
+            sys.exit(f"no such index: {p}")
+        rows += [json.loads(line) for line in p.read_text().splitlines() if line.strip()]
+    return rows
+
+
+def section_html(label, cfg, shots):
+    """One submission's block: its screenshots, then the rating buttons. No agent or run name."""
+    if cfg["script"] == "shot.mjs":
+        imgs = (f'<div class="desk"><img alt="Desktop screenshot of submission {label}" src="{b64(shots / "1440.png")}"></div>'
+                f'<div class="mob"><img alt="Mobile screenshot of submission {label}" src="{b64(shots / "390.png")}"></div>')
+    else:
+        imgs = f'<div class="board"><img alt="Screenshot of submission {label}" src="{b64(shots / cfg["files"][0])}"></div>'
+    return (f'<section><h2>Submission {label}</h2><div class="shots">{imgs}</div>'
+            f'<div class="rate" role="radiogroup" aria-label="Rating for submission {label}">'
+            + "".join(f'<label><input type="radio" name="{label}" value="{v}">{v}</label>' for v in ("Bad", "Ok", "Good", "Excellent"))
+            + "</div></section>")
+
+
+def screenshot(ws_kept, shots, script="shot.mjs"):
     tmp = Path(tempfile.mkdtemp(prefix="eval-blind-"))
     ws = tmp / "ws"
     shutil.copytree(ws_kept, ws, symlinks=True)
@@ -71,58 +117,57 @@ def screenshot(ws_kept, shots):
         shutil.rmtree(tmp, ignore_errors=True)
         return False, log
     with pwlib.preview(ws) as url:
-        pwlib.run_node("shot.mjs", url, {"outDir": str(shots)})
+        pwlib.run_node(script, url, {"outDir": str(shots)})
     shutil.rmtree(tmp, ignore_errors=True)
     return True, ""
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--task", help="only this landing task")
-    ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--index", default=str(ROOT / "results" / "index.jsonl"))
-    ap.add_argument("--out", default=str(ROOT / "results" / "blind"))
-    a = ap.parse_args()
-    idx = Path(a.index)
-    if not idx.exists():
-        sys.exit("no results yet")
-    rows = [json.loads(line) for line in idx.read_text().splitlines() if line.strip()]
-    rows = [r for r in rows if r["task"].startswith("web-landing") and (not a.task or r["task"] == a.task)]
+def build_sheets(rows, out, seed=None, task=None, shoot=screenshot):
+    """Write one sheet per rated task into out and return the key. Rows of all sources are shuffled together."""
+    rows = [r for r in rows if task_kind(r["task"]) and (not task or r["task"] == task)]
     if not rows:
-        sys.exit("no web-landing runs found")
-    rng = random.Random(a.seed)
-    stamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
-    out = Path(a.out) / stamp
-    out.mkdir(parents=True)
+        sys.exit("no web-landing or web-kanban runs found")
+    rng = random.Random(seed)
+    out.mkdir(parents=True, exist_ok=True)
     key = {}
-    for task in sorted({r["task"] for r in rows}):
-        subs = [r for r in rows if r["task"] == task]
+    for t in sorted({r["task"] for r in rows}):
+        cfg = task_kind(t)
+        subs = [r for r in rows if r["task"] == t]
         rng.shuffle(subs)
-        spec = (ROOT / "tasks" / task / "spec.md").read_text()
-        brief = next((ln for ln in spec.splitlines() if ln.startswith("A ") and "audience" in ln), "").strip()
+        spec = (ROOT / "tasks" / t / "spec.md").read_text()
+        brief = cfg["brief"] or next((ln for ln in spec.splitlines() if ln.startswith("A ") and "audience" in ln), "").strip()
         sections, labels = [], {}
         for r in subs:
             label = chr(ord("A") + len(labels))
             shots = Path(tempfile.mkdtemp(prefix="eval-shots-"))
-            ok, log = screenshot(Path(r["rundir"]) / "workspace", shots)
+            ok, log = shoot(Path(r["rundir"]) / "workspace", shots, cfg["script"])
             labels[label] = {"agent": r["agent"], "run": r["run"], "rundir": r["rundir"], "score": r["score"],
-                             "build_failed": not ok}
-            if not ok:
-                continue
-            sections.append(
-                f'<section><h2>Submission {label}</h2><div class="shots"><div class="desk"><img alt="Desktop screenshot of submission {label}" src="{b64(shots / "1440.png")}"></div>'
-                f'<div class="mob"><img alt="Mobile screenshot of submission {label}" src="{b64(shots / "390.png")}"></div></div>'
-                f'<div class="rate" role="radiogroup" aria-label="Rating for submission {label}">'
-                + "".join(f'<label><input type="radio" name="{label}" value="{v}">{v}</label>' for v in ("Bad", "Ok", "Good", "Excellent"))
-                + "</div></section>")
+                             "personal": bool(r.get("personal")), "build_failed": not ok}
+            if ok:
+                sections.append(section_html(label, cfg, shots))
             shutil.rmtree(shots, ignore_errors=True)
-        key[task] = labels
-        html = (PAGE.replace("__TASK__", task).replace("__BRIEF__", brief or task).replace("__N__", str(len(sections)))
+        key[t] = labels
+        html = (PAGE.replace("__TASK__", t).replace("__BRIEF__", brief or t).replace("__N__", str(len(sections)))
                 .replace("__SECTIONS__", "\n".join(sections)))
-        (out / f"{task}.html").write_text(html)
-        print(f"wrote {out / (task + '.html')} ({len(sections)} submissions)")
+        (out / f"{t}.html").write_text(html)
+        print(f"wrote {out / (t + '.html')} ({len(sections)} submissions)")
     (out / "key.json").write_text(json.dumps(key, indent=1))
     print(f"key (do not open before rating): {out / 'key.json'}")
+    return key
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--task", help="only this task (for example web-kanban)")
+    ap.add_argument("--seed", type=int, default=None)
+    ap.add_argument("--index", default=str(ROOT / "results" / "index.jsonl"))
+    ap.add_argument("--also-index", action="append", default=[], help="another index.jsonl whose runs join the same sheets (repeatable)")
+    ap.add_argument("--out", default=str(ROOT / "results" / "blind"))
+    a = ap.parse_args()
+    if not Path(a.index).exists():
+        sys.exit("no results yet")
+    stamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
+    build_sheets(read_rows([a.index, *a.also_index]), Path(a.out) / stamp, a.seed, a.task)
 
 
 if __name__ == "__main__":

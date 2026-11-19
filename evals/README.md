@@ -30,7 +30,7 @@ Only one local model can be loaded at a time on a 24 GB machine: run local agent
 | `go-notes` | 3B Go CLI | adds `stats` and `rm` and fixes a bug in a small cobra CLI, following the repo's conventions | hidden `go test` + binary behaviour + lint/convention checks |
 | `py-clean` | 3A1 Python + DuckDB | cleans, joins and aggregates four dirty parquet tables | exact output tables vs generator truth |
 | `py-insight` | 3A2 Python + DuckDB + scikit-learn | EDA, features, churn model, written insights with charts | holdout AUC (leak-free) + planted-pattern checklist (LLM judge) |
-| `web-kanban` | 3C React + TS | Trello-style kanban SPA | hidden Playwright tests + `tsc` + build |
+| `web-kanban` | 3C React + TS | Trello-style kanban SPA | hidden Playwright tests + `tsc` + build; a screenshot of the board for **blind human rating** (`blind.py`) |
 | `web-landing-nursery`, `web-landing-mars`, `web-landing-tax` | 3C taste | landing page for three fictional companies, each with a different audience | build + structure + a11y + responsive checks; screenshots for **blind human rating** (`blind.py`) |
 
 ## Task layout
