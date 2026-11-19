@@ -2,6 +2,8 @@ Build a single-page kanban board (like a small Trello) in this directory. It is 
 
 Run `npm run build` to check your work, and use `npm run dev` or `npm run preview` if you want to try it (a browser is not available to you, so reason carefully about behaviour and keep the code simple).
 
+This is a customer-facing web app, so it should look good and be polished: a clean, consistent visual design with deliberate spacing, typography and colour, not an unstyled prototype.
+
 ## Behaviour
 
 The board has exactly three columns, in this order: "To do" (id `todo`), "Doing" (id `doing`), "Done" (id `done`). On first load the board is empty (no seeded cards).
