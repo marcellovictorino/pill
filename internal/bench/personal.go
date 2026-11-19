@@ -71,7 +71,9 @@ func CopyPersonalPi(src, dest string) error {
 // maxCopyDepth stops a link cycle in the user's folder from recursing forever.
 const maxCopyDepth = 32
 
-func copyTree(src, dest string, depth int, top, inExtensions bool) error {
+// dropHindsight marks the folders Pi loads by itself (extensions and skills): an
+// entry there named after Hindsight is left out.
+func copyTree(src, dest string, depth int, top, dropHindsight bool) error {
 	if depth > maxCopyDepth {
 		return fmt.Errorf("%s is nested too deeply (a link cycle?)", src)
 	}
@@ -87,7 +89,7 @@ func copyTree(src, dest string, depth int, top, inExtensions bool) error {
 		if top && skipTop(name) {
 			continue
 		}
-		if inExtensions && strings.Contains(strings.ToLower(name), "hindsight") {
+		if dropHindsight && strings.Contains(strings.ToLower(name), "hindsight") {
 			continue
 		}
 		from, to := filepath.Join(src, name), filepath.Join(dest, name)
@@ -99,7 +101,7 @@ func copyTree(src, dest string, depth int, top, inExtensions bool) error {
 		}
 		switch {
 		case info.IsDir():
-			if err := copyTree(from, to, depth+1, false, top && name == "extensions"); err != nil {
+			if err := copyTree(from, to, depth+1, false, top && (name == "extensions" || name == "skills")); err != nil {
 				return err
 			}
 		case info.Mode().IsRegular():

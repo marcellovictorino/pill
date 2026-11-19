@@ -211,7 +211,7 @@ def _personal_ignore(src):
         if d == src:  # only the top level: node_modules and the like keep their own names
             skip += [n for n in names if n in PERSONAL_SKIP or ".bak" in n or n.endswith("-backup")
                      or ("hindsight" in n.lower() and n != "settings.json")]
-        elif d == src / "extensions":  # Pi loads this folder automatically
+        elif d in (src / "extensions", src / "skills"):  # Pi loads these folders automatically
             skip += [n for n in names if "hindsight" in n.lower()]
         return skip
     return ignore
