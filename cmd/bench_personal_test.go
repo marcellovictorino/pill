@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/marcellovictorino/pill/internal/config"
+	"github.com/marcellovictorino/pill/internal/pi"
 )
 
 // treeDigest fingerprints every file under dir (names and contents), so a
@@ -84,9 +85,15 @@ func TestPersonalRunNeverTouchesTheGate(t *testing.T) {
 
 	t.Setenv("PILL_FAKE_PI_TIER1", "wrong") // the tool check fails; that must not demote the model
 	r := e.run("bench", "run", "gemma4-26b-iq4xs-64k", "--personal").ok(t)
-	for _, want := range []string{"result: personal (informational)", "tool_check: 0/1", "extra_s:", "t2: 22/22", "bare_t2: 22/22", "pill bench summary --personal"} {
+	for _, want := range []string{"result: personal (informational)", "tool_check: 0/1", "extra_s:", "pill bench summary --personal"} {
 		if !strings.Contains(r.out, want) {
 			t.Errorf("missing %q in:\n%s", want, r.out)
+		}
+	}
+	// Tier 2 ran in the personal run although its tool check failed (informational).
+	for _, want := range []string{"\nt2: 22/22\n", "\nbare_t2: 22/22\n"} {
+		if !strings.Contains("\n"+r.out+"\n", want) {
+			t.Errorf("missing line %q in:\n%s", strings.TrimSpace(want), r.out)
 		}
 	}
 	if strings.Contains(r.out, "result: passed") || strings.Contains(r.out, "result: failed") {
@@ -125,8 +132,12 @@ func TestPersonalRunUsesCopyOfSetupWithoutIsolationFlags(t *testing.T) {
 	solveTier2(t)
 	e.gguf(gemmaFile)
 	piDir := filepath.Join(e.dir, "piagent")
-	e.run("bench", "run", "gemma4-26b-iq4xs-64k").ok(t)
+	// The bare run fails Tier 1, so Pi's own models.json does not list the model.
+	t.Setenv("PILL_FAKE_PI_TIER1", "wrong")
+	e.run("bench", "run", "gemma4-26b-iq4xs-64k").fails(t, 1, "state: failed")
+	t.Setenv("PILL_FAKE_PI_TIER1", "")
 	writeUserPiSetup(t, piDir)
+	liveModels, _ := os.ReadFile(e.piModels()) // may not exist: nothing is offered to Pi
 	if err := os.Symlink(filepath.Join(piDir, "missing"), filepath.Join(piDir, "dangling")); err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +161,7 @@ func TestPersonalRunUsesCopyOfSetupWithoutIsolationFlags(t *testing.T) {
 		t.Fatalf("personal agent folder: %v", matches)
 	}
 	copyDir := matches[0]
-	for _, want := range []string{"AGENTS.md", "skills/mine/SKILL.md", "extensions/web.ts", "models.json"} {
+	for _, want := range []string{"AGENTS.md", "skills/mine/SKILL.md", "extensions/web.ts"} {
 		if _, err := os.Stat(filepath.Join(copyDir, want)); err != nil {
 			t.Errorf("the copy should keep %s", want)
 		}
@@ -163,8 +174,13 @@ func TestPersonalRunUsesCopyOfSetupWithoutIsolationFlags(t *testing.T) {
 	if s := readFile(t, filepath.Join(copyDir, "settings.json")); strings.Contains(strings.ToLower(s), "hindsight") || !strings.Contains(s, "extensions/web.ts") {
 		t.Errorf("settings in the copy: %s", s)
 	}
-	if !strings.Contains(readFile(t, filepath.Join(copyDir, "models.json")), "gemma4-26b-iq4xs-64k") {
-		t.Error("the copy's pill provider must point at the model under test")
+	prov, _, err := pi.ReadProvider(filepath.Join(copyDir, "models.json"))
+	if err != nil || !strings.Contains(string(prov), "gemma4-26b-iq4xs-64k") {
+		t.Errorf("the copy's pill provider must expose the model under test: %s %v", prov, err)
+	}
+	// Pi's own list is not touched: the failed model stays out of it.
+	if got, _ := os.ReadFile(e.piModels()); string(got) != string(liveModels) {
+		t.Errorf("a personal run changed Pi's own models.json:\n%s", got)
 	}
 }
 
@@ -189,15 +205,27 @@ func TestSummaryPersonalShowsBareBeside(t *testing.T) {
 		t.Errorf("empty state:\n%s", empty.out)
 	}
 
-	e.run("bench", "run", "gemma4-26b-iq4xs-64k").ok(t)
+	e.run("bench", "run", "gemma4-26b-iq4xs-64k").ok(t) // the bare run solves Tier 2: 22/22
 	bareSummary := e.run("bench", "summary").ok(t).out
+	t.Setenv("PILL_FAKE_PI_TIER2_SCRIPT", "true") // the personal run does not: 0/22
 	e.run("bench", "run", "gemma4-26b-iq4xs-64k", "--personal").ok(t)
 
 	s := e.run("bench", "summary", "--personal").ok(t)
-	for _, want := range []string{"personal[1]{model,setup,runs,tool_check,tool_s,extra_s,t2,t2_min,bare_t2,bare_t2_min,date}:", "gemma4-26b-iq4xs-64k,", ",1/1,", ",22/22,", "informational"} {
-		if !strings.Contains(s.out, want) {
-			t.Errorf("missing %q in:\n%s", want, s.out)
+	if !strings.Contains(s.out, "personal[1]{model,setup,runs,tool_check,tool_s,extra_s,t2,t2_min,bare_t2,bare_t2_min,date}:") ||
+		!strings.Contains(s.out, "informational") {
+		t.Errorf("header or help missing:\n%s", s.out)
+	}
+	var row []string
+	for _, line := range strings.Split(s.out, "\n") {
+		if f := strings.Split(strings.TrimSpace(line), ","); f[0] == "gemma4-26b-iq4xs-64k" && len(f) == 11 {
+			row = f
 		}
+	}
+	if row == nil {
+		t.Fatalf("no personal row:\n%s", s.out)
+	}
+	if row[3] != "1/1" || row[6] != "0/22" || row[8] != "22/22" {
+		t.Errorf("tool_check, t2 and bare_t2 should be 1/1, 0/22 and 22/22: %v", row)
 	}
 	if strings.Contains(s.out, ",pass,") || strings.Contains(s.out, ",fail,") {
 		t.Errorf("no pass or fail in personal rows:\n%s", s.out)

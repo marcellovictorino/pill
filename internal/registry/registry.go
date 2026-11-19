@@ -349,26 +349,11 @@ type Applied struct {
 // Entries whose GGUF is missing are skipped in both: the router could not
 // load them, and Pi would offer a model that fails on first use.
 func (r *Registry) Apply(s *Snapshot) (Applied, error) {
-	var served []config.Model
-	var out Applied
-	for _, m := range s.Models.Models {
-		if r.FileSize(m) == 0 {
-			continue
-		}
-		served = append(served, m)
-		out.Served = append(out.Served, m.Name)
+	out, err := r.ApplyRouter(s)
+	if err != nil {
+		return out, err
 	}
 	piModels := r.PiModels(s)
-
-	ini := preset.Render(served, r.Settings.ModelsDir)
-	out.IniHash = preset.HashOf(ini)
-	if old, err := os.ReadFile(r.Paths.ModelsIni()); err != nil || string(old) != ini {
-		if err := config.WriteFileAtomic(r.Paths.ModelsIni(), []byte(ini), 0o644); err != nil {
-			return out, err
-		}
-		out.IniChanged = true
-	}
-
 	var provider []byte
 	if len(piModels) > 0 {
 		provider = pi.BuildProvider(r.Settings.Port, piModels)
@@ -380,6 +365,30 @@ func (r *Registry) Apply(s *Snapshot) (Applied, error) {
 	out.PiChanged = changed
 	for _, m := range piModels {
 		out.PiModels = append(out.PiModels, m.ID)
+	}
+	return out, nil
+}
+
+// ApplyRouter regenerates only models.ini from the snapshot and leaves Pi's
+// provider alone. A personal benchmark uses it: it needs the router to know
+// the model but must not change what Pi lists.
+func (r *Registry) ApplyRouter(s *Snapshot) (Applied, error) {
+	var served []config.Model
+	var out Applied
+	for _, m := range s.Models.Models {
+		if r.FileSize(m) == 0 {
+			continue
+		}
+		served = append(served, m)
+		out.Served = append(out.Served, m.Name)
+	}
+	ini := preset.Render(served, r.Settings.ModelsDir)
+	out.IniHash = preset.HashOf(ini)
+	if old, err := os.ReadFile(r.Paths.ModelsIni()); err != nil || string(old) != ini {
+		if err := config.WriteFileAtomic(r.Paths.ModelsIni(), []byte(ini), 0o644); err != nil {
+			return out, err
+		}
+		out.IniChanged = true
 	}
 	return out, nil
 }

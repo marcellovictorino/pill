@@ -60,11 +60,11 @@ func runPersonalBench(ctx context.Context, a *App, arg string, runs int, th conf
 		return output.Fail([]string{"a personal run copies your Pi folder; run Pi once to create it"}, "there is no Pi folder at %s", piDir)
 	}
 
-	// Refresh only regenerates models.ini and Pi's provider from the state as it
-	// is; it saves nothing, so the model's state is untouched.
-	_, applied, err := a.reg.Refresh(ctx)
+	// The router has to know the model, so models.ini is brought up to date; Pi's
+	// provider and results.json are left alone.
+	applied, err := a.reg.ApplyRouter(snap)
 	if err != nil {
-		return output.Fail(nil, "%v", wrapState(err))
+		return output.Fail(nil, "%v", err)
 	}
 	if err := a.startBenchRouter(ctx, applied); err != nil {
 		return err
