@@ -42,6 +42,7 @@ to get the TOON.
 - Do not pass `--yes`-style flags to hide a failing gate. `pill add <name>
   --unverified` is the only override, and it keeps the model labelled.
 - The router listens on `127.0.0.1` only and has no authentication. It loads a model on the first request, keeps one loaded at a time and unloads it after 15 idle minutes.
+- Benchmark a new model in order and stop at the first step it fails: `pill bench run <model>` (Tier 1 and 2); only if it passes (`result: passed` and `swap_growth_mb` at most 4096: it is then promising) the Tier 3 tasks; only if it performs well there, the personal Tier 3 (`--personal`).
 - Bare Pi benchmark results are the baseline and the only ones to commit, quote or add to the catalog. Personal runs (`pill bench run <model> --personal` and `pill bench summary --personal` for Tier 1 and 2; `python3 evals/run.py run <task> --agent pi:<model> --personal`, in a pill checkout, for Tier 3) use the user's own Pi setup and stay under `$PILL_HOME/personal`; never commit or quote them. Suggest them when the user wonders whether their setup helps.
 - Downloads need `HF_TOKEN` in the environment for gated repositories; pill
   never stores it.

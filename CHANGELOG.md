@@ -16,6 +16,7 @@ All notable changes to pill are documented here. The format follows
 
 ### Changed
 
+- The pill skill and README state the benchmark ladder for a new model: Tier 1 and 2 first, Tier 3 only if it passes, the personal Tier 3 only if it performs well there.
 - `pill catalog` shows the default MiniCPM model's Tier 1 and Tier 2 times again (`pass (36s)`, `22/22 3.6m`), taken from its 29 October 2026 benchmark run.
 
 ### Fixed

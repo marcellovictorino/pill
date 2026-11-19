@@ -139,6 +139,16 @@ dev tooling, not part of the binary:
 - Local image-generation models (prompts, Opus 5.5 scoring, blind human sheet, how to add a model, best samples; the
   models have non-commercial licences): [`evals/imagegen/README.md`](evals/imagegen/README.md).
 
+### Benchmark ladder for a new model
+
+Climb one rung at a time and stop at the first one the model fails:
+
+1. **Tier 1 and 2** (`pill bench run <model>`): does it load, answer and get a basic task right? It is
+   *promising* only if it passes the gate (`result: passed`, `swap_growth_mb` at or under 4096).
+2. **Tier 3** ([`evals/`](evals/README.md)): for a promising model, measure its strong and weak points. There is no
+   pass mark; compare its scores with the models already in the catalog.
+3. **Personal Tier 3** (`--personal`, below): if it still performs well, see whether your own Pi setup makes it better.
+
 ### Benchmarks: baseline and personal
 
 The bare Pi run (no extensions, skills or context files) is the baseline, and the only one whose results belong in
