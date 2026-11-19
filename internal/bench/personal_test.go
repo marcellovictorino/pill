@@ -81,3 +81,22 @@ func TestCopyPersonalPiSkipsOnlyDanglingLinks(t *testing.T) {
 		t.Error("a link that cannot be resolved must fail the copy")
 	}
 }
+
+// A relative reference in settings.json is relative to the Pi folder, not to the
+// folder pill was started from: editing it must change the hash, and an
+// unrelated folder of the same name in the working directory must not.
+func TestSetupHashResolvesRelativeReferencesAgainstThePiFolder(t *testing.T) {
+	d, cwd := t.TempDir(), t.TempDir()
+	t.Chdir(cwd)
+	write(t, d, "settings.json", `{"skills":["./custom-skills"]}`)
+	write(t, d, "custom-skills/SKILL.md", "one")
+	base := SetupHash(d)
+	write(t, cwd, "custom-skills/SKILL.md", "unrelated")
+	if SetupHash(d) != base {
+		t.Error("a folder in the working directory must not change the hash")
+	}
+	write(t, d, "custom-skills/SKILL.md", "two")
+	if SetupHash(d) == base {
+		t.Error("an edit under the Pi folder's relative reference must change the hash")
+	}
+}

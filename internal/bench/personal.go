@@ -168,8 +168,9 @@ func SetupHash(dir string) string {
 				list, _ := cfg[key].([]any)
 				for _, e := range list {
 					if path, ok := e.(string); ok {
-						walk(expandHome(path))
-						files = append(files, expandHome(path))
+						path = resolveRef(dir, path)
+						walk(path)
+						files = append(files, path)
 					}
 				}
 			}
@@ -190,11 +191,18 @@ func SetupHash(dir string) string {
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
-func expandHome(p string) string {
-	if strings.HasPrefix(p, "~/") {
+// resolveRef turns a path named in settings.json into a real one: ~/ is the
+// home folder and a relative path is relative to the Pi folder, as for Pi
+// itself. A package identifier resolves to a path that does not exist and so
+// contributes nothing.
+func resolveRef(dir, p string) string {
+	switch {
+	case strings.HasPrefix(p, "~/"):
 		if home, err := os.UserHomeDir(); err == nil {
 			return filepath.Join(home, p[2:])
 		}
+	case !filepath.IsAbs(p):
+		return filepath.Join(dir, p)
 	}
 	return p
 }
