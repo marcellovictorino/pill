@@ -23,6 +23,31 @@ python3 evals/summary.py                                      # markdown table o
 Only one local model can be loaded at a time on a 24 GB machine: run local agents one at a time
 (the runner calls `pill stop` first so every run is a cold start).
 
+## Personal runs
+
+The bare Pi run above (no extensions, skills or context files, offline) is the **baseline**: only its results
+may be committed or added to the catalog. A **personal** run gives Pi a copy of your own `~/.pi/agent` setup, as
+you use it day to day, to show whether that setup helps or is noise. The task, workspace, time cap and hidden
+tests are identical; only Pi changes.
+
+```bash
+python3 evals/run.py run go-notes --agent pi:<model> --personal --runs 3
+python3 evals/summary.py --personal      # bare and personal medians side by side
+```
+
+- The copy leaves out `sessions/`, backups, `web-search-cache/` and any Hindsight entry (its memory service
+  would otherwise read and write your real memory). Your real folder is only read. The copy is deleted after each run
+  once its setup hash is recorded.
+- Pi drops `--no-extensions`, `--no-skills`, `--no-context-files` and `--offline`; `--no-session` stays.
+- Results go to `$PILL_HOME/personal/evals/` (default `~/.pill/personal/evals/`), never to `results/`. The runner
+  refuses a results folder inside a git work tree. Every record carries a `personal` marker set to true and a
+  hash of the copied setup, and CI fails if a tracked file carries the marker.
+- `summary.py --personal` calls a difference noise unless the personal median falls outside the range the bare
+  runs themselves span. Run the bare task three or more times first.
+- Do not commit, quote in reports or add personal results to the catalog. Personal runs add the size of your setup
+  to every prompt, so they are slower than bare runs; run them overnight, one model at a time.
+- `python3 -m unittest discover -s evals -p 'test_*.py'` tests this (fake `pi`, no model).
+
 ## Tasks
 
 | id | domain | what the agent builds | score |
@@ -54,7 +79,7 @@ Hidden tests live in `verify.py` and its helpers, outside the workspace: the age
 - Hidden tests carry most of the score; an LLM or human rubric is a secondary signal. One run says little:
   use at least 3 runs per cell when a conclusion matters.
 - Cloud baselines run with permissions bypassed inside the temp workspace; local models run through Pi.
-- Results (`results/`) are gitignored.
+- Results (`results/`) are gitignored. Personal results never live in the repository (see Personal runs).
 
 ## Image generation
 

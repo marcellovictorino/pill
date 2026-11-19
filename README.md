@@ -138,6 +138,20 @@ dev tooling, not part of the binary:
 - Local image-generation models (prompts, Opus 5.5 scoring, blind human sheet, how to add a model, best samples; the
   models have non-commercial licences): [`evals/imagegen/README.md`](evals/imagegen/README.md).
 
+### Benchmarks: baseline and personal
+
+The bare Pi run (no extensions, skills or context files) is the baseline, and the only one whose results belong in
+the repository or the catalog, so anyone can repeat it. To see whether your own Pi setup (skills, `AGENTS.md`,
+extensions) helps or is just noise, run the same Tier 3 tasks with a copy of it and compare:
+
+```bash
+python3 evals/run.py run go-notes --agent pi:<model> --personal --runs 3
+python3 evals/summary.py --personal
+```
+
+Personal results stay on your computer under `~/.pill/personal` (`$PILL_HOME/personal`). Do not commit, quote or
+catalogue them. Details: [`evals/README.md`](evals/README.md#personal-runs).
+
 ## Where things live
 
 | Path | Purpose |
