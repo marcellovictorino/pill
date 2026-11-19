@@ -172,7 +172,8 @@ class MemorySampler:
 
 
 def pill_home():
-    return Path(os.environ.get("PILL_HOME") or Path.home() / ".pill")
+    # Absolute: Pi runs in a temporary workspace and would resolve a relative path from there.
+    return Path(os.environ.get("PILL_HOME") or Path.home() / ".pill").expanduser().resolve()
 
 
 def personal_results_dir():
@@ -203,10 +204,13 @@ def _is_hindsight(entry):
 
 def _personal_ignore(src):
     def ignore(directory, names):
-        if Path(directory) != src:  # only the top level: node_modules and the like keep their own names
-            return []
-        return [n for n in names if n in PERSONAL_SKIP or ".bak" in n or n.endswith("-backup")
-                or ("hindsight" in n.lower() and n != "settings.json")]
+        top = Path(directory) == src
+        if top:  # only the top level: node_modules and the like keep their own names
+            return [n for n in names if n in PERSONAL_SKIP or ".bak" in n or n.endswith("-backup")
+                    or ("hindsight" in n.lower() and n != "settings.json")]
+        if Path(directory) == src / "extensions":  # Pi loads this folder automatically
+            return [n for n in names if "hindsight" in n.lower()]
+        return []
     return ignore
 
 
@@ -217,7 +221,10 @@ def copy_personal_pi(src, dest):
     user's real memory; its entries are dropped from settings.json. The source is only read.
     """
     src = Path(src)
-    shutil.copytree(src, dest, symlinks=True, ignore=_personal_ignore(src), dirs_exist_ok=True)
+    # symlinks=False copies what a link points to, so nothing in the copy can write through to the
+    # original (settings.json and models.json are rewritten below); dangling links are dropped.
+    shutil.copytree(src, dest, symlinks=False, ignore_dangling_symlinks=True,
+                    ignore=_personal_ignore(src), dirs_exist_ok=True)
     settings = Path(dest) / "settings.json"
     if settings.exists():
         cfg = json.loads(settings.read_text())
@@ -234,9 +241,20 @@ def setup_hash(d):
     parts = [d / "settings.json", d / "AGENTS.md", d / "npm" / "package.json", d / "npm" / "package-lock.json"]
     for sub in ("skills", "extensions"):
         parts += sorted(p for p in (d / sub).rglob("*") if p.is_file()) if (d / sub).is_dir() else []
+    # Settings can name extensions, skills and packages that live outside the folder: hash their contents too.
+    if (d / "settings.json").is_file():
+        cfg = json.loads((d / "settings.json").read_text())
+        for key in ("extensions", "skills", "packages"):
+            for e in cfg.get(key, []) if isinstance(cfg.get(key), list) else []:
+                ext = Path(os.path.expanduser(e)) if isinstance(e, str) else None
+                if ext and ext.is_file():
+                    parts.append(ext)
+                elif ext and ext.is_dir():
+                    parts += sorted(p for p in ext.rglob("*") if p.is_file() and "node_modules" not in p.parts)
     for p in parts:
         if p.is_file():
-            h.update(str(p.relative_to(d)).encode() + b"\0" + p.read_bytes() + b"\0")
+            name = p.relative_to(d) if d in p.parents else p
+            h.update(str(name).encode() + b"\0" + p.read_bytes() + b"\0")
     return h.hexdigest()[:16]
 
 

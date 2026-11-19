@@ -112,6 +112,29 @@ class PersonalRun(Env):
         self.assertEqual(cfg["packages"], ["npm:pi-web-access"])
         self.assertEqual(tree_hash(self.agent_src), before)  # the real folder is only read
 
+    def test_links_and_hindsight_in_the_extensions_folder_cannot_reach_the_original(self):
+        outside = self.tmp / "outside"
+        outside.mkdir()
+        (outside / "settings.json").write_text(json.dumps(
+            {"extensions": ["/x/.hindsight/pi.js"], "theme": "dark"}))
+        (outside / "linked-skill").mkdir()
+        (outside / "linked-skill" / "SKILL.md").write_text("linked skill")
+        (self.agent_src / "settings.json").unlink()
+        (self.agent_src / "settings.json").symlink_to(outside / "settings.json")
+        (self.agent_src / "skills" / "linked").symlink_to(outside / "linked-skill")
+        (self.agent_src / "extensions" / "hindsight.ts").write_text("memory")
+        (self.agent_src / "extensions" / "hindsight").mkdir()
+        before = tree_hash(outside), tree_hash(self.agent_src)
+        self.go(personal=True)
+        copy = self.log / "agent_dir_copy"
+        self.assertEqual((tree_hash(outside), tree_hash(self.agent_src)), before)
+        self.assertFalse((copy / "settings.json").is_symlink())
+        self.assertEqual(json.loads((copy / "settings.json").read_text())["extensions"], [])
+        self.assertEqual((copy / "skills" / "linked" / "SKILL.md").read_text(), "linked skill")
+        self.assertFalse((copy / "extensions" / "hindsight.ts").exists())
+        self.assertFalse((copy / "extensions" / "hindsight").exists())
+        self.assertTrue((copy / "extensions" / "footer.ts").exists())
+
     def test_the_pill_model_is_cloned_into_the_copy_like_a_bare_run(self):
         self.go(personal=True, agent="pi:not-offered-to-pi")
         models = json.loads((self.log / "agent_dir_copy" / "models.json").read_text())["providers"]["pill"]["models"]
@@ -136,6 +159,28 @@ class PersonalRun(Env):
         self.go(personal=True)
         second = json.loads((self.pill_home / "personal/evals/index.jsonl").read_text().splitlines()[1])["setup_hash"]
         self.assertNotEqual(first, second)
+
+    def test_editing_an_external_extension_changes_the_setup_hash(self):
+        ext = self.tmp / "footer.ts"
+        ext.write_text("v1")
+        cfg = json.loads((self.agent_src / "settings.json").read_text())
+        cfg["extensions"] = [str(ext)]
+        (self.agent_src / "settings.json").write_text(json.dumps(cfg))
+        self.go(personal=True)
+        ext.write_text("v2")
+        time.sleep(1.1)
+        self.go(personal=True)
+        hashes = [json.loads(line)["setup_hash"]
+                  for line in (self.pill_home / "personal/evals/index.jsonl").read_text().splitlines()]
+        self.assertNotEqual(hashes[0], hashes[1])
+
+    def test_a_relative_pill_home_gives_pi_an_absolute_config_path(self):
+        os.chdir(self.tmp)
+        self.addCleanup(os.chdir, "/")
+        with mock.patch.dict(os.environ, {"PILL_HOME": "relhome"}):
+            self.go(personal=True)
+        self.assertTrue(Path((self.log / "agent_dir").read_text()).is_absolute())
+        self.assertTrue((self.tmp / "relhome" / "personal" / "evals" / "index.jsonl").exists())
 
     def test_a_bare_run_keeps_its_isolation_and_carries_no_marker(self):
         self.go(personal=False)
