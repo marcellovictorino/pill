@@ -50,3 +50,10 @@ func (p Paths) RouterState() string  { return filepath.Join(p.RunDir(), "router.
 func (p Paths) BenchLock() string    { return filepath.Join(p.RunDir(), "bench.lock") }
 func (p Paths) StateLock() string    { return filepath.Join(p.RunDir(), "state.lock") }
 func (p Paths) BenchmarkDir() string { return filepath.Join(p.Root, "benchmark") }
+
+// PersonalDir holds personal benchmark runs (the user's own Pi setup). It is
+// separate from results.json and benchmark/, which decide the gate and what
+// Pi lists, and from anything that is committed or catalogued.
+func (p Paths) PersonalDir() string          { return filepath.Join(p.Root, "personal") }
+func (p Paths) PersonalResults() string      { return filepath.Join(p.PersonalDir(), "results.json") }
+func (p Paths) PersonalBenchmarkDir() string { return filepath.Join(p.PersonalDir(), "benchmark") }

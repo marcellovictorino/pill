@@ -40,6 +40,7 @@ Use 'pill bench run <name>' to measure and 'pill bench summary' to compare.`,
 func newBenchRunCmd(a *App) *cobra.Command {
 	th := bench.DefaultThresholds()
 	var runs, ctxSize int
+	var personal bool
 	c := &cobra.Command{
 		Use:   "run <name>",
 		Short: "Run Tier 1 and Tier 2 on a model and apply the gate",
@@ -53,7 +54,15 @@ needs the full score within the time cap. A pass needs every run to pass.
 
 <name> is a catalog name, a registered model, or a Hugging Face reference; the
 GGUF is downloaded if missing. Results are saved under ~/.pill/benchmark.
-This takes a while (up to ~25 minutes per run).`,
+This takes a while (up to ~25 minutes per run).
+
+--personal runs the same tasks with a copy of your own Pi setup (skills,
+AGENTS.md, extensions, online; Hindsight and session history left out), to show
+whether that setup helps or is noise. It is informational: no pass or fail, no
+change to the model's state or to what Pi lists, and nothing is added to
+results.json. The model must already be registered and downloaded. Results are
+saved in ~/.pill/personal/results.json; compare them with
+'pill bench summary --personal'. Never commit or catalogue them.`,
 		Args:              cobra.ExactArgs(1),
 		ValidArgsFunction: a.completeModels(modelSources{catalog: true, registered: true}),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -63,11 +72,15 @@ This takes a while (up to ~25 minutes per run).`,
 			if err := a.load(); err != nil {
 				return err
 			}
+			if personal {
+				return runPersonalBench(cmd.Context(), a, args[0], runs, th)
+			}
 			return runBench(cmd.Context(), a, args[0], ctxSize, runs, th)
 		},
 	}
 	c.Flags().IntVar(&runs, "runs", 1, "number of cold-start runs; a pass needs every run to pass")
 	c.Flags().IntVar(&ctxSize, "ctx", 0, "context size when benchmarking a model that is not registered yet")
+	c.Flags().BoolVar(&personal, "personal", false, "run with a copy of your own Pi setup; informational, kept apart from results.json")
 	c.Flags().Float64Var(&th.Tier1MaxSeconds, "tier1-max-seconds", th.Tier1MaxSeconds, "Tier 1: time limit for the agent-sized request")
 	c.Flags().Float64Var(&th.MinFreePct, "min-free-pct", th.MinFreePct, "Tier 1: free memory must stay at or above this percentage")
 	c.Flags().Float64Var(&th.Tier2MaxMinutes, "tier2-max-minutes", th.Tier2MaxMinutes, "Tier 2: time cap for building the task")
@@ -126,28 +139,10 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 	if err != nil {
 		return nil, err
 	}
-	// Benchmark through the main router: free whatever it has loaded, then make
-	// sure it knows the candidate. Never unload a server pill did not start.
-	if err := a.requireOwnRouter(ctx); err != nil {
+	if err := a.startBenchRouter(ctx, applied); err != nil {
 		return nil, err
 	}
-	if a.rt.Healthy(ctx) {
-		if _, err := a.rt.UnloadAll(ctx); err != nil {
-			return nil, output.Fail([]string{"pill stop --all"}, "cannot unload the router's current model: %v", err)
-		}
-	}
-	if _, err := a.ensureRouter(ctx, applied); err != nil {
-		return nil, err
-	}
-
-	ramBytes, _ := a.deps.Sys.TotalRAMBytes()
-	env := config.Environment{
-		LlamaCpp: a.llamaVersion(), Pill: version.Version, MacOS: a.deps.Sys.OSVersion(), RAMGB: sysinfo.RAMGB(ramBytes),
-	}
-	env.Pi, _ = pi.Version(piBin)
-	runner := bench.NewRunner(a.rt, a.deps.Sys, piBin, env)
-	runner.Lock = lock
-	runner.Log = func(format string, args ...any) { a.printer.Progress(format, args...) }
+	runner := a.newBenchRunner(piBin, lock)
 
 	stamp := time.Now().UTC().Format("20060102T150405Z")
 	plan := bench.Plan{Model: m, Runs: runs, Thresholds: th, Dir: filepath.Join(a.paths.BenchmarkDir(), stamp+"-"+m.Name)}
@@ -166,6 +161,35 @@ func (a *App) benchModel(ctx context.Context, arg string, ctxSize, runs int, th 
 	}
 
 	return &benchOutcome{Model: m, Res: res, State: state, Dir: plan.Dir, Note: note}, nil
+}
+
+// startBenchRouter benchmarks through the main router: it frees whatever the
+// router has loaded, then makes sure it knows the candidate. It never unloads
+// a server pill did not start.
+func (a *App) startBenchRouter(ctx context.Context, applied registry.Applied) error {
+	if err := a.requireOwnRouter(ctx); err != nil {
+		return err
+	}
+	if a.rt.Healthy(ctx) {
+		if _, err := a.rt.UnloadAll(ctx); err != nil {
+			return output.Fail([]string{"pill stop --all"}, "cannot unload the router's current model: %v", err)
+		}
+	}
+	_, err := a.ensureRouter(ctx, applied)
+	return err
+}
+
+// newBenchRunner records what the benchmark runs on, so results stay comparable.
+func (a *App) newBenchRunner(piBin string, lock *bench.Lock) *bench.Runner {
+	ramBytes, _ := a.deps.Sys.TotalRAMBytes()
+	env := config.Environment{
+		LlamaCpp: a.llamaVersion(), Pill: version.Version, MacOS: a.deps.Sys.OSVersion(), RAMGB: sysinfo.RAMGB(ramBytes),
+	}
+	env.Pi, _ = pi.Version(piBin)
+	runner := bench.NewRunner(a.rt, a.deps.Sys, piBin, env)
+	runner.Lock = lock
+	runner.Log = func(format string, args ...any) { a.printer.Progress(format, args...) }
+	return runner
 }
 
 // registerCandidate writes the candidate into models.toml and models.ini as
@@ -332,7 +356,7 @@ func (a *App) confirmDemotion(name string) bool {
 }
 
 func newBenchSummaryCmd(a *App) *cobra.Command {
-	var all bool
+	var all, personal bool
 	c := &cobra.Command{
 		Use:   "summary",
 		Short: "Ranked benchmark results for this machine",
@@ -342,11 +366,18 @@ By default each registered model shows its latest result; --all shows every
 result ever recorded, including removed models.
 
 A * after the llama.cpp build means the result was measured on a different
-build than the one installed now.`,
+build than the one installed now.
+
+--personal shows the results of 'pill bench run <name> --personal' (your own
+Pi setup) beside each model's latest bare result. They are informational: there
+is no pass or fail, and they are never part of the ranking above.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := a.load(); err != nil {
 				return err
+			}
+			if personal {
+				return personalSummary(a)
 			}
 			snap, err := a.reg.Load()
 			if err != nil {
@@ -389,6 +420,7 @@ build than the one installed now.`,
 		},
 	}
 	c.Flags().BoolVar(&all, "all", false, "show every recorded result, not just the latest per model")
+	c.Flags().BoolVar(&personal, "personal", false, "show personal results (your own Pi setup) beside the bare baseline")
 	return c
 }
 

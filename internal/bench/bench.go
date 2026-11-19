@@ -44,6 +44,12 @@ type Runner struct {
 	Env    config.Environment
 	Lock   *Lock // when set, records each agent's process group for crash cleanup
 
+	// PersonalSource, when set, makes this a personal run: Pi gets a copy of
+	// this folder (the user's own Pi setup) and runs online, and nothing is
+	// judged pass or fail. SetupHash is filled in by the run.
+	PersonalSource string
+	SetupHash      string
+
 	SampleInterval  time.Duration // how often memory/GPU is sampled (5s)
 	PromptFunctions int           // size of the agent-sized prompt (number of functions listed)
 	Log             func(format string, args ...any)
@@ -99,7 +105,7 @@ func (r *Runner) Run(ctx context.Context, p Plan) (config.Result, error) {
 		}
 		res.Runs = append(res.Runs, rr)
 	}
-	res.Passed = len(res.Runs) > 0
+	res.Passed = len(res.Runs) > 0 && r.PersonalSource == ""
 	for _, rr := range res.Runs {
 		res.Passed = res.Passed && rr.Passed // a pass needs every run to pass
 	}
@@ -124,9 +130,14 @@ func (r *Runner) runOnce(ctx context.Context, p Plan, n int) (config.RunResult, 
 		return rr, fmt.Errorf("unload before run: %w", err)
 	}
 	agentDir := filepath.Join(dir, "pi-agent")
-	if err := pi.WriteBenchAgentDir(agentDir, r.Router.Settings.Port, pi.Model{
-		ID: p.Model.Name, Reasoning: p.Model.Reasoning, Ctx: p.Model.Ctx, MaxTokens: p.Model.MaxTokens,
-	}); err != nil {
+	piModel := pi.Model{ID: p.Model.Name, Reasoning: p.Model.Reasoning, Ctx: p.Model.Ctx, MaxTokens: p.Model.MaxTokens}
+	if r.PersonalSource != "" {
+		hash, err := preparePersonalAgentDir(r.PersonalSource, agentDir, r.Router.Settings.Port, piModel)
+		if err != nil {
+			return rr, fmt.Errorf("copy your Pi setup: %w", err)
+		}
+		r.SetupHash = hash
+	} else if err := pi.WriteBenchAgentDir(agentDir, r.Router.Settings.Port, piModel); err != nil {
 		return rr, err
 	}
 
@@ -182,6 +193,7 @@ func (r *Runner) runOnce(ctx context.Context, p Plan, n int) (config.RunResult, 
 	if ctx.Err() != nil {
 		return rr, ctx.Err()
 	}
+	rr.Tier1ToolSeconds = turn.Duration.Seconds()
 	toolOK := turn.Err == nil && !turn.TimedOut && turn.ToolCalls >= 1 && contains(turn.Answer, token)
 	toolDetail := fmt.Sprintf("%d tool call(s), answer %q", turn.ToolCalls, truncate(turn.Answer, 60))
 	switch {
@@ -203,7 +215,8 @@ func (r *Runner) runOnce(ctx context.Context, p Plan, n int) (config.RunResult, 
 	rr.Tier1Pass = reqOK && toolOK && memOK
 
 	// --- Tier 2: build the embedded task ---
-	if rr.Tier1Pass {
+	// A personal run is informational, so Tier 2 runs whatever Tier 1 showed.
+	if rr.Tier1Pass || r.PersonalSource != "" {
 		r.Log("tier 2: building the task (cap %.0f min)", th.Tier2MaxMinutes)
 		r.tier2(ctx, p, dir, agentDir, &rr)
 		if ctx.Err() != nil {
@@ -214,7 +227,9 @@ func (r *Runner) runOnce(ctx context.Context, p Plan, n int) (config.RunResult, 
 	stats := sampler.Stop()
 	rr.MinFreePct, rr.SwapGrowthMB, rr.GPUBusyMin = stats.MinFreePct, stats.SwapGrowthMB, stats.GPUBusyMin
 	saveJSON(filepath.Join(dir, "samples.json"), stats)
-	rr.Passed, rr.Reason = verdict(rr, th, stats)
+	if r.PersonalSource == "" { // a personal run is never judged
+		rr.Passed, rr.Reason = verdict(rr, th, stats)
+	}
 	return rr, nil
 }
 
