@@ -11,7 +11,7 @@ One focused report per model, plus a comparison across models. These are written
 | `muse-glimmer-30b.md` | Meta Muse Glimmer 30B (UD-IQ2_XXS) with its DFlash drafter: one Tier 3 run, TLDR first |
 | `qwen38-27b.md` | Qwen3.8 27B (UD-IQ3_XXS) with MTP, thinking off: one Tier 3 run, TLDR first; also the UD-IQ4_XS test and the Unsloth Dynamic 3.1 UD-IQ4_XS and UD-Q3_K_XL tests, none adopted |
 | `arete-27b.md` | Nous Research Arete-27B (Qwen3.8 27B fine-tune), IQ3_XXS with the base model's MTP head and IQ4_XS: Tier 1/2, TLDR first (Tier 3 not run) |
-| `qwen38-27b-pi-adapted.md` | Qwen3.8 27B with harness-hub's Pi-adapted LoRA on UD-IQ3_XXS: Tier 1/2, TLDR first (Tier 3 not run) |
+| `qwen38-27b-pi-adapted.md` | Qwen3.8 27B with harness-hub's Pi-adapted LoRA on UD-IQ3_XXS: Tier 1/2, a batch-size and MTP speed probe, and one Tier 3 run with MTP; TLDR first |
 | `qwen38-flash-next.md` | Qwen3.8 Flash Next Coder IQ1_M on 24 GB: llama.cpp offload flags, MTP speed, Tier 1/2 (Tier 3 not run) |
 | `m2-pro-16gb-2026-11-04.md` | Recent models on a 16 GB M2 Pro, Tier 1 and 2 (twelve runs, none passed both) and Tier 3 for Qwen3.5 9B; TLDR first |
 | `tried-and-rejected.md` | Models benchmarked and not adopted, with dates, numbers and what would justify a re-test |
