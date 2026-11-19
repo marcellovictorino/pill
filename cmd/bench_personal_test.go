@@ -75,10 +75,16 @@ func TestPersonalRunNeverTouchesTheGate(t *testing.T) {
 	piDir := filepath.Join(e.dir, "piagent")
 	writeUserPiSetup(t, piDir)
 
+	// Pi's list is stale (the passed model is missing from it): a personal run must
+	// not "repair" it, because it may not change what Pi lists.
+	if err := os.Remove(e.piModels()); err != nil {
+		t.Fatal(err)
+	}
 	pill := filepath.Join(e.dir, "pill")
 	before := map[string]string{}
 	for _, p := range []string{filepath.Join(pill, "results.json"), filepath.Join(pill, "config", "models.toml"), e.piModels()} {
-		before[p] = readFile(t, p)
+		data, _ := os.ReadFile(p) // Pi's file is absent here
+		before[p] = string(data)
 	}
 	srcDigest := treeDigest(t, piDir)
 	bareBench := treeDigest(t, filepath.Join(pill, "benchmark"))
@@ -101,7 +107,7 @@ func TestPersonalRunNeverTouchesTheGate(t *testing.T) {
 	}
 
 	for p, was := range before {
-		if got := readFile(t, p); got != was {
+		if got, _ := os.ReadFile(p); string(got) != was {
 			t.Errorf("%s changed during a personal run:\n%s", p, got)
 		}
 	}
