@@ -11,11 +11,15 @@ Agent specs:
   pi:<pill-model-name>             local model through the pill router, driven by Pi (thinking off)
   pi:<pill-model-name>:<level>     same with thinking on (Pi level minimal|low|medium|high; with pill's
                                    chat-template format this is an on/off switch for the model's reasoning)
+  Add --personal to a pi: run to give Pi a copy of your own ~/.pi/agent setup (see README.md); the
+  results then stay under $PILL_HOME/personal/evals and are never committed.
+
   claude:<model>[:<effort>]        Claude Code CLI, e.g. claude:opus:medium
   codex:<model>[:<effort>]         Codex CLI, e.g. codex:gpt-5.6-luna:high
 """
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import shutil
@@ -31,6 +35,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 TASKS = ROOT / "tasks"
 RESULTS = ROOT / "results"
+
+# Personal runs (the user's own full Pi setup) are never committed. Every personal record carries this
+# key set to true; CI fails if a tracked file does. The marker is built here, not written out, so this
+# file does not trip that check itself.
+PERSONAL_KEY = "personal"
+# Top-level names of ~/.pi/agent that are not part of the setup: history, caches and backups.
+PERSONAL_SKIP = {"sessions", "web-search-cache"}
 
 # Same preamble for every agent so the comparison is fair.
 PREAMBLE = (
@@ -160,8 +171,98 @@ class MemorySampler:
                 "max_pressure_level": max(self.level, default=None)}
 
 
-def pi_agent_dir(outdir, model, reasoning=False):
-    """Throwaway Pi config: a copy of the user's models.json (the pill provider).
+def pill_home():
+    # Absolute: Pi runs in a temporary workspace and would resolve a relative path from there.
+    return Path(os.environ.get("PILL_HOME") or Path.home() / ".pill").expanduser().resolve()
+
+
+def personal_results_dir():
+    return pill_home() / "personal" / "evals"
+
+
+def inside_git_work_tree(path):
+    """True when path (which may not exist yet) lies inside a git work tree."""
+    p = Path(path).resolve()
+    while not p.exists():
+        p = p.parent
+    r = subprocess.run(["git", "-C", str(p), "rev-parse", "--is-inside-work-tree"],
+                       capture_output=True, text=True)
+    return r.returncode == 0 and r.stdout.strip() == "true"
+
+
+def guard_personal_results(path):
+    """Refuse a personal results folder inside a git work tree, so a commit cannot pick it up."""
+    if inside_git_work_tree(path):
+        sys.exit(f"refusing to write personal results inside a git work tree: {path}\n"
+                 "personal results must stay outside every repository; unset PILL_HOME or point it elsewhere")
+
+
+def _is_hindsight(entry):
+    text = entry if isinstance(entry, str) else json.dumps(entry)
+    return "hindsight" in text.lower()
+
+
+def _personal_ignore(src):
+    def ignore(directory, names):
+        d = Path(directory)
+        # Dangling links are skipped here, judged from the link's own folder: copytree's own flag
+        # checks relative targets against the launching directory and would drop valid links.
+        skip = [n for n in names if (d / n).is_symlink() and not (d / n).exists()]
+        if d == src:  # only the top level: node_modules and the like keep their own names
+            skip += [n for n in names if n in PERSONAL_SKIP or ".bak" in n or n.endswith("-backup")
+                     or ("hindsight" in n.lower() and n != "settings.json")]
+        elif d == src / "extensions":  # Pi loads this folder automatically
+            skip += [n for n in names if "hindsight" in n.lower()]
+        return skip
+    return ignore
+
+
+def copy_personal_pi(src, dest):
+    """Copy the user's Pi folder into dest, leaving out history, caches, backups and Hindsight.
+
+    The Hindsight add-on talks to its own memory service, so a copy of it would read and write the
+    user's real memory; its entries are dropped from settings.json. The source is only read.
+    """
+    src = Path(src)
+    # symlinks=False copies what a link points to, so nothing in the copy can write through to the
+    # original (settings.json and models.json are rewritten below).
+    shutil.copytree(src, dest, symlinks=False,
+                    ignore=_personal_ignore(src), dirs_exist_ok=True)
+    settings = Path(dest) / "settings.json"
+    if settings.exists():
+        cfg = json.loads(settings.read_text())
+        for key in ("extensions", "packages"):
+            if isinstance(cfg.get(key), list):
+                cfg[key] = [e for e in cfg[key] if not _is_hindsight(e)]
+        settings.write_text(json.dumps(cfg, indent=2))
+
+
+def setup_hash(d):
+    """Short hash of what steers the agent in a copied Pi folder, so a changed setup shows later."""
+    d = Path(d)
+    h = hashlib.sha256()
+    parts = [d / "settings.json", d / "AGENTS.md", d / "npm" / "package.json", d / "npm" / "package-lock.json"]
+    for sub in ("skills", "extensions"):
+        parts += sorted(p for p in (d / sub).rglob("*") if p.is_file()) if (d / sub).is_dir() else []
+    # Settings can name extensions, skills and packages that live outside the folder: hash their contents too.
+    if (d / "settings.json").is_file():
+        cfg = json.loads((d / "settings.json").read_text())
+        for key in ("extensions", "skills", "packages"):
+            for e in cfg.get(key, []) if isinstance(cfg.get(key), list) else []:
+                ext = Path(os.path.expanduser(e)) if isinstance(e, str) else None
+                if ext and ext.is_file():
+                    parts.append(ext)
+                elif ext and ext.is_dir():
+                    parts += sorted(p for p in ext.rglob("*") if p.is_file() and "node_modules" not in p.parts)
+    for p in parts:
+        if p.is_file():
+            name = p.relative_to(d) if d in p.parents else p
+            h.update(str(name).encode() + b"\0" + p.read_bytes() + b"\0")
+    return h.hexdigest()[:16]
+
+
+def pi_agent_dir(outdir, model, reasoning=False, personal=False):
+    """Throwaway Pi config: the user's models.json (the pill provider), or a full copy when personal.
 
     pill drops a model from Pi's config when its benchmark failed, though the router still serves
     it. Evals compare such models too, so the entry is cloned into this throwaway copy only; the
@@ -170,9 +271,12 @@ def pi_agent_dir(outdir, model, reasoning=False):
     d = Path(outdir) / "pi-agent"
     d.mkdir(parents=True, exist_ok=True)
     src = Path.home() / ".pi" / "agent"
-    for f in ("models.json", "models-store.json", "auth.json"):
-        if (src / f).exists():
-            shutil.copy(src / f, d / f)
+    if personal:
+        copy_personal_pi(src, d)
+    else:
+        for f in ("models.json", "models-store.json", "auth.json"):
+            if (src / f).exists():
+                shutil.copy(src / f, d / f)
     cfg = json.loads((d / "models.json").read_text())
     models = cfg["providers"]["pill"]["models"]
     if not any(m["id"] == model for m in models):
@@ -189,15 +293,17 @@ def pi_agent_dir(outdir, model, reasoning=False):
     return d
 
 
-def agent_command(spec, prompt, ws, outdir, env):
+def agent_command(spec, prompt, ws, outdir, env, personal=False):
     kind, _, rest = spec.partition(":")
     if kind == "pi":
         model, _, level = rest.partition(":")  # pi:<model>[:<thinking level>]
         subprocess.run(["pill", "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # cold start
-        env["PI_CODING_AGENT_DIR"] = str(pi_agent_dir(outdir, model, reasoning=bool(level)))
+        env["PI_CODING_AGENT_DIR"] = str(pi_agent_dir(outdir, model, reasoning=bool(level), personal=personal))
         env["PI_SKIP_VERSION_CHECK"] = "1"
-        return ["pi", "-p", "--mode", "json", "--no-session", "--offline", "--no-extensions",
-                "--no-skills", "--no-context-files", "--model", "pill/" + model,
+        # Bare: no extensions, skills or context files, offline. Personal: the copied setup as the
+        # user runs it day to day, online; --no-session stays so no session is written.
+        isolation = [] if personal else ["--offline", "--no-extensions", "--no-skills", "--no-context-files"]
+        return ["pi", "-p", "--mode", "json", "--no-session", *isolation, "--model", "pill/" + model,
                 "--thinking", level or "off", prompt]
     if kind == "claude":
         model, _, effort = rest.partition(":")
@@ -265,10 +371,15 @@ def cmd_selftest(a):
 
 def cmd_run(a):
     task = load_task(a.task)
+    if a.personal and not a.agent.startswith("pi:"):
+        sys.exit("--personal applies to pi: agents only")
+    results = personal_results_dir() if a.personal else RESULTS
+    if a.personal:
+        guard_personal_results(results)
     ensure_setup(task)
     slug = a.agent.replace(":", "_").replace("/", "_")
     stamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
-    rundir = RESULTS / f"{stamp}-{task['id']}-{slug}"
+    rundir = results / f"{stamp}-{task['id']}-{slug}"
     rundir.mkdir(parents=True, exist_ok=True)
     timeout_min = a.timeout_min or task.get("timeout_minutes", 30)
     prompt = PREAMBLE + (task["dir"] / task.get("prompt_file", "spec.md")).read_text()
@@ -278,7 +389,7 @@ def cmd_run(a):
         tmp = tempfile.mkdtemp(prefix="eval-run-")
         ws = make_workspace(task, tmp)
         env = task_env(task)
-        cmd = agent_command(a.agent, prompt, ws, out, env)
+        cmd = agent_command(a.agent, prompt, ws, out, env, personal=a.personal)
         print(f"[run] {task['id']} {a.agent} run {i}/{a.runs} (timeout {timeout_min} min)", flush=True)
         sampler = MemorySampler().start() if a.agent.startswith("pi:") else None
         info = run_cmd(cmd, ws, env, timeout_min * 60, out / "transcript.jsonl", out / "agent.stderr.log")
@@ -288,8 +399,12 @@ def cmd_run(a):
         keep_workspace(ws, out / "workspace")
         rec = {"task": task["id"], "agent": a.agent, "run": i, "rundir": str(out),
                "score": res["score"], "total": res["total"], "when": stamp, **info}
+        if a.personal:
+            rec[PERSONAL_KEY] = True
+            rec["setup_hash"] = setup_hash(out / "pi-agent")
+            shutil.rmtree(out / "pi-agent", ignore_errors=True)  # the copy is large; the hash records it
         (out / "result.json").write_text(json.dumps(rec, indent=1))
-        with open(RESULTS / "index.jsonl", "a") as f:
+        with open(results / "index.jsonl", "a") as f:
             f.write(json.dumps(rec) + "\n")
         print(f"[done] score {res['score']}/{res['total']} in {info['seconds']}s"
               f"{' (TIMED OUT)' if info['timed_out'] else ''}", flush=True)
@@ -309,6 +424,9 @@ def main():
     r.add_argument("--agent", required=True)
     r.add_argument("--runs", type=int, default=1)
     r.add_argument("--timeout-min", type=float, default=0)
+    r.add_argument("--personal", action="store_true",
+                   help="pi: agents only: run with a copy of your own ~/.pi/agent; results go to "
+                        "$PILL_HOME/personal/evals and are never committed")
     r.set_defaults(fn=cmd_run)
     a = ap.parse_args()
     a.fn(a)

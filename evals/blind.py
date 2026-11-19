@@ -11,8 +11,8 @@ results/blind/<stamp>/<task>.html: shuffled labels (A, B, C...), the screenshots
 Bad/Ok/Good/Excellent buttons and a button that downloads the ratings as JSON. The
 label -> (agent, run) key goes to results/blind/<stamp>/key.json: do not open it before rating.
 Rows from --also-index (for example personal runs kept outside the repository) join the same shuffled
-sheet; the sheet never says where a row came from, and the key marks it ("personal": true when the
-row carries that stamp). Output stays under results/, which git ignores.
+sheet; the sheet never says where a row came from, and the key marks it (a personal flag when the
+row carries the personal stamp). Output stays under results/, which git ignores.
 """
 import argparse
 import base64

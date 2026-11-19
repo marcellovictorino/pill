@@ -18,6 +18,11 @@ jobs:
         with:
           version: v2.14.0
       - run: go test ./...
+      - name: Eval tooling tests
+        run: python3 -m unittest discover -s evals -p 'test_*.py'
+      - name: No personal benchmark results are tracked
+        # Personal runs (a user's own Pi setup) are stamped with a marker and must never be committed.
+        run: "! git grep -nIE '\"personal\"[[:space:]]*:[[:space:]]*true'"
       - name: Test release tag check
         run: |
           go build -o "$RUNNER_TEMP/pill" .
