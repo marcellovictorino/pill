@@ -60,11 +60,14 @@ func runPersonalBench(ctx context.Context, a *App, arg string, runs int, th conf
 		return output.Fail([]string{"a personal run copies your Pi folder; run Pi once to create it"}, "there is no Pi folder at %s", piDir)
 	}
 
-	// The router has to know the model, so models.ini is brought up to date; Pi's
-	// provider and results.json are left alone.
-	applied, err := a.reg.ApplyRouter(snap)
+	// The router has to know the model, so models.ini is brought up to date under
+	// the state lock; Pi's provider and results.json are left alone.
+	snap, applied, err := a.reg.RefreshRouter(ctx)
 	if err != nil {
 		return output.Fail(nil, "%v", err)
+	}
+	if m, ok = snap.Models.Find(arg); !ok {
+		return output.Fail(nil, "%s was removed while the benchmark was being prepared", arg)
 	}
 	if err := a.startBenchRouter(ctx, applied); err != nil {
 		return err

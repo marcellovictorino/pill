@@ -33,3 +33,51 @@ func TestSetupHashTracksWhatSteersTheAgent(t *testing.T) {
 		t.Error("an edited skill must change the setup hash")
 	}
 }
+
+// A package upgrade or an edited skill outside the Pi folder changes what the
+// agent does, so it must change the setup hash too.
+func TestSetupHashCoversPackagesAndExternalSkills(t *testing.T) {
+	d, ext := t.TempDir(), t.TempDir()
+	write(t, ext, "SKILL.md", "one")
+	write(t, d, "settings.json", `{"skills":["`+ext+`"]}`)
+	write(t, d, "npm/package-lock.json", "v1")
+	base := SetupHash(d)
+	write(t, ext, "SKILL.md", "two")
+	afterSkill := SetupHash(d)
+	if afterSkill == base {
+		t.Error("an edited external skill must change the setup hash")
+	}
+	write(t, d, "npm/package-lock.json", "v2")
+	if SetupHash(d) == afterSkill {
+		t.Error("an upgraded package must change the setup hash")
+	}
+}
+
+// An entry that cannot be read must stop the run, not shrink the setup quietly;
+// only a link whose target is gone is skipped.
+func TestCopyPersonalPiSkipsOnlyDanglingLinks(t *testing.T) {
+	if os.Getuid() == 0 {
+		t.Skip("root can read everything")
+	}
+	src := t.TempDir()
+	write(t, src, "AGENTS.md", "rules")
+	if err := os.Symlink(filepath.Join(src, "gone"), filepath.Join(src, "dangling")); err != nil {
+		t.Fatal(err)
+	}
+	if err := CopyPersonalPi(src, filepath.Join(t.TempDir(), "copy")); err != nil {
+		t.Fatalf("a dangling link is skipped: %v", err)
+	}
+
+	locked := t.TempDir()
+	write(t, locked, "secret.md", "x")
+	if err := os.Chmod(locked, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+	if err := os.Symlink(filepath.Join(locked, "secret.md"), filepath.Join(src, "skill.md")); err != nil {
+		t.Fatal(err)
+	}
+	if err := CopyPersonalPi(src, filepath.Join(t.TempDir(), "copy2")); err == nil {
+		t.Error("a link that cannot be resolved must fail the copy")
+	}
+}

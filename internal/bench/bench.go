@@ -109,7 +109,11 @@ func (r *Runner) Run(ctx context.Context, p Plan) (config.Result, error) {
 	for _, rr := range res.Runs {
 		res.Passed = res.Passed && rr.Passed // a pass needs every run to pass
 	}
-	data, _ := json.MarshalIndent(res, "", "  ")
+	var record any = res
+	if r.PersonalSource != "" { // every persisted personal record carries the marker
+		record = config.PersonalResult{Result: res, Personal: true, SetupHash: r.SetupHash}
+	}
+	data, _ := json.MarshalIndent(record, "", "  ")
 	if err := config.WriteFileAtomic(filepath.Join(p.Dir, "result.json"), append(data, '\n'), 0o644); err != nil {
 		return res, err
 	}

@@ -92,8 +92,10 @@ func copyTree(src, dest string, depth int, top, inExtensions bool) error {
 		}
 		from, to := filepath.Join(src, name), filepath.Join(dest, name)
 		info, err := os.Stat(from) // follows links
-		if err != nil {
-			continue // dangling link
+		if errors.Is(err, fs.ErrNotExist) && isLink(from) {
+			continue // a dangling link: nothing to copy
+		} else if err != nil {
+			return err // an unreadable entry must not silently shrink the setup
 		}
 		switch {
 		case info.IsDir():
@@ -107,6 +109,11 @@ func copyTree(src, dest string, depth int, top, inExtensions bool) error {
 		}
 	}
 	return nil
+}
+
+func isLink(p string) bool {
+	fi, err := os.Lstat(p)
+	return err == nil && fi.Mode()&os.ModeSymlink != 0
 }
 
 func copyFile(from, to string, perm os.FileMode) error {
@@ -132,27 +139,64 @@ func copyFile(from, to string, perm os.FileMode) error {
 func SetupHash(dir string) string {
 	h := sha256.New()
 	var files []string
-	for _, f := range []string{"settings.json", "AGENTS.md"} {
+	for _, f := range []string{"settings.json", "AGENTS.md", "npm/package.json", "npm/package-lock.json"} {
 		files = append(files, filepath.Join(dir, f))
 	}
-	for _, sub := range []string{"skills", "extensions"} {
-		_ = filepath.WalkDir(filepath.Join(dir, sub), func(p string, d fs.DirEntry, err error) error {
-			if err == nil && d.Type().IsRegular() {
+	walk := func(root string) {
+		_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() && d.Name() == "node_modules" {
+				return filepath.SkipDir
+			}
+			if d.Type().IsRegular() {
 				files = append(files, p)
 			}
 			return nil
 		})
 	}
+	for _, sub := range []string{"skills", "extensions"} {
+		walk(filepath.Join(dir, sub))
+	}
+	// Settings can name extensions, skills and packages that live outside the
+	// folder: their contents steer the agent too.
+	if data, err := os.ReadFile(filepath.Join(dir, "settings.json")); err == nil {
+		var cfg map[string]any
+		if json.Unmarshal(data, &cfg) == nil {
+			for _, key := range []string{"extensions", "skills", "packages"} {
+				list, _ := cfg[key].([]any)
+				for _, e := range list {
+					if path, ok := e.(string); ok {
+						walk(expandHome(path))
+						files = append(files, expandHome(path))
+					}
+				}
+			}
+		}
+	}
 	sort.Strings(files)
 	for _, f := range files {
 		data, err := os.ReadFile(f)
 		if err != nil {
-			continue
+			continue // a directory, or a name that is not a path
 		}
-		rel, _ := filepath.Rel(dir, f)
-		_, _ = fmt.Fprintf(h, "%s\x00%s\x00", rel, data)
+		name := f
+		if rel, err := filepath.Rel(dir, f); err == nil && !strings.HasPrefix(rel, "..") {
+			name = rel
+		}
+		_, _ = fmt.Fprintf(h, "%s\x00%s\x00", name, data)
 	}
 	return hex.EncodeToString(h.Sum(nil))[:16]
+}
+
+func expandHome(p string) string {
+	if strings.HasPrefix(p, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return filepath.Join(home, p[2:])
+		}
+	}
+	return p
 }
 
 // preparePersonalAgentDir builds the Pi folder of a personal run: a copy of

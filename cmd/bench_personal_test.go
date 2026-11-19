@@ -121,6 +121,11 @@ func TestPersonalRunNeverTouchesTheGate(t *testing.T) {
 		t.Errorf("the model must stay passed:\n%s", ls.out)
 	}
 
+	// The per-run record is marked too: copied on its own it must still trip the CI guard.
+	raw, _ := filepath.Glob(filepath.Join(pill, "personal", "benchmark", "*", "result.json"))
+	if len(raw) != 1 || !strings.Contains(readFile(t, raw[0]), `"personal": true`) {
+		t.Errorf("the run's own result.json must carry the personal marker: %v", raw)
+	}
 	var recs []config.PersonalResult
 	if err := json.Unmarshal([]byte(readFile(t, filepath.Join(pill, "personal", "results.json"))), &recs); err != nil {
 		t.Fatal(err)

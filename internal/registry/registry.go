@@ -393,6 +393,25 @@ func (r *Registry) ApplyRouter(s *Snapshot) (Applied, error) {
 	return out, nil
 }
 
+// RefreshRouter loads the state and regenerates models.ini inside one state-lock
+// transaction, so a concurrent add, rm or sync cannot have its newer router
+// configuration overwritten by an older snapshot. It never writes Pi's provider
+// or results.json.
+func (r *Registry) RefreshRouter(ctx context.Context) (*Snapshot, Applied, error) {
+	var applied Applied
+	unlock, err := config.LockState(ctx, r.Paths)
+	if err != nil {
+		return nil, applied, err
+	}
+	defer unlock()
+	snap, err := r.Load()
+	if err != nil {
+		return nil, applied, err
+	}
+	applied, err = r.ApplyRouter(snap)
+	return snap, applied, err
+}
+
 // PiModels lists what Pi should be offered: entries whose state offers them
 // (see config.OfferedToPi) and whose GGUF exists.
 func (r *Registry) PiModels(s *Snapshot) []pi.Model {

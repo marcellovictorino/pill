@@ -1,12 +1,15 @@
 package registry
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/marcellovictorino/pill/internal/config"
+	"github.com/marcellovictorino/pill/internal/pi"
 )
 
 // newRegistry opens a registry whose every path lives in a temp directory.
@@ -120,5 +123,28 @@ func TestUpdateSerialisesConcurrentWriters(t *testing.T) {
 	}
 	if len(snap.Models.Models) != writers {
 		t.Errorf("%d of %d concurrent additions survived", len(snap.Models.Models), writers)
+	}
+}
+
+// A personal benchmark regenerates models.ini, so it must wait for a command
+// that is changing the model list: otherwise its older snapshot could overwrite
+// the newer router configuration. It must also leave Pi's provider alone.
+func TestRefreshRouterWaitsForTheStateLockAndLeavesPiAlone(t *testing.T) {
+	r := newRegistry(t)
+	unlock, err := config.LockState(t.Context(), r.Paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 300*time.Millisecond)
+	defer cancel()
+	if _, _, err := r.RefreshRouter(ctx); err == nil {
+		t.Error("RefreshRouter must wait while another command holds the state lock")
+	}
+	unlock()
+	if _, _, err := r.RefreshRouter(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(pi.ModelsPath(r.PiDir)); err == nil {
+		t.Error("RefreshRouter must not write Pi's models.json")
 	}
 }
