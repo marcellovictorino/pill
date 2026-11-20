@@ -13,6 +13,7 @@ All notable changes to pill are documented here. The format follows
 - `pill catalog` records Nemotron 3.5 Lightning 30B-A3B Q4_0 (ggml-org) on the 24 GB M4 as `nemotron3.5-30b`: it failed Tier 1 on memory in all three runs (3 to 4% free against the 10% floor), so Tier 2 was not run. See `evals/reports/tried-and-rejected.md`.
 - `pill catalog` lists Nous Research Arete-27B on the 24 GB M4: `arete-27b` (IQ4_XS, Tier 2 22/22 in all three runs but Tier 1 129-144 s) and `arete-27b-mtp` (IQ3_XXS with the base model's MTP head, Tier 2 21, 22 and 20 of 22). Neither passes the default gate; MiniCPM stays the default. See `evals/reports/arete-27b.md`.
 - `pill catalog` records Qwen3.8 27B with harness-hub's Pi-adapted LoRA on UD-IQ3_XXS as `qwen3.8-27b-pi`: Tier 2 scored 22/22 in all three runs with fewer tool calls than the base model, but Tier 1 took 138-146 s and one Tier 2 run hit the 30-minute cap. MiniCPM stays the default. See `evals/reports/qwen38-27b-pi-adapted.md`.
+- `pill catalog` records SenseNova-Loop-9B Q4_K_M (official GGUF) as a no-go, `sensenova-loop-9b`: it needs SenseNova's own llama.cpp fork (stock llama.cpp cannot load it) and, run that way on the 24 GB M4, failed Tier 1 at 86 s against 60 s (about 6 tokens/s). A relaxed rerun passed Tier 1 and scored 19/22 on Tier 2 at the cap. Not worth re-testing unless the engine gets faster. See `evals/reports/tried-and-rejected.md`.
 
 ### Changed
 
