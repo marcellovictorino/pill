@@ -53,7 +53,7 @@ default = true
 chip = "Apple M9"
 ram_gb = 32
 ctx = 32768
-tier1 = "relaxed"
+tier1 = "fail"
 tier2 = "pass"
 tok_per_s = 90
 date = "2026-01-01"
@@ -117,16 +117,16 @@ func TestAssessMatchesExactProfile(t *testing.T) {
 	}
 }
 
-// Intent: a failed run is a result, a relaxed pass is never a standard pass,
-// and the newest measurement on the device wins.
+// Intent: a failed run is a result, a Tier 1 fail is a fail even when Tier 2
+// passed, and the newest measurement on the device wins.
 func TestAssessFailureRelaxedAndNewest(t *testing.T) {
 	c := fixture(t)
 	d := Device{"apple m9", 32} // chip names compare case-insensitively
 	if got := status(c, d, "fast"); got != StatusFailed {
 		t.Errorf("newest run failed, got %s", got)
 	}
-	if got := status(c, d, "slow"); got != StatusRelaxed {
-		t.Errorf("relaxed limits are not a pass, got %s", got)
+	if got := status(c, d, "slow"); got != StatusFailed {
+		t.Errorf("a Tier 1 fail is not a pass, got %s", got)
 	}
 }
 
@@ -147,8 +147,8 @@ func TestAssessTooSmallAndUnverified(t *testing.T) {
 	}
 }
 
-// Intent: show up to three, standard passes only, fastest first; relaxed and
-// failed results never appear, and fewer (or none) is a valid answer.
+// Intent: show up to three, standard passes only, fastest first; failed
+// results never appear, and fewer (or none) is a valid answer.
 func TestShortlistOnlyStandardPassesFastestFirst(t *testing.T) {
 	c := fixture(t)
 	got := c.Shortlist(Device{"Apple M9", 32})

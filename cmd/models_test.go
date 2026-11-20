@@ -127,9 +127,8 @@ func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
 // "pass (29s)", and a failed run must not read as a pass. gemma4-26b Q3KXL
 // passed both tiers but pushed 4.75 GB to swap: it gets no ✓, and agents read
 // FAIL. "The red cross should be only for the models marked as fail", so it
-// gets no ✗ either. "There should be no relax option": muse-30b-dflash passed
-// Tier 1 only with looser limits (111 s against the 60 s cutoff), so it reads
-// fail and carries the ✗.
+// gets no ✗ either. arete-27b failed Tier 1 (144 s and 8% free memory against
+// the 10% floor), so it reads fail and carries the ✗.
 func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 	e := newEnv(t)
 	human := e.run("catalog", "--format", "human").ok(t).out
@@ -150,8 +149,8 @@ func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 			t.Errorf("the ✗ belongs on exactly the rows marked fail:\n%s", line)
 		}
 	}
-	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "muse-30b-dflash✗") || !strings.Contains(human, "fail (111s)") {
-		t.Errorf("a pass carries ✓, and a run over the Tier 1 cutoff fails with ✗:\n%s", human)
+	if !strings.Contains(human, "minicpm✓") || !strings.Contains(human, "arete-27b✗") || !strings.Contains(human, "fail (144s)") {
+		t.Errorf("a pass carries ✓, and a run whose Tier 1 failed carries ✗:\n%s", human)
 	}
 	agent := e.run("catalog", "--format", "agent").ok(t).out
 	if !strings.Contains(agent, "gemma4-26b,Q3KXL,64k,pass (48s),22/22 4.9m,") || !strings.Contains(agent, ",11%,FAIL,") {
@@ -190,7 +189,7 @@ func TestCatalogDefaultsToHumanEvenWhenPiped(t *testing.T) {
 		t.Errorf("a bare, piped pill catalog must print the table:\n%s", bare)
 	}
 	for _, f := range []string{"agent", "toon"} {
-		if out := e.run("catalog", "--format", f).ok(t).out; !strings.Contains(out, "models[7]{id,") {
+		if out := e.run("catalog", "--format", f).ok(t).out; !strings.Contains(out, "models[") || !strings.Contains(out, "]{id,") {
 			t.Errorf("--format %s must give TOON:\n%s", f, out)
 		}
 	}
@@ -391,5 +390,35 @@ func TestRmPulledOnlyFile(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(e.modelsDir(), gemmaFile)); err == nil {
 		t.Error("pulled file not deleted")
+	}
+}
+
+// Intent (captain): "the Pi adapted model is actually better, just very slow.
+// So it should be shown in the catalog as yes ... I guess it passes." With
+// Tier 1 allowed up to 300 s and full marks at the Tier 2 cap counting,
+// qwen3.8-27b-pi reads pass (157s), 22/22 30m and carries the ✓: the minutes
+// column is what shows it is slow. MiniCPM stays listed above it, being faster.
+func TestCatalogShowsTheSlowQwenAsAPass(t *testing.T) {
+	e := newEnv(t)
+	human := e.run("catalog", "--format", "human").ok(t).out
+	var row string
+	minicpm, qwen := -1, -1
+	for i, line := range strings.Split(human, "\n") {
+		if strings.Contains(line, "qwen3.8-27b-pi") {
+			row, qwen = line, i
+		}
+		if strings.Contains(line, "minicpm") {
+			minicpm = i
+		}
+	}
+	if !strings.Contains(row, "qwen3.8-27b-pi✓") || !strings.Contains(row, "pass (157s)") || !strings.Contains(row, "22/22 30m") || strings.Contains(row, "✗") {
+		t.Errorf("a slow model with full marks reads as a pass:\n%s", human)
+	}
+	if minicpm < 0 || qwen < minicpm {
+		t.Errorf("the faster MiniCPM is listed before the slower Qwen:\n%s", human)
+	}
+	agent := e.run("catalog", "--format", "agent").ok(t).out
+	if !strings.Contains(agent, "qwen3.8-27b-pi,Q3,32k,pass (157s),22/22 30m,\"90|96|0|100|(94,96,96)\",6.5,15%,ok,") {
+		t.Errorf("agents read the same pass and its Tier 3 medians:\n%s", agent)
 	}
 }

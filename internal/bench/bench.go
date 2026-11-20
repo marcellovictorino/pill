@@ -65,7 +65,7 @@ type Plan struct {
 
 // DefaultThresholds are the gate values from the design (all are flags).
 func DefaultThresholds() config.Thresholds {
-	return config.Thresholds{Tier1MaxSeconds: 60, MinFreePct: 10, Tier2MaxMinutes: 15}
+	return config.Thresholds{Tier1MaxSeconds: 300, MinFreePct: 10, Tier2MaxMinutes: 15}
 }
 
 // NewRunner fills in defaults for the optional fields.
@@ -277,7 +277,8 @@ func (r *Runner) tier2(ctx context.Context, p Plan, dir, agentDir string, rr *co
 	_ = os.WriteFile(filepath.Join(dir, "tier2-verify.json"), out, 0o644)
 }
 
-// verdict applies the gate: Tier 1 passed, Tier 2 full score within the cap,
+// verdict applies the gate: Tier 1 passed, Tier 2 full score (a run stopped by
+// the cap with full marks and no tool-call loop counts, and its time shows it),
 // and memory never dipped below the limit during the whole run.
 func verdict(rr config.RunResult, th config.Thresholds, stats Stats) (bool, string) {
 	switch {
@@ -291,7 +292,7 @@ func verdict(rr config.RunResult, th config.Thresholds, stats Stats) (bool, stri
 	case rr.Tier2TimedOut && rr.Tier2Repeats >= 10:
 		return false, fmt.Sprintf("tier 2 hit the %.0f-minute cap: the agent repeated the same tool call %d times in a row (score %d/%d)",
 			th.Tier2MaxMinutes, rr.Tier2Repeats, rr.Tier2Score, rr.Tier2Total)
-	case rr.Tier2TimedOut:
+	case rr.Tier2TimedOut && rr.Tier2Score != rr.Tier2Total:
 		return false, fmt.Sprintf("tier 2 hit the %.0f-minute cap (score %d/%d)", th.Tier2MaxMinutes, rr.Tier2Score, rr.Tier2Total)
 	case rr.Tier2Total == 0 || rr.Tier2Score != rr.Tier2Total:
 		return false, fmt.Sprintf("tier 2 score %d/%d", rr.Tier2Score, rr.Tier2Total)

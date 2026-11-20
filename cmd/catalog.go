@@ -120,9 +120,6 @@ func catalogRow(r catalog.Row, p *output.Printer, isDefault bool) output.Obj {
 	if m != nil {
 		if m.Tier1 != "" {
 			t1 = m.Tier1
-			if t1 == "relaxed" {
-				t1 = "fail" // passed only with looser limits: its time is over pill's cutoff
-			}
 			if m.Tier1Seconds > 0 {
 				t1 += fmt.Sprintf(" (%.0fs)", m.Tier1Seconds) // "pass (48s)"
 			}
@@ -171,8 +168,7 @@ func minutesLabel(min float64) string {
 
 // verdictLabel is the overall result of a measured model, so a row whose times
 // look fine is still not read as a pass when it failed (for example on swap
-// growth). A run that passed only with looser limits than pill's is a fail:
-// there is no in-between verdict. Models nobody measured print "-".
+// growth). Models nobody measured print "-".
 func verdictLabel(r catalog.Row) string {
 	if r.Measurement == nil {
 		return "-"
@@ -180,7 +176,7 @@ func verdictLabel(r catalog.Row) string {
 	switch r.Status {
 	case catalog.StatusRecommended:
 		return "ok"
-	case catalog.StatusRelaxed, catalog.StatusFailed:
+	case catalog.StatusFailed:
 		return "FAIL"
 	}
 	return "-"
@@ -197,7 +193,7 @@ func verdictMark(r catalog.Row, p *output.Printer) string {
 	case "ok":
 		return p.Paint("32", "✓")
 	case "FAIL":
-		if t1 := r.Measurement.Tier1; t1 == "fail" || t1 == "relaxed" {
+		if t1 := r.Measurement.Tier1; t1 == "fail" {
 			return p.Paint("31", "✗")
 		}
 	}
