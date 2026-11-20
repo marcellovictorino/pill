@@ -82,6 +82,24 @@ func TestCopyPersonalPiSkipsOnlyDanglingLinks(t *testing.T) {
 	}
 }
 
+// The Hindsight skill tells the agent to use the memory service on this computer,
+// so a personal run must leave it out as it leaves out the add-on.
+func TestCopyPersonalPiLeavesOutHindsightSkills(t *testing.T) {
+	src := t.TempDir()
+	write(t, src, "skills/one/SKILL.md", "skill")
+	write(t, src, "skills/hindsight-memory/SKILL.md", "memory service")
+	dest := filepath.Join(t.TempDir(), "copy")
+	if err := CopyPersonalPi(src, dest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "skills", "one", "SKILL.md")); err != nil {
+		t.Errorf("an ordinary skill must be copied: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dest, "skills", "hindsight-memory")); !os.IsNotExist(err) {
+		t.Errorf("the Hindsight skill must stay out of a personal run, stat error: %v", err)
+	}
+}
+
 // A relative reference in settings.json is relative to the Pi folder, not to the
 // folder pill was started from: editing it must change the hash, and an
 // unrelated folder of the same name in the working directory must not.

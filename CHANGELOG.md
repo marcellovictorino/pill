@@ -21,6 +21,7 @@ All notable changes to pill are documented here. The format follows
 
 ### Fixed
 
+- `pill bench run <name> --personal` leaves the Hindsight skills out of its copy of your Pi folder, as it already left out the Hindsight add-on, so a personal run cannot use your Hindsight memory service through them.
 - A model that failed its benchmark and then had its settings or file changed no longer shows as `unverified` while Pi hides it, and `pill` no longer launches Pi on it. `pill ls` now shows it, and a model whose benchmark never finished, as `candidate`: not offered to Pi until `pill add <name> --unverified` or a passing benchmark. Existing `results.json` files are migrated on first read.
 
 - pill is built with Go 1.27.4, which fixes a `net/http` vulnerability (GO-2026-6859) present in the Go 1.27.3 standard library that the router, Hugging Face and catalog downloads use.

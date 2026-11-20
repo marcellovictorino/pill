@@ -52,6 +52,8 @@ class Env(unittest.TestCase):
         (agent / "web-search-cache").mkdir()
         (agent / "skills" / "one").mkdir(parents=True)
         (agent / "skills" / "one" / "SKILL.md").write_text("skill")
+        (agent / "skills" / "hindsight-memory").mkdir()
+        (agent / "skills" / "hindsight-memory" / "SKILL.md").write_text("memory service")
         (agent / "AGENTS.md").write_text("my rules")
         (agent / "models.json.bak").write_text("backup")
         (agent / "settings.json.hindsight-backup").write_text("backup")
@@ -105,7 +107,8 @@ class PersonalRun(Env):
         copy = self.log / "agent_dir_copy"
         self.assertTrue((copy / "AGENTS.md").exists() and (copy / "skills" / "one" / "SKILL.md").exists())
         self.assertTrue((copy / "extensions" / "footer.ts").exists())
-        for gone in ("sessions", "web-search-cache", "models.json.bak", "settings.json.hindsight-backup"):
+        for gone in ("sessions", "web-search-cache", "models.json.bak", "settings.json.hindsight-backup",
+                     "skills/hindsight-memory"):  # the skill tells the agent to use the real memory service
             self.assertFalse((copy / gone).exists(), gone)
         cfg = json.loads((copy / "settings.json").read_text())
         self.assertEqual(cfg["extensions"], ["/x/footer.ts"])  # Hindsight would read the real memory
