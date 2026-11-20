@@ -120,6 +120,15 @@ func TestVerdict(t *testing.T) {
 	if pass, why := verdict(good, th, ok); !pass || why != "" {
 		t.Errorf("good run: %v %q", pass, why)
 	}
+	// Intent (captain): slow but accurate models must not be thrown away.
+	// Tier 1 allows 300 s, and full marks at the Tier 2 cap pass.
+	if th.Tier1MaxSeconds != 300 {
+		t.Errorf("Tier 1 limit is %v s, want 300", th.Tier1MaxSeconds)
+	}
+	slow := config.RunResult{Tier1Pass: true, Tier2Ran: true, Tier2TimedOut: true, Tier2Score: 22, Tier2Total: 22}
+	if pass, why := verdict(slow, th, ok); !pass || why != "" {
+		t.Errorf("full marks at the cap: %v %q", pass, why)
+	}
 	cases := []struct {
 		name  string
 		rr    config.RunResult
@@ -127,7 +136,8 @@ func TestVerdict(t *testing.T) {
 		want  string
 	}{
 		{"tier 1 failed", config.RunResult{Tier1Checks: []config.Check{{Name: "agent-sized request within time limit", Detail: "90s"}}}, ok, "tier 1: agent-sized request within time limit: 90s"},
-		{"timeout", config.RunResult{Tier1Pass: true, Tier2Ran: true, Tier2TimedOut: true, Tier2Score: 22, Tier2Total: 22}, ok, "hit the 15-minute cap"},
+		{"timeout with a partial score", config.RunResult{Tier1Pass: true, Tier2Ran: true, Tier2TimedOut: true, Tier2Score: 20, Tier2Total: 22}, ok, "hit the 15-minute cap"},
+		{"timeout in a tool-call loop", config.RunResult{Tier1Pass: true, Tier2Ran: true, Tier2TimedOut: true, Tier2Repeats: 12, Tier2Score: 22, Tier2Total: 22}, ok, "repeated the same tool call"},
 		{"partial score", config.RunResult{Tier1Pass: true, Tier2Ran: true, Tier2Score: 20, Tier2Total: 22}, ok, "score 20/22"},
 		{"no total", config.RunResult{Tier1Pass: true, Tier2Ran: true}, ok, "score 0/0"},
 		{"memory", good, Stats{Samples: 2, MinFreePct: 7}, "free memory dipped to 7%"},

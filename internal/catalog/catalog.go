@@ -31,9 +31,8 @@ type Variant struct {
 }
 
 // Measurement is one pill benchmark result on one exact device profile (chip
-// and unified memory). Tier1 and Tier2 are "pass", "relaxed" (passed only
-// with limits looser than pill's defaults), "fail", or empty when the tier did
-// not run. A missing measurement is "no result", never a failure.
+// and unified memory). Tier1 and Tier2 are "pass", "fail", or empty when the
+// tier did not run. A missing measurement is "no result", never a failure.
 //
 // The detail fields come from results.json (tier1_seconds, tier2_score,
 // min_free_pct, swap_growth_mb, reason) and the Tier 3 index. A zero or nil
@@ -50,7 +49,7 @@ type Measurement struct {
 	Date     string  `toml:"date"`
 	Pill     string  `toml:"pill"`
 	LlamaCpp string  `toml:"llama_cpp"`
-	Gate     string  `toml:"gate"` // limits used, e.g. "tier 1 60 s, tier 2 15 min"
+	Gate     string  `toml:"gate"` // limits used, e.g. "tier 1 300 s, tier 2 30 min"
 	Source   string  `toml:"source"`
 	// SourceRow is the first cell of the report table row this record was
 	// converted from, so a test can compare the two.

@@ -118,7 +118,7 @@ func summarizeOne(r config.Result, currentBuild string) SummaryRow {
 		t1 = t1 && run.Tier1Pass
 		if run.Tier2Ran {
 			t2ran = true
-			t2full = t2full && run.Tier2Total > 0 && run.Tier2Score == run.Tier2Total && !run.Tier2TimedOut
+			t2full = t2full && run.Tier2Total > 0 && run.Tier2Score == run.Tier2Total
 			if minScore < 0 || run.Tier2Score < minScore {
 				minScore, minTotal = run.Tier2Score, run.Tier2Total
 			}

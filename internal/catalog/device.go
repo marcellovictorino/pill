@@ -19,7 +19,6 @@ func (d Device) Known() bool { return d.Chip != "" && d.RAMGB > 0 }
 const (
 	StatusRecommended = "yes"        // passed both standard tiers on this exact device
 	StatusUnmeasured  = "unmeasured" // fits, but nobody has measured it on this device
-	StatusRelaxed     = "relaxed"    // passed only with looser limits than pill's defaults
 	StatusFailed      = "failed"     // measured on this device and did not pass
 	StatusTooSmall    = "too-small"  // needs more memory than this device has
 	StatusUnverified  = "unverified" // chip or memory could not be detected
@@ -28,7 +27,7 @@ const (
 // Assessment is the verdict for one entry plus the measurement behind it.
 type Assessment struct {
 	Status      string
-	Measurement *Measurement // nil unless Status is yes, relaxed or failed
+	Measurement *Measurement // nil unless Status is yes or failed
 }
 
 // Assess judges one variant on a device. Matching is exact: another chip, or
@@ -75,13 +74,11 @@ func verdict(m *Measurement) string {
 		return StatusFailed
 	case m.Tier1 == "pass" && m.Tier2 == "pass":
 		return StatusRecommended
-	case m.Tier1 == "relaxed" && m.Tier2 == "pass":
-		return StatusRelaxed
 	}
 	return StatusFailed
 }
 
-// MaxAttempts is how many failed or relaxed runs of models that are not
+// MaxAttempts is how many failed runs of models that are not
 // offered `pill catalog` shows.
 const MaxAttempts = 5
 
@@ -97,8 +94,6 @@ func tier1Rank(s string) int {
 	switch s {
 	case "pass":
 		return 2
-	case "relaxed":
-		return 1
 	}
 	return 0
 }

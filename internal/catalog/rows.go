@@ -24,7 +24,7 @@ type Row struct {
 	ID          string
 	Quant       string // bit width ("Q4"), or the exact quant when two files of the ID share one
 	Ctx         int    // 0 when not recorded
-	Status      string // yes, relaxed, failed, or unmeasured
+	Status      string // yes, failed, or unmeasured
 	Measurement *Measurement
 	Entry       *Entry // nil for a tried model
 	Source      string // Hugging Face reference; empty for a tried model
@@ -81,8 +81,7 @@ func (c *Catalog) quantsOf(id string) []string {
 }
 
 // Rows is the `pill catalog` list for a device, one row per model. Passes come
-// first (fastest first, at most MaxRecommendations), then the closest failed or
-// relaxed runs (at most MaxAttempts, plus every offered model that was run,
+// first (fastest first, at most MaxRecommendations), then the closest failed runs (at most MaxAttempts, plus every offered model that was run,
 // since a failed default must stay visible), then offered models that fit but
 // were never measured here. hidden counts measured rows left out, and tooSmall
 // counts offered models that need more memory and have no result on this
@@ -95,14 +94,11 @@ func (c *Catalog) Rows(d Device) (rows []Row, hidden, tooSmall int) {
 		return rows, 0, 0
 	}
 	var passes, near, unmeasured []Row
-	for _, r := range c.Shortlist(d) {
-		passes = append(passes, c.offeredRow(r.Entry, r.Measurement, StatusRecommended))
-	}
 	for _, e := range c.Entries() {
 		m := newestOn(d, e.Variant.Measurements, e.Variant.Ctx)
 		switch {
 		case m != nil && verdict(m) == StatusRecommended:
-			// A pass: Shortlist already holds it, or cut it at the limit.
+			passes = append(passes, c.offeredRow(e, m, StatusRecommended))
 		case m != nil:
 			near = append(near, c.offeredRow(e, m, verdict(m)))
 		case d.RAMGB < e.Variant.MinRAMGB:
@@ -114,9 +110,15 @@ func (c *Catalog) Rows(d Device) (rows []Row, hidden, tooSmall int) {
 	for i := range c.Tried {
 		t := &c.Tried[i]
 		if m := newestOn(d, t.Measurements, 0); m != nil {
-			near = append(near, Row{ID: t.ID, Quant: c.QuantLabel(t.ID, t.Quant), Ctx: m.Ctx, Status: verdict(m), Measurement: m})
+			row := Row{ID: t.ID, Quant: c.QuantLabel(t.ID, t.Quant), Ctx: m.Ctx, Status: verdict(m), Measurement: m}
+			if row.Status == StatusRecommended {
+				passes = append(passes, row) // slow or not, a pass is a pass
+			} else {
+				near = append(near, row)
+			}
 		}
 	}
+	sort.SliceStable(passes, func(i, j int) bool { return passes[i].Measurement.TokPerS > passes[j].Measurement.TokPerS })
 	sort.SliceStable(near, func(i, j int) bool { return closer(near[i].Measurement, near[j].Measurement) })
 	var shown []Row
 	for i, r := range near {
@@ -144,7 +146,7 @@ func (c *Catalog) offeredRow(e Entry, m *Measurement, status string) Row {
 	}
 }
 
-// closer orders failed or relaxed runs, closest to a pass first: more Tier 2
+// closer orders failed runs, closest to a pass first: more Tier 2
 // tests passed, then a better Tier 1 result, then faster decoding.
 func closer(a, b *Measurement) bool {
 	if sa, sb := a.tier2Fraction(), b.tier2Fraction(); sa != sb {
