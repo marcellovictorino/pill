@@ -22,6 +22,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v5
+      # Pages caches every file for 10 minutes. Without a per-deploy query on the stylesheet and
+      # script, a browser can pair new HTML with an old cached style.css (a new video then shows
+      # at its full 1280 px width on a phone). Stamping them with the commit makes each deploy's
+      # HTML fetch its own CSS and JS.
+      - name: Stamp asset URLs with the commit
+        run: |
+          sed -i -e 's|href="style.css"|href="style.css?v=${{ github.sha }}"|' \
+                 -e 's|src="script.js"|src="script.js?v=${{ github.sha }}"|' site/index.html
+          grep -q 'style.css?v=${{ github.sha }}' site/index.html
+          grep -q 'script.js?v=${{ github.sha }}' site/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
