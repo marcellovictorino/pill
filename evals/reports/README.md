@@ -14,6 +14,7 @@ One focused report per model, plus a comparison across models. These are written
 | `qwen38-27b-pi-adapted.md` | Qwen3.8 27B with harness-hub's Pi-adapted LoRA on UD-IQ3_XXS: Tier 1/2, a batch-size and MTP speed probe, and one Tier 3 run with MTP; TLDR first |
 | `qwen38-flash-next.md` | Qwen3.8 Flash Next Coder IQ1_M on 24 GB: llama.cpp offload flags, MTP speed, Tier 1/2 (Tier 3 not run) |
 | `m2-pro-16gb-2026-11-04.md` | Recent models on a 16 GB M2 Pro, Tier 1 and 2 (twelve runs, none passed both) and Tier 3 for Qwen3.5 9B; TLDR first |
+| `daisyrose-27b.md` | RadixArk DaisyRose-27B (Qwen3.8 27B fine-tune) on the 16 GB M2 Pro: IQ2 quants with and without its own MTP head, Tier 1/2, TLDR first (none passed, Tier 3 not run) |
 | `tried-and-rejected.md` | Models benchmarked and not adopted, with dates, numbers and what would justify a re-test |
 | `recursive-flint-iq2xxs.md` | RecursiveSI Flint Bartowski and Unsloth IQ2 variants, Tier 1/2 comparison (Tier 3 not run) |
 | `image-generation.md` | FLUX 3 Image Klein against Qwen-Image 2.1 Turbo on three prompts, Opus 5.5 scores and timings |

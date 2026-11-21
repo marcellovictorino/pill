@@ -1449,3 +1449,109 @@ tier1_seconds = 86
 min_free_pct = 35
 swap_mb = 0
 fail_reason = "Tier 1 took 86 s against the 60 s limit; Tier 2 not run"
+
+# DaisyRose-27B (RadixArk fine-tune of Qwen3.8 27B), 21 Nov 2026, 16 GB M2 Pro, from evals/reports/daisyrose-27b.md.
+# bartowski imatrix quants, thinking off. The MTP row uses the model's own head, which the GGUF keeps.
+
+[[tried]]
+name = "DaisyRose-27B IQ2_S, thinking off"
+id = "daisyrose-27b"
+quant = "IQ2_S"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 8
+runs = 1
+date = "2026-11-21"
+pill = "0.6.0"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "DaisyRose-27B IQ2_S"
+tier1_seconds = 127
+min_free_pct = 8
+swap_mb = 2225
+fail_reason = "Free memory fell to 8% in Tier 1 (limit 10%)"
+
+[[tried]]
+name = "DaisyRose-27B IQ2_XS, thinking off"
+id = "daisyrose-27b"
+quant = "IQ2_XS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 21
+tier2_total = 22
+tier2_minutes = 15.0
+tier2_timed_out = true
+tok_per_s = 8
+runs = 1
+date = "2026-11-21"
+pill = "0.6.0"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "DaisyRose-27B IQ2_XS"
+tier1_seconds = 121
+min_free_pct = 9
+swap_mb = 82
+fail_reason = "Tier 2 scored 21/22 and hit the 15-minute cap"
+
+[[tried]]
+name = "DaisyRose-27B IQ2_XXS, thinking off"
+id = "daisyrose-27b"
+quant = "IQ2_XXS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 15.0
+tier2_timed_out = true
+tok_per_s = 9
+runs = 1
+date = "2026-11-21"
+pill = "0.6.0"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "DaisyRose-27B IQ2_XXS"
+tier1_seconds = 116
+min_free_pct = 11
+swap_mb = 0
+fail_reason = "Tier 2 scored 20/22 at the 15-minute cap after repeating one tool call 84 times"
+
+[[tried]]
+name = "DaisyRose-27B IQ2_XXS, thinking off, MTP"
+id = "daisyrose-27b-mtp"
+quant = "IQ2_XXS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M2 Pro"
+ram_gb = 16
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 16
+runs = 1
+date = "2026-11-21"
+pill = "0.6.0"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "DaisyRose-27B IQ2_XXS, MTP (spec-type draft-mtp)"
+note = "MTP head is the model's own; decoding 16 tok/s against 9 without it"
+tier1_seconds = 119
+min_free_pct = 7
+swap_mb = 338
+fail_reason = "Free memory fell to 7% in Tier 1 (limit 10%)"
