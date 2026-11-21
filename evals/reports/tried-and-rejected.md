@@ -229,6 +229,25 @@ bartowski's quants `hf.co/bartowski/RadixArk_DaisyRose-27B-GGUF`. None passed bo
 - **MTP:** the model's own one-layer head is in the GGUF, so `spec-type = "draft-mtp"` works without a separate file.
 - **Re-test only on:** a 24 GB Mac, where Arete-27B (the same base) scored 22/22 at IQ4_XS.
 
+## Inkling 2 Mini on the 24 GB M4, 2026-11-21
+
+Thinking Machines' Inkling 2 Mini (26.4B mixture of experts, 5.4B active, looped layers) was released on 20 November. I used
+Unsloth's UD-IQ4_XS (15.7 GB, `Mainline_Support` layout), the largest quant with the lowest quality loss that leaves room for
+64k context on 24 GB: its KLD against Q8 is 0.0109, the same as Q4_K_M (0.0108) at 0.9 GB less, and Q3_K_XL (13.6 GB) is 0.0174.
+The installed llama.cpp (build 12359) cannot load the model, so the run used mainline b12606 through `PILL_LLAMA_SERVER`.
+Three cold-start runs, pill 0.6.0, current gate (Tier 1 300 s, Tier 2 15 min, 10% free memory). Not a good model here: it
+failed Tier 1, so Tier 2 and Tier 3 were not run.
+
+| Model | Result | Tier 1 | Tier 2 | tok/s | Lowest free | Issues seen |
+|---|---|---|---|---|---|---|
+| Inkling 2 Mini UD-IQ4_XS, 64k | Failed (3 of 3 runs) | 630-700 s | Not run | Not measured | 14% | Latency; empty reply; swap up 28-450 MB |
+
+- **Latency:** the 6,815-token request took 628-635 s to process (10.7 to 10.9 tok/s) against 30 to 37 tok/s for the 27B models, then
+  returned no text within the 64-token reply limit. The Pi tool turn timed out at 600 s. Memory stayed healthy.
+- **Not tested:** thinking off (the model replied with nothing visible, which fits a reasoning model spending its 64 tokens on thinking;
+  the prompt time alone fails the gate), other quants, and a faster llama.cpp build.
+- **Re-test only after:** mainline llama.cpp speeds up the looped layers on Metal, then try UD-Q3_K_XL or UD-IQ3_XXS.
+
 ## Ornith 1.5 and Qwen3.6 35B re-run on build 12110, 11 November (no result)
 
 The re-run of the two 35B models from the 14 October table did not finish on the 24 GB M4, so neither has a new

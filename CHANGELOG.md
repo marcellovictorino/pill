@@ -8,6 +8,7 @@ All notable changes to pill are documented here. The format follows
 
 ### Added
 
+- `pill catalog` records Thinking Machines' Inkling 2 Mini (UD-IQ4_XS, mainline llama.cpp b12606) on the 24 GB M4 as `inkling-2-mini`: it failed Tier 1 in all three runs (the 6,815-token request took 630-700 s against 300 s, prompt processing 10.8 tok/s), so Tier 2 and 3 were not run. See `evals/reports/tried-and-rejected.md`.
 - `pill catalog` records RadixArk DaisyRose-27B (a Qwen3.8 27B fine-tune) on the 16 GB M2 Pro as `daisyrose-27b` and `daisyrose-27b-mtp`: IQ2_XS and IQ2_XXS passed Tier 1 in 116-121 s but scored 21/22 and 20/22 on Tier 2 at the 15-minute cap; IQ2_S and IQ2_XXS with the model's own MTP head (16 tok/s against 9) failed Tier 1 on memory (8% and 7% free). See `evals/reports/daisyrose-27b.md`.
 - `pill bench run <name> --personal` and `pill bench summary --personal` run Tier 1 and 2 with a copy of your own Pi setup (skills, `AGENTS.md`, extensions, online; session history and Hindsight left out) and show the result beside the bare run. It is informational: no pass or fail, Tier 1 reports the Pi tool check and its extra seconds, and results go only to `~/.pill/personal/results.json`, so it never changes whether a model passes or whether Pi lists it.
 - `pill catalog` records two more 24 GB M4 results: Gemma 4 26B-A4B UD-Q4_K_S failed Tier 1 on memory (6% free) and Qwen3.6 35B-A3B UD-Q3_K_S passed Tier 1 but Tier 2 scored 22, 22 and 20 of 22 with one run at the cap. Neither replaces MiniCPM. See `evals/reports/bigger-models-overnight.md`.

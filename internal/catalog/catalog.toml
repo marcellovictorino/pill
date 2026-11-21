@@ -1555,3 +1555,29 @@ tier1_seconds = 119
 min_free_pct = 7
 swap_mb = 338
 fail_reason = "Free memory fell to 7% in Tier 1 (limit 10%)"
+
+# Inkling 2 Mini (Thinking Machines, 26.4B MoE, 5.4B active), 21 Nov 2026, 24 GB M4, from evals/reports/tried-and-rejected.md.
+# Unsloth UD-IQ4_XS in the Mainline_Support layout, run on mainline llama.cpp b12606 (build 12359, the version the
+# other rows use, cannot load it). Prompt processing ran at 10.8 tok/s against 30 to 37 for the 27B rows.
+
+[[tried]]
+name = "Inkling 2 Mini UD-IQ4_XS"
+id = "inkling-2-mini"
+quant = "UD-IQ4_XS"
+ctx = 65536
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "fail"
+runs = 3
+date = "2026-11-21"
+pill = "0.6.0"
+llama_cpp = "build 12606"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Inkling 2 Mini UD-IQ4_XS, 64k"
+tier1_seconds = 700
+min_free_pct = 14
+swap_mb = 450
+fail_reason = "The 6,815-token Tier 1 request took 630-700 s against the 300 s limit and returned an empty reply (prompt processing 10.8 tok/s); Tier 2 not run"
