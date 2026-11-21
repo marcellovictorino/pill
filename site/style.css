@@ -724,3 +724,10 @@ h1, h2, h3 { line-height: 1.1; letter-spacing: -0.02em; margin: 0; }
   .code pre code, .code pre code.multi { display: block; padding: 0.55em 0.8em; }
   .copy { align-self: flex-end; }
 }
+
+/* Pitch video */
+.pitch { padding-block: clamp(2rem, 5vw, 3.5rem) 0; }
+.pitch-video {
+  display: block; width: 100%; max-width: 960px; margin-inline: auto; aspect-ratio: 16 / 9;
+  border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--bg-0);
+}
