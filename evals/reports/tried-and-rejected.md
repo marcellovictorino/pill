@@ -212,6 +212,23 @@ caveats in [the report](m2-pro-16gb-2026-11-04.md). Every GGUF was deleted after
 - **Tier 3 for Qwen3.5 9B UD-Q4_K_XL (one run each):** Go 15, cleaning 21, insight 0, Kanban 2, nursery 90, Mars 95, tax 76. Good on landing pages, poor on multi-step tool tasks; MiniCPM's medians on the M4 are far higher on four tasks. Details in [the report](m2-pro-16gb-2026-11-04.md).
 - **Re-test only after:** a smaller KV cache or quant for Qwen3.6 35B (16k got 19/22 in 5 min), an MTP file for a 9B model that
   scores 22/22 without it, or a 24 GB Mac.
+## DaisyRose-27B on the 16 GB M2 Pro, 2026-11-21
+
+RadixArk's DaisyRose-27B is a fine-tune of Qwen3.8 27B. It ran on the 16 GB M2 Pro with llama.cpp build 12359, pill 0.6.0 and the
+current gate (Tier 1 300 s, Tier 2 15 min, 10% free memory). Each arm had one run at 32k context with thinking off, using
+bartowski's quants `hf.co/bartowski/RadixArk_DaisyRose-27B-GGUF`. None passed both tiers. Details are in
+[the report](daisyrose-27b.md).
+
+| Model | Result | Tier 1 | Tier 2 | tok/s | Lowest free | Issues seen |
+|---|---|---|---|---|---|---|
+| DaisyRose-27B IQ2_S | Failed | 127 s | Not run | 8 | 8% | Memory; swap up 2225 MB |
+| DaisyRose-27B IQ2_XS | Failed | 121 s | 21/22, hit the 15-min cap | 8 | 9% | Latency and accuracy (tie-break); swap up 82 MB |
+| DaisyRose-27B IQ2_XXS | Failed | 116 s | 20/22, hit the 15-min cap | 9 | 11% | Accuracy; repeated one tool call 84 times |
+| DaisyRose-27B IQ2_XXS, MTP (spec-type draft-mtp) | Failed | 119 s | Not run | 16 | 7% | Memory; MTP nearly doubled decoding; swap up 338 MB |
+
+- **MTP:** the model's own one-layer head is in the GGUF, so `spec-type = "draft-mtp"` works without a separate file.
+- **Re-test only on:** a 24 GB Mac, where Arete-27B (the same base) scored 22/22 at IQ4_XS.
+
 ## Ornith 1.5 and Qwen3.6 35B re-run on build 12110, 11 November (no result)
 
 The re-run of the two 35B models from the 14 October table did not finish on the 24 GB M4, so neither has a new

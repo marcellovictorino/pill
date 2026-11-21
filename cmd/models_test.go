@@ -69,9 +69,9 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	e.sys.RAM, e.sys.Chip = 16<<30, "Apple M2 Pro"
 	r := e.run("catalog", "--format", "agent").ok(t)
 	golden(t, "catalog_16gb_m2pro", r.out)
-	// Qwen3.5 9B (21/22) is closer to a pass than Ornith 1.5 9B (18/22).
-	i21, i18 := strings.Index(r.out, "qwen3.5-9b,Q4,32k"), strings.Index(r.out, "ornith1.5-9b,Q6")
-	if i21 < 0 || i18 < 0 || i21 > i18 || !strings.Contains(r.out, "21/22") {
+	// Qwen3.5 9B (21/22) is closer to a pass than Nemotron 3.5 Bolt E4B (20/22).
+	i21, i20 := strings.Index(r.out, "qwen3.5-9b,Q4,32k"), strings.Index(r.out, "nemotron3.5-e4b,Q8")
+	if i21 < 0 || i20 < 0 || i21 > i20 || !strings.Contains(r.out, "21/22") {
 		t.Errorf("tried models must be ordered by Tier 2 score:\n%s", r.out)
 	}
 	// Landing pages group in brackets, so a 9B model that wins them but fails
