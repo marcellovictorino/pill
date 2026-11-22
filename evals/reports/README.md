@@ -16,6 +16,7 @@ One focused report per model, plus a comparison across models. These are written
 | `m2-pro-16gb-2026-11-04.md` | Recent models on a 16 GB M2 Pro, Tier 1 and 2 (twelve runs, none passed both) and Tier 3 for Qwen3.5 9B; TLDR first |
 | `daisyrose-27b.md` | RadixArk DaisyRose-27B (Qwen3.8 27B fine-tune) on the 16 GB M2 Pro: IQ2 quants with and without its own MTP head, Tier 1/2, TLDR first (none passed, Tier 3 not run) |
 | `tried-and-rejected.md` | Models benchmarked and not adopted, with dates, numbers and what would justify a re-test |
+| `llama-cpp-1-0-rebench.md` | MiniCPM (default), Gemma 4 UD-Q4_K_S and Qwen3.6 UD-Q3_K_S on llama.cpp 1.0.0 against the build 12110 records, including the MoE expert cache on the memory gate; TLDR first |
 | `recursive-flint-iq2xxs.md` | RecursiveSI Flint Bartowski and Unsloth IQ2 variants, Tier 1/2 comparison (Tier 3 not run) |
 | `image-generation.md` | FLUX 3 Image Klein against Qwen-Image 2.1 Turbo on three prompts, Opus 5.5 scores and timings |
 | `benchmark-report.html` | The same findings as one readable page (images in `img/`) |
