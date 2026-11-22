@@ -248,6 +248,35 @@ failed Tier 1, so Tier 2 and Tier 3 were not run.
   the prompt time alone fails the gate), other quants, and a faster llama.cpp build.
 - **Re-test only after:** mainline llama.cpp speeds up the looped layers on Metal, then try UD-Q3_K_XL or UD-IQ3_XXS.
 
+## Inkling 2 Mini retest on the 24 GB M4, 2026-11-22
+
+A retest of the 21 November run with thinking off, the model's MTP drafter and the smaller UD-Q3_K_XL quant. One cold-start
+run each, pill 0.6.0 built from main, current gate (Tier 1 300 s, Tier 2 15 min, 10% free memory). Still not a good model on
+24 GB: nothing passed, so Tier 3 was not run. Another job was rendering on the same Mac during these runs, so the free-memory
+figures are lower than the model alone would cause.
+
+| Model | Result | Tier 1 | Tier 2 | tok/s | Lowest free | Issues seen |
+|---|---|---|---|---|---|---|
+| Inkling 2 Mini UD-IQ4_XS, thinking off, 32k | Failed | 93 s | Not run | 16 | 4% | Memory; garbled reply; swap up 3502 MB |
+| Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k | Failed | 83 s | 20/22 at the 15-min cap | 12 | 7% | Speed; memory in Tier 2; garbled reply |
+| Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k, DSpark MTP | Failed | 76 s | Not run | 16 | 8% | Memory; garbled reply; swap up 1035 MB |
+
+- **Why the first run was slow:** the 64k context on mainline llama.cpp. For one 2,400-token prompt on b12606, prompt
+  processing falls from 31 tok/s at 8k to 13 at 64k, and decoding from 10.7 to 2.1 tok/s (b12619 is the same). llama-bench
+  shows 33-35 tok/s at 4k depth, so the model's compute is not the problem.
+- **Build:** Unsloth's own llama.cpp build (b12588-mix) with the root-layout GGUFs processes prompts at 112-119 tok/s and decodes
+  at 14.5-15 tok/s up to 32k, about 4 times mainline. At 32k it needs `ubatch-size = 256` or Metal runs out of memory; at 64k
+  (ubatch 128) decoding drops to 3.4 tok/s, so these runs use 32k. The Tier 1 request now takes 76-93 s against 630-700 s.
+- **Thinking off:** the chat template defaults to a reasoning effort of 0.9. `reasoning_effort = "none"` alone still thinks and
+  fills the 64-token Tier 1 reply with thinking (empty reply). Adding `reasoning-budget = 0` stops the thinking but the reply
+  becomes a loop of empty thinking blocks. Pi's tool-call turn returns the right answer in every configuration.
+- **MTP:** Inkling ships its multi-token prediction head as a separate DSpark drafter (`dspark-Inkling-2-Mini-Q8_0.gguf`,
+  0.4 GB), not a `draft-mtp` head, and only Unsloth's build runs it (`spec-type = "draft-dspark"`, `spec-draft-n-max = 3`).
+  Draft acceptance was 46-89% and decoding rose from 12 to 16 tok/s, but the extra memory failed Tier 1.
+- **Tier 2 misses (Q3_K_XL):** `bestMove` returned -1 instead of blocking or answering the centre with a corner.
+- **Re-test only after:** mainline llama.cpp gets Unsloth's speed-ups, or on a Mac with more than 24 GB. UD-Q3_K_XL with DSpark is
+  the configuration to try first.
+
 ## Ornith 1.5 and Qwen3.6 35B re-run on build 12110, 11 November (no result)
 
 The re-run of the two 35B models from the 14 October table did not finish on the 24 GB M4, so neither has a new

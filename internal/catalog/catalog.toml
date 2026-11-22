@@ -1581,3 +1581,82 @@ tier1_seconds = 700
 min_free_pct = 14
 swap_mb = 450
 fail_reason = "The 6,815-token Tier 1 request took 630-700 s against the 300 s limit and returned an empty reply (prompt processing 10.8 tok/s); Tier 2 not run"
+
+# Inkling 2 Mini retest, 22 Nov 2026, 24 GB M4, from evals/reports/tried-and-rejected.md. Unsloth's own llama.cpp
+# build (b12588-mix) with Unsloth's root-layout GGUFs, 32k context, ubatch 256, thinking forced off with
+# reasoning-budget 0. Prompt processing ran at about 112 tok/s against 10.8 on mainline at 64k. Another job was
+# rendering on the same Mac during these runs, so the memory figures are less clean than usual.
+
+[[tried]]
+name = "Inkling 2 Mini UD-IQ4_XS, thinking off, 32k"
+id = "inkling-2-mini"
+quant = "UD-IQ4_XS"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 16
+runs = 1
+date = "2026-11-22"
+pill = "0.6.0"
+llama_cpp = "build 12588 (Unsloth b12588-mix)"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Inkling 2 Mini UD-IQ4_XS, thinking off, 32k"
+tier1_seconds = 93
+min_free_pct = 4
+swap_mb = 3502
+fail_reason = "Free memory fell to 4% in Tier 1 (limit 10%); the chat reply was a loop of empty thinking tokens"
+
+[[tried]]
+name = "Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k"
+id = "inkling-2-mini"
+quant = "UD-Q3_K_XL"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 15.0
+tier2_timed_out = true
+tok_per_s = 12
+runs = 1
+date = "2026-11-22"
+pill = "0.6.0"
+llama_cpp = "build 12588 (Unsloth b12588-mix)"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k"
+tier1_seconds = 83
+min_free_pct = 7
+swap_mb = 0
+fail_reason = "Tier 2 scored 20/22 and hit the 15-minute cap; free memory fell to 7% in Tier 2"
+
+[[tried]]
+name = "Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k, DSpark MTP"
+id = "inkling2-mini-mtp"
+quant = "UD-Q3_K_XL"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "fail"
+tok_per_s = 16
+runs = 1
+date = "2026-11-22"
+pill = "0.6.0"
+llama_cpp = "build 12588 (Unsloth b12588-mix)"
+gate = "tier 1 300 s, tier 2 15 min"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k, DSpark MTP"
+tier1_seconds = 76
+min_free_pct = 8
+swap_mb = 1035
+fail_reason = "Free memory fell to 8% in Tier 1 (limit 10%)"
