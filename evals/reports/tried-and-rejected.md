@@ -263,6 +263,8 @@ figures are lower than the model alone would cause.
 | Inkling 2 Mini UD-IQ4_XS, thinking off, 32k | Failed | 93 s | Not run | 16 | 4% | Memory; garbled reply; swap up 3502 MB |
 | Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k | Failed | 83 s | 20/22 at the 15-min cap | 12 | 7% | Speed; memory in Tier 2; garbled reply |
 | Inkling 2 Mini UD-Q3_K_XL, thinking off, 32k, DSpark MTP | Failed | 76 s | Not run | 16 | 8% | Memory; garbled reply; swap up 1035 MB |
+| Ternary Bonsai 2.5 27B Q2_0, thinking off, 32k | Failed | 144 s | 20/22 at the 15-min cap | 9 | 18% | Latency; accuracy; swap up 2310 MB |
+| Ternary Bonsai 2.5 27B Q2_0 with MTP head, thinking off, 32k | Passed at relaxed Tier 1 (300 s); weak Tier 3 | 160 s | 22/22 at the 15-min cap | 11 | 15% | Latency; Python tasks; swap up 2463 MB |
 
 - **Why the first run was slow:** the 64k context on mainline llama.cpp. For one 2,400-token prompt on b12606, prompt
   processing falls from 31 tok/s at 8k to 13 at 64k, and decoding from 10.7 to 2.1 tok/s (b12619 is the same). llama-bench
@@ -322,3 +324,20 @@ sha256 matches Localcode's pin. A 5-minute speed check first compared 3 and 8 gu
 
 - **NariQ Qwen3.8-27B** (10.1 GB file, saving 0.8 GB against UD-IQ3_XXS; TRL1-TRL6 tensor types; Nari Labs fork only;
   Metal experimental; estimated Tier 1 300-390 s against the 300 s limit): not worth running here, no measurement.
+
+## Ternary Bonsai 2.5 27B (PrismML), Q2_0 with and without the MTP head, 2026-11-25
+
+Not adopted. The MTP file is the first Bonsai to reach 22/22 on Tier 2, but it needs the 15-minute cap, takes 160 s on Tier 1,
+and its Tier 3 run scored 0 on both Python tasks. Details in [the report](ternary-bonsai-2-5-27b.md).
+
+- **Model and engine:** `prism-ml/Ternary-Bonsai-2.5-27B-GGUF` (Qwen3.8-27B base, ternary, dense). `Q2_0` (7.7 GB) and
+  `Q2_0-mtp` (7.9 GB, includes the draft head) run on stock llama.cpp 1.0.0 (build 12359; the card requires b11556 or newer).
+  The `PQ2_0` and `PTQ1_0` files need PrismML's fork and were not run. Thinking off, 32k context, `--spec-type draft-mtp` for the MTP file.
+- **Gate:** Tier 1 limit 300 s, Tier 2 15 min, free memory floor 5%, one run per file (the default 60 s Tier 1 limit would fail both).
+- **Results:** plain Tier 1 144 s, Tier 2 20/22 at the cap (`bestMove blocks` and `bestMove replies to centre with a corner`), 9 tok/s.
+  With MTP, Tier 1 160 s, Tier 2 22/22 at the cap, 11 tok/s, 95–99% of drafted tokens accepted. MTP lifts decoding 22%, but Tier 1 is
+  bound by prefill and got no faster.
+- **Tier 3 (MTP, one run per task, 25 Nov):** Go 80, cleaning 0 (timed out at 30 min), insight 0, Kanban 86, nursery 96, Mars 93, tax 96.
+  Landing pages match MiniCPM's medians (93, 95, 98); Go, cleaning, Kanban and insight do not (88, 91, 90, 40).
+  Personal Tier 3 was not run because the baseline Tier 3 did not hold up against MiniCPM.
+- **Re-test only on:** a fork or engine change that speeds prefill of Pi's 7,400-token prompt, or a Bonsai release that fixes multi-step Python work.
