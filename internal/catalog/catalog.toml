@@ -371,6 +371,75 @@ tier2_minutes = 15
 tier2_timed_out = true
 min_free_pct = 18
 fail_reason = "Tier 2 run 1 scored 0/22; another reached 22/22 only at the cap (build 11429 outlier, not repeated)"
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "pass"
+tier2 = "fail"
+tok_per_s = 29
+runs = 3
+date = "2026-11-23"
+llama_cpp = "build 12359"
+gate = "tier 1 60 s, tier 2 15 min, free memory floor 5%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.6 35B-A3B UD-IQ2_M, 64k, build 12359 retest"
+tier1_seconds = 26
+tier2_score = 0
+tier2_total = 22
+tier2_minutes = 11.4
+min_free_pct = 13
+fail_reason = "Tier 2 run 3 scored 0/22 again; runs 1 and 2 scored 22/22 in 11.4 and 4.0 min, so the 0/22 is not a build 11429 outlier"
+
+[[tried]]
+name = "Qwen3.6 35B-A3B UD-IQ2_M, DFlash drafter"
+id = "qwen3.6-dflash"
+quant = "UD-IQ2_M"
+ctx = 65536
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "pass"
+tier2 = "fail"
+tok_per_s = 50
+runs = 3
+date = "2026-11-23"
+llama_cpp = "build 12359"
+gate = "tier 1 60 s, tier 2 15 min, free memory floor 5%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Qwen3.6 35B-A3B UD-IQ2_M, 64k, DFlash drafter"
+tier1_seconds = 26
+tier2_score = 21
+tier2_total = 22
+tier2_minutes = 15.0
+min_free_pct = 8
+fail_reason = "Tier 2 run 1 scored 21/22; run 3 reached 22/22 only at the cap (runs 2 and 3: 22/22 in 8.9 min and at the cap)"
+
+[[tried]]
+name = "MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS, Qwen3.6 DFlash drafter"
+id = "cpm47-dflash"
+quant = "AD-IQ2_XS-IQ2_XXS"
+ctx = 65536
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "pass"
+tier2 = "fail"
+tok_per_s = 13
+runs = 3
+date = "2026-11-23"
+llama_cpp = "build 12359"
+gate = "tier 1 60 s, tier 2 15 min, free memory floor 5%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS, 64k, Qwen3.6 DFlash drafter"
+tier1_seconds = 23
+tier2_score = 21
+tier2_total = 22
+tier2_minutes = 11.9
+min_free_pct = 12
+fail_reason = "Tier 2 run 3 scored 21/22; runs 1 and 2 scored 22/22 in 6.5 and 10.9 min; decode 13 tok/s against 27 without the drafter"
 
 [[tried]]
 name = "Qwen3.6 27B UD-IQ3_XXS"

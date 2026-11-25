@@ -22,6 +22,9 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | GLM-4.7 Flash UD-IQ2_M, 64k | Failed, 3 runs, build 11429, 14 Oct | 37 s | 18/22, 18/22, 14/22; all hit the cap | 2–14 | 16–19% | Accuracy and latency |
 | Ornith 1.5 35B-A3B IQ3_XXS-IQ2_S, 64k | Failed, 3 runs, build 11429, 14 Oct | 22–32 s | 20/22; 22/22 in 372 s; 22/22 at the cap | 24–25 | 11% | Accuracy on run 1; swap up to 533 MB |
 | Qwen3.6 35B-A3B UD-IQ2_M, 64k | Failed, 3 runs, build 11429, 14 Oct | 22–29 s | 0/22 in 528 s; 22/22 in 650 s; 22/22 at the cap | 31–32 | 18–22% | Accuracy: 0/22 on run 1 |
+| Qwen3.6 35B-A3B UD-IQ2_M, 64k, build 12359 retest | Failed, 3 runs, build 12359, 23 Nov (default gate, free memory floor 5%) | 22–26 s | 22/22 in 11.4 min; 22/22 in 4.0 min; 0/22 in 8.6 min | 29 | 13% | Accuracy: run 3 scored 0/22 again, so the 14 Oct 0/22 is not a build 11429 outlier; 0 swap |
+| Qwen3.6 35B-A3B UD-IQ2_M, 64k, DFlash drafter | Failed, 3 runs, build 12359, 23 Nov (default gate, free memory floor 5%); ggml-org drafter, 3 guesses ahead (8 ahead measured 16.5–19.2 tok/s against 48.6–51.4) | 24–26 s | 21/22 in 4.6 min; 22/22 in 8.9 min; 22/22 at the cap | 50 | 8% | Accuracy on run 1; latency on run 3; swap up 1.5 GB in run 1 (the first drafter run, with the lowest free memory); draft acceptance 71–77% in the speed check |
+| MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS, 64k, Qwen3.6 DFlash drafter | Failed, 3 runs, build 12359, 23–24 Nov (default gate, free memory floor 5%); the drafter loads and runs | 23 s | 22/22 in 6.5 min; 22/22 in 10.9 min; 21/22 in 11.9 min | 13 | 12% | Accuracy on run 3; decode is half the 27 tok/s of the same file without the drafter; 0 swap |
 | Qwen3.6 27B UD-IQ3_XXS, 64k | Failed, 3 runs, build 11669, 25 Oct (PILL-8) | 130–147 s | Not run at the default limits; one relaxed run 20/22 at the 30-min cap | 6.3–6.6 | 9–10% | Latency; swap up to 2.4 GB; thinking partly on in the relaxed run |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking on | Failed, 3 runs, build 11429, 14 Oct | 130–144 s | Not run; one relaxed run 0/22 | 6.7–6.8 | 13–18% | Thinking: an 8,192-token thinking block and no tool call (PILL-9) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off | Relaxed gate, 3 runs, scratch home, 25 Oct (PILL-8) | 133–142 s (limit 300 s) | 22/22 in 4.3 min; 22/22 and 20/22 at the 30-min cap | 6.7 | 12% | Latency; Tier 1 answer wrong in every run (informational) |
@@ -289,3 +292,33 @@ result. The table rows above still stand as the build 11429 results.
 - **MiniCPM control, 10 November, build 12110:** Tier 1 passed in all six runs. Tier 2 scored 22, 17 and 22 at the start of
   the batch and 17, 22 and 22 at the end, so two of six runs missed the 22/22 record. The record in the catalog is kept
   as measured, with a note, and MiniCPM stays the recommendation by a maintainer decision.
+
+## Qwen3.6 with and without the DFlash drafter, MiniCPM with Qwen3.6's drafter, 2026-11-23
+
+Overnight on the 24 GB M4, llama.cpp 1.0.0 (build 12359), pill 0.6.0, default gate except the free memory floor of 5%. Localcode
+recommends Qwen3.6 35B-A3B UD-IQ2_M with ggml-org's DFlash drafter on 24 GB, so I re-tested that pair. The drafter file's
+sha256 matches Localcode's pin. A 5-minute speed check first compared 3 and 8 guesses ahead: 3 gave 48.6–51.4 tok/s with
+71–77% accepted, 8 gave 16.5–19.2 tok/s with 40–47% accepted, so 3 stayed.
+
+- **Qwen3.6 plain:** 2 of 3 runs reached 22/22, one scored 0/22 again. The 14 Oct 0/22 was not a build 11429 outlier.
+- **Qwen3.6 with the drafter:** decode rose from 29 to 50 tok/s and Tier 1 stayed at 24–26 s. Tier 2 scored 21/22, 22/22 and 22/22
+  at the cap, so 2 of 3 runs passed. Free memory fell to 8%, and the first run grew swap by 1.5 GB.
+- **MiniCPM control:** 17/22 on Tier 2 in this single run (rows `row win`, `column win`, `diagonal win`, `draw detection` and
+  `move after game over` failed), in line with the 10 November control that missed 22/22 in two of six runs.
+- **MiniCPM with Qwen3.6's drafter:** the file loads and runs (the vocabularies match), but decode fell to 13 tok/s from 27.
+  Tier 2 scored 22/22, 22/22 and 21/22, so 2 of 3 runs passed.
+- **Tier 3, Qwen3.6 with the drafter (25 Nov, build 12359, one run per task, 5% floor):** Go 40, cleaning 0, insight 0, Kanban 86,
+  nursery 94, Mars 93, tax 85. The landing pages and Kanban are close to MiniCPM's medians (93, 95, 98, 90), but both Python tasks
+  scored 0 and Go 40, against MiniCPM's 88 and 90.5 on Go and cleaning. In both Python runs the model's last turn stopped with
+  `stopReason: length` after 1 output token (a reasoning block that never reached a reply) with no output file written
+  (cleaning) or no predictions or report (insight). Run times 5.6 to 13.5 minutes, none at its cap; lowest free memory 8%, swap up
+  3.5 GB on Go, 1.0 GB on insight, 1.5 GB on Kanban and 2.0 GB on nursery.
+- **Verdict:** no setup passed 3 of 3 on Tier 2. The Qwen3.6 drafter setup was run through Tier 3 anyway at the captain's
+  request: it is a landing-page and Kanban model, unreliable on multi-step Python and Go tool work (one run per task, so read
+  as a signal, not a median). Nothing replaces the default.
+- **Re-test only on:** a Qwen3.6 drafter or engine change that removes the 0/22 and 21/22 misses.
+
+## NariQ Qwen3.8-27B, not run, 2026-11-24
+
+- **NariQ Qwen3.8-27B** (10.1 GB file, saving 0.8 GB against UD-IQ3_XXS; TRL1-TRL6 tensor types; Nari Labs fork only;
+  Metal experimental; estimated Tier 1 300-390 s against the 300 s limit): not worth running here, no measurement.
