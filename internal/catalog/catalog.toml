@@ -1729,3 +1729,57 @@ tier1_seconds = 76
 min_free_pct = 8
 swap_mb = 1035
 fail_reason = "Free memory fell to 8% in Tier 1 (limit 10%)"
+
+[[tried]]
+name = "Ternary Bonsai 2.5 27B Q2_0, thinking off, 32k"
+id = "bonsai2.5"
+quant = "Q2_0"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "pass"
+tier2 = "fail"
+tok_per_s = 9
+runs = 1
+date = "2026-11-25"
+pill = "0.6.0"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 15 min, free memory floor 5%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Ternary Bonsai 2.5 27B Q2_0, thinking off, 32k"
+tier1_seconds = 144
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 15.0
+min_free_pct = 18
+swap_mb = 2310
+fail_reason = "Tier 2 scored 20/22 and hit the 15-minute cap (bestMove blocks and bestMove replies to centre with a corner failed)"
+
+[[tried]]
+name = "Ternary Bonsai 2.5 27B Q2_0 with MTP head, thinking off, 32k"
+id = "bonsai2.5-mtp"
+quant = "Q2_0"
+ctx = 32768
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 32768
+tier1 = "pass"
+tier2 = "pass"
+tok_per_s = 11
+runs = 1
+date = "2026-11-25"
+pill = "0.6.0"
+llama_cpp = "build 12359"
+gate = "tier 1 300 s, tier 2 15 min, free memory floor 5%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Ternary Bonsai 2.5 27B Q2_0 with MTP head, thinking off, 32k"
+tier1_seconds = 160
+tier2_score = 22
+tier2_total = 22
+tier2_minutes = 15.0
+min_free_pct = 15
+swap_mb = 2463
+fail_reason = "Tier 1 took 160 s against the 60 s default; Tier 2 22/22 only at the 15-minute cap; Tier 3 cleaning and insight scored 0"
