@@ -1,5 +1,13 @@
 # Qwen3.8 27B, UD-IQ3_XXS (10.9 GB), 32k context, thinking off, MTP
 
+## Update: DFlash2 drafter (25 November, build 12359)
+
+With z-lab's DFlash2 Q4_K_M drafter (1.1 GB, `spec-draft-n-max = 7`) the UD-IQ3_XXS file decodes at 29 tok/s (MTP 14.8) and
+scored 22/22 on Tier 2 in all three runs, two of them at the 15-minute cap, with Tier 1 at 132–144 s, lowest free memory 8%
+and swap up at most 1.4 GB. The pill 0.6.0 binary that ran it printed `failed` for the capped runs; the repository's gate
+(since 20 November) counts them as passes. This is the first Qwen3.8 27B setup that clears the gate. Details and caveats in
+[`tried-and-rejected.md`](tried-and-rejected.md#qwen38-27b-with-the-dflash2-drafter-2026-11-25). Tier 3 not run.
+
 ## Update: Unsloth Dynamic 3.1 quants (UD-IQ4_XS and UD-Q3_K_XL) tested and not adopted
 
 **Verdict:** Not a good model on this machine (16–17 November, build 12359). Unsloth's Dynamic 3.1 files
