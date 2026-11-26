@@ -6,7 +6,33 @@ With z-lab's DFlash2 Q4_K_M drafter (1.1 GB, `spec-draft-n-max = 7`) the UD-IQ3_
 scored 22/22 on Tier 2 in all three runs, two of them at the 15-minute cap, with Tier 1 at 132–144 s, lowest free memory 8%
 and swap up at most 1.4 GB. The pill 0.6.0 binary that ran it printed `failed` for the capped runs; the repository's gate
 (since 20 November) counts them as passes. This is the first Qwen3.8 27B setup that clears the gate. Details and caveats in
-[`tried-and-rejected.md`](tried-and-rejected.md#qwen38-27b-with-the-dflash2-drafter-2026-11-25). Tier 3 not run.
+[`tried-and-rejected.md`](tried-and-rejected.md#qwen38-27b-with-the-dflash2-drafter-2026-11-25). Tier 3 run on 26 November, below.
+
+## Update: Tier 3 with the DFlash2 drafter (26 November)
+
+Same setup (UD-IQ3_XXS, 32k, thinking off, DFlash2 drafter), one run per task, run one after another. Scores are the
+verifier's, out of 100.
+
+| Task | Score | Time | Note |
+|---|---|---|---|
+| `go-notes` | 100 | 15.1 min | |
+| `py-clean` | 0 | 3.8 min | Context overflow: a 47,242-token request against the 32,768-token window on the sixth tool call, so no output was written |
+| `py-insight` | 0 | 22.5 min | The final reply stopped at the output limit with no report written |
+| `web-kanban` | 100 | 10.1 min | |
+| `web-landing-nursery` | 56 | 14.3 min | The agent reported done; the verifier found none of the 14 sections and reported external requests and console errors. Not investigated further |
+| `web-landing-mars` | 100 | 40.0 min | Stopped at the 40-minute cap; the verifier scored it 100 |
+| `web-landing-tax` | 96 | 27.0 min | |
+
+Against MiniCPM-V 4.7 IQ2, the champion (six-run medians): ahead on Go (100 against 88), Kanban (100 against 90) and Mars
+(100 against 95); level on tax (96 against 98); behind on nursery (56 against 93) and on both Python tasks it scored 0 on
+(insight 0 against 40, cleaning 0 against 90.5). The mean over the seven tasks is 65 against 85. That is one run per task
+against six for MiniCPM, so the gap is indicative.
+
+- **Verdict:** not a new champion. Both zeros are runs that stopped early: cleaning overflowed the 32k context window, and
+  insight stopped at the output limit with no report. Neither was a finished answer the verifier marked wrong. A 64k re-test of the two Python tasks would show whether the window is the cause.
+- **Personal Tier 3:** not run. The bare run does not perform well against the champion, so the ladder stops here.
+- **Memory:** lowest free memory 8% to 9% in every run (floor 5%). Swap grew 0.5 to 0.8 GB in six runs and 2.8 GB in the
+  Mars run, under the 4 GB limit.
 
 ## Update: Unsloth Dynamic 3.1 quants (UD-IQ4_XS and UD-Q3_K_XL) tested and not adopted
 
