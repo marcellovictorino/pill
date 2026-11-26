@@ -170,7 +170,7 @@ func TestShortlistOnlyStandardPassesFastestFirst(t *testing.T) {
 	}
 }
 
-// Intent (captain): the catalog never holds model weights, only references,
+// Intent (maintainer): the catalog never holds model weights, only references,
 // and every measurement is attributable to a device and a source.
 func TestEmbeddedCatalogHoldsReferencesAndAttributableMeasurements(t *testing.T) {
 	c := mustLoad(t)
@@ -222,7 +222,7 @@ func TestChampionOnTestedMacOnly(t *testing.T) {
 	}
 }
 
-// Intent (captain): on a device where nothing passes, the best available is
+// Intent (maintainer): on a device where nothing passes, the best available is
 // still shown, closest to a pass first, and only from that exact device.
 func TestRowsOrderByCloseness(t *testing.T) {
 	const data = `
@@ -287,7 +287,7 @@ tier2_total = 22
 	}
 }
 
-// Intent (PILL-55 plan, swap cap): a run that passes its tests but pushes more
+// Intent (swap cap plan): a run that passes its tests but pushes more
 // than 4 GB to swap is not a recommendation; zero swap stays a pass, and a
 // missing swap figure is "not measured", not a failure.
 func TestSwapPastTheCapIsNotAPass(t *testing.T) {

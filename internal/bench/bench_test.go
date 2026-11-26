@@ -120,7 +120,7 @@ func TestVerdict(t *testing.T) {
 	if pass, why := verdict(good, th, ok); !pass || why != "" {
 		t.Errorf("good run: %v %q", pass, why)
 	}
-	// Intent (captain): slow but accurate models must not be thrown away.
+	// Intent (maintainer): slow but accurate models must not be thrown away.
 	// Tier 1 allows 300 s, and full marks at the Tier 2 cap pass.
 	if th.Tier1MaxSeconds != 300 {
 		t.Errorf("Tier 1 limit is %v s, want 300", th.Tier1MaxSeconds)

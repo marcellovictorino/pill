@@ -11,7 +11,7 @@
   python3 evals/imagegen/imagegen.py validate agreement <ratings.json> <key.json> <run-dir>...
   python3 evals/imagegen/imagegen.py selftest                         # whole pipeline with a fake generator, no model
 
-Models are the captain's: Qwen-Image 2.1 Turbo (Draw Things CLI, 4-bit i4x, 8 steps, the default) and FLUX.2 klein 4B
+Models are the maintainer's: Qwen-Image 2.1 Turbo (Draw Things CLI, 4-bit i4x, 8 steps, the default) and FLUX.2 klein 4B
 (6-bit). FLUX 3 Image Klein was dropped after round 3. Every model gets the same prompts, seeds 7/42/1234, 1024x1024.
 The prompts are prompts.json, or the file named by IMAGEGEN_PROMPTS (prompts-round3.json is the round 3 set).
 Every prompt is sent with a standing no-text sentence and, for FLUX.2 on realistic or photographic prompts, a
@@ -44,7 +44,7 @@ SEEDS = [7, 42, 1234]
 SIZE = 1024
 JUDGE_MODEL = "claude-opus-5-5"
 CRITERIA = ["subject", "style", "setting", "technical_quality", "composition"]
-# Standing rule from the captain: no written text in generated images (these models garble it); blurred stand-in text
+# Standing rule from the maintainer: no written text in generated images (these models garble it); blurred stand-in text
 # only where a scene needs it. Exact text only when the user confirms what and where (then send the prompt with --plain).
 NO_TEXT = ("No text, letters, numbers or logos anywhere. All surfaces are plain and unmarked; "
            "nothing is written on anything.")
@@ -54,11 +54,11 @@ REALISM_CUE = ("Shot as a candid documentary photograph on a 35 mm lens: natural
 REALISM_MODELS = {"flux2-klein-4b"}
 DEFAULT_OPTION_MODELS = ["qwen-turbo", "flux2-klein-4b"]  # standing rule: both models, 3 variants each
 VARIANTS = 3
-MIN_FREE_PCT = 20  # personal rule for this machine: below this, raise it instead of starting a model run
+MIN_FREE_PCT = 20  # rule for this machine: below this, raise it instead of starting a model run
 
 
 def build_prompt(model, prompt, plain=False, cue=True):
-    """What is sent to the model: the captain's prompt plus the standing no-text sentence, plus the realism cue
+    """What is sent to the model: the user's prompt plus the standing no-text sentence, plus the realism cue
     for the models in REALISM_MODELS when the prompt asks for realistic or photographic style."""
     if plain:
         return prompt
@@ -74,7 +74,7 @@ def backend_cmd(model, prompt, seed, out):
         return ["draw-things-cli", "generate", "--local", "--model", "qwen_image_2.1_turbo_i4x.ckpt",
                 "--prompt", prompt, "--seed", str(seed), "--width", str(SIZE), "--height", str(SIZE),
                 "--steps", "8", "--output", str(out)]
-    # More candidates (PILL-27 shortlist), 6-bit through Draw Things at each model's recommended settings
+    # More candidates (from the shortlist), 6-bit through Draw Things at each model's recommended settings
     # (steps and guidance), so only the file differs from the two runs above.
     draw_things = {"z-image-turbo": "z_image_turbo_1.0_q6p.ckpt",
                    "flux2-klein-4b": "flux_2_klein_4b_q6p.ckpt",

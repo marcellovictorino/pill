@@ -5,7 +5,7 @@ Throwaway dev tooling under evals/, not part of pill. pill bench cannot target m
 models through the llama-server router), so this script does the same steps by hand, one engine at
 a time:
 
-  1. refuse to start while any other local model is loaded (the pill router, another run, PILL-59)
+  1. refuse to start while any other local model is loaded (the pill router or another run)
   2. start the one engine it was asked for, on a free port, with the catalog's sampling settings
   3. run Tier 1 (agent-sized request, decode speed, Pi tool-calling turn) and Tier 2 (Pi builds the
      tic-tac-toe task, then the hidden verify.mjs) with the same gates as internal/bench/bench.go

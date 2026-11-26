@@ -101,7 +101,7 @@ func TestShortQuantIgnoresCaseOfThePrefix(t *testing.T) {
 	}
 }
 
-// Intent (captain): short readable IDs, with the real source kept in the
+// Intent (maintainer): short readable IDs, with the real source kept in the
 // catalog file. Every model needs an ID, and one ID + quant + context must name
 // exactly one record, or two rows of `pill catalog` would be indistinguishable.
 func TestEveryModelHasAShortIDAndTheKeyIsUnique(t *testing.T) {
@@ -136,7 +136,7 @@ func TestEveryModelHasAShortIDAndTheKeyIsUnique(t *testing.T) {
 	}
 }
 
-// Intent (captain): the Tier 3 column has a fixed task order, so every task a
+// Intent (maintainer): the Tier 3 column has a fixed task order, so every task a
 // record names must have a place in it.
 func TestEveryTier3TaskHasAPlaceInTheColumn(t *testing.T) {
 	known := map[string]bool{}
@@ -165,7 +165,7 @@ func TestEveryTier3TaskHasAPlaceInTheColumn(t *testing.T) {
 	}
 }
 
-// Intent (captain): the QUANT column is the bit width; the exact quant only
+// Intent (maintainer): the QUANT column is the bit width; the exact quant only
 // where two files of one model share a bit width (Gemma 4 26B has two Q3 files).
 func TestQuantLabel(t *testing.T) {
 	c := mustLoad(t)
@@ -184,7 +184,7 @@ func TestQuantLabel(t *testing.T) {
 	}
 }
 
-// Intent (captain): commands take the short ID, id:quant when an ID has two
+// Intent (maintainer): commands take the short ID, id:quant when an ID has two
 // files, and the old long names keep working as aliases.
 func TestResolveShortIDs(t *testing.T) {
 	c := mustLoad(t)

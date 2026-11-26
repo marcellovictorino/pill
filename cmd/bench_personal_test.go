@@ -63,7 +63,7 @@ func writeUserPiSetup(t *testing.T, piDir string) {
 	}
 }
 
-// A personal run is informational (captain: kept apart from the pass or fail
+// A personal run is informational (maintainer: kept apart from the pass or fail
 // record): even a failing Tier 1 tool check cannot touch results.json, the
 // model's state or Pi's model list, and the record lands in personal/results.json.
 func TestPersonalRunNeverTouchesTheGate(t *testing.T) {
@@ -136,7 +136,7 @@ func TestPersonalRunNeverTouchesTheGate(t *testing.T) {
 	}
 }
 
-// Captain: the same tasks with the full setup as used day to day, Hindsight
+// Maintainer: the same tasks with the full setup as used day to day, Hindsight
 // left out, online. The bare run keeps its three isolation flags and --offline.
 func TestPersonalRunUsesCopyOfSetupWithoutIsolationFlags(t *testing.T) {
 	needNode(t)
@@ -204,7 +204,7 @@ func TestPersonalRunNeedsARegisteredModel(t *testing.T) {
 	}
 }
 
-// Captain: `pill bench summary --personal` shows both. The ranking itself stays
+// Maintainer: `pill bench summary --personal` shows both. The ranking itself stays
 // the pass or fail record and does not change.
 func TestSummaryPersonalShowsBareBeside(t *testing.T) {
 	needNode(t)
