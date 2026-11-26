@@ -25,6 +25,8 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | Qwen3.6 35B-A3B UD-IQ2_M, 64k, build 12359 retest | Failed, 3 runs, build 12359, 23 Nov (default gate, free memory floor 5%) | 22–26 s | 22/22 in 11.4 min; 22/22 in 4.0 min; 0/22 in 8.6 min | 29 | 13% | Accuracy: run 3 scored 0/22 again, so the 14 Oct 0/22 is not a build 11429 outlier; 0 swap |
 | Qwen3.6 35B-A3B UD-IQ2_M, 64k, DFlash drafter | Failed, 3 runs, build 12359, 23 Nov (default gate, free memory floor 5%); ggml-org drafter, 3 guesses ahead (8 ahead measured 16.5–19.2 tok/s against 48.6–51.4) | 24–26 s | 21/22 in 4.6 min; 22/22 in 8.9 min; 22/22 at the cap | 50 | 8% | Accuracy on run 1; latency on run 3; swap up 1.5 GB in run 1 (the first drafter run, with the lowest free memory); draft acceptance 71–77% in the speed check |
 | MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS, 64k, Qwen3.6 DFlash drafter | Failed, 3 runs, build 12359, 23–24 Nov (default gate, free memory floor 5%); the drafter loads and runs | 23 s | 22/22 in 6.5 min; 22/22 in 10.9 min; 21/22 in 11.9 min | 13 | 12% | Accuracy on run 3; decode is half the 27 tok/s of the same file without the drafter; 0 swap |
+| Qwen3.8 27B UD-IQ3_XXS, 32k, MTP head, 26 Nov retest | Failed, 1 run, build 12359, 26 Nov (relaxed Tier 1 300 s, free memory floor 5%) | 147 s | 22/22 at the 15-min cap | 14 | 12% | Latency: Tier 2 reached 22/22 only at the cap; 0 swap |
+| Qwen3.8 27B UD-IQ4_XS, 32k, MTP head, 26 Nov | Failed, 1 run, build 12359, 26 Nov (relaxed Tier 1 300 s, free memory floor 5%) | 148 s | 21/22 at the 15-min cap | 14 | 6% | Latency and accuracy; swap up 1686 MB |
 | Qwen3.6 27B UD-IQ3_XXS, 64k | Failed, 3 runs, build 11669, 25 Oct (PILL-8) | 130–147 s | Not run at the default limits; one relaxed run 20/22 at the 30-min cap | 6.3–6.6 | 9–10% | Latency; swap up to 2.4 GB; thinking partly on in the relaxed run |
 | Qwen3.8 27B UD-IQ3_XXS, 32k, thinking off, DFlash2 drafter | Passed the repo gate by hand count, 3 runs, build 12359, 25 Nov (Tier 1 300 s, free memory floor 5%); pill 0.6.0 printed failed | 132–144 s | 22/22 at the cap; 22/22 in 8.6 min; 22/22 at the cap | 29 | 8% | Latency: two runs at the cap; swap up 0.6–1.4 GB; Tier 1 answer wrong in 2 of 3 (informational) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking on | Failed, 3 runs, build 11429, 14 Oct | 130–144 s | Not run; one relaxed run 0/22 | 6.7–6.8 | 13–18% | Thinking: an 8,192-token thinking block and no tool call (PILL-9) |
@@ -320,6 +322,17 @@ sha256 matches Localcode's pin. A 5-minute speed check first compared 3 and 8 gu
   request: it is a landing-page and Kanban model, unreliable on multi-step Python and Go tool work (one run per task, so read
   as a signal, not a median). Nothing replaces the default.
 - **Re-test only on:** a Qwen3.6 drafter or engine change that removes the 0/22 and 21/22 misses.
+
+## Qwen3.6 Tier 3 control and drafter repeat, Qwen3.8 27B with MTP, 2026-11-26
+
+Run during working hours at the captain's request, one model at a time, on the 24 GB M4 (llama.cpp 1.0.0, build 12359, free memory floor 5%).
+
+- **Tier 3, Qwen3.6 plain control (one run per task, 64k):** Go 66, cleaning 0, insight 0, Kanban 98, nursery 91, Mars 3, tax 56.
+- **Tier 3, Qwen3.6 with the DFlash drafter (two runs per task, 64k, mean of the two):** Go 74 (63, 84), cleaning 0, insight 0, Kanban 89, nursery 96, Mars 72 (56, 87), tax 94 (93, 96). Against the plain control the drafter is steadier on the landing pages (Mars 72 against 3, tax 94 against 56); both still score 0 on both Python tasks. One run per task for the control, so read it as a signal.
+- **Qwen3.8 27B UD-IQ3_XXS with the MTP head, 32k:** Tier 1 passed in 147 s; Tier 2 22/22 but only at the 15-minute cap, 14 tok/s, lowest free memory 12%, no swap growth. Failed the gate; Tier 3 not run.
+- **Qwen3.8 27B UD-IQ4_XS with the MTP head, 32k:** Tier 1 passed in 148 s; Tier 2 21/22 at the cap, 14 tok/s, lowest free memory 6%, swap up 1.7 GB. Failed the gate; Tier 3 not run.
+- **Qwen3.8 with the DFlash2 drafter:** not repeated here; the separate overnight run of 25 Nov (`qwen3-8-27b-iq3xxs-dflash2-32k`, 22/22 at the cap) is in the catalog.
+- **Verdict:** nothing replaces the default. The MTP head doubles decode over plain Qwen3.8 (14 against 6 to 7 tok/s) but Tier 2 still reaches the cap.
 
 ## NariQ Qwen3.8-27B, not run, 2026-11-24
 
