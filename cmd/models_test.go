@@ -25,7 +25,7 @@ func gemmaHub(t *testing.T) *testutil.Hub {
 	})
 }
 
-// Intent (captain): the list is per device, from measurements on that exact
+// Intent (maintainer): the list is per device, from measurements on that exact
 // chip and memory, with explicit empty and unverified states.
 func TestCatalogRecommendsPerDevice(t *testing.T) {
 	e := newEnv(t)
@@ -61,7 +61,7 @@ func TestCatalogRecommendsPerDevice(t *testing.T) {
 	}
 }
 
-// Intent (captain): on a 16 GB Mac, where nothing passes, `pill catalog`
+// Intent (maintainer): on a 16 GB Mac, where nothing passes, `pill catalog`
 // shows the best that was tried there, closest to a pass first, one row per
 // model with its short ID, and never offers a tried model as a download.
 func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
@@ -93,7 +93,7 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 	}
 }
 
-// Intent (captain): no wrapped lines. Every row of the human list stays under
+// Intent (maintainer): no wrapped lines. Every row of the human list stays under
 // 90 characters on the Macs the records cover, and the default is marked *.
 func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
 	for _, dev := range []struct {
@@ -122,7 +122,7 @@ func TestCatalogHumanRowsFitUnder90Characters(t *testing.T) {
 	}
 }
 
-// Intent (captain): side by side, a model's Tier 1 time and Tier 2 time are
+// Intent (maintainer): side by side, a model's Tier 1 time and Tier 2 time are
 // the point of the table ("it took 48 seconds ... almost 5 minutes"), read as
 // "pass (29s)", and a failed run must not read as a pass. gemma4-26b Q3KXL
 // passed both tiers but pushed 4.75 GB to swap: it gets no ✓, and agents read
@@ -163,7 +163,7 @@ func TestCatalogShowsTimesAndVerdict(t *testing.T) {
 	}
 }
 
-// Intent (captain): the catalog reads "more polished. Like it presents a
+// Intent (maintainer): the catalog reads "more polished. Like it presents a
 // report, without underscore": the facts above the table say Memory and
 // "24GB RAM", not ram_gb: 24. Agents keep their field names.
 func TestCatalogReadsAsAReport(t *testing.T) {
@@ -178,7 +178,7 @@ func TestCatalogReadsAsAReport(t *testing.T) {
 	}
 }
 
-// Intent (captain): "The format human should be the default. If it's better
+// Intent (maintainer): "The format human should be the default. If it's better
 // for an agent, add that format agent." The test env's stdout is a pipe, so
 // the bare command proves human wins even when piped; --format agent and the
 // older --format toon still give TOON; other commands keep their piped TOON.
@@ -198,7 +198,7 @@ func TestCatalogDefaultsToHumanEvenWhenPiped(t *testing.T) {
 	}
 }
 
-// Intent (captain): the default is marked in the list, by its short ID, with
+// Intent (maintainer): the default is marked in the list, by its short ID, with
 // an * to its left ("I think that is common practice"), and the IDs still
 // line up under the heading.
 func TestCatalogMarksTheDefault(t *testing.T) {
@@ -393,7 +393,7 @@ func TestRmPulledOnlyFile(t *testing.T) {
 	}
 }
 
-// Intent (captain): "the Pi adapted model is actually better, just very slow.
+// Intent (maintainer): "the Pi adapted model is actually better, just very slow.
 // So it should be shown in the catalog as yes ... I guess it passes." With
 // Tier 1 allowed up to 300 s and full marks at the Tier 2 cap counting,
 // qwen3.8-27b-pi reads pass (157s), 22/22 30m and carries the ✓: the minutes

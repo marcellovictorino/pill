@@ -1,7 +1,7 @@
 """Tests for the image runner's standing prompt rules and the six-option command (stdlib unittest, no model).
 
 Run: python3 -m unittest discover -s evals/imagegen
-Intent source: PILL-31 (captain: no text in generated images; FLUX.2 cyberpunk looked plastic; always generate
+Intent source: image prompt rules (maintainer: no text in generated images; FLUX.2 cyberpunk looked plastic; always generate
 3 variants per model so both models give six options to pick from).
 """
 import argparse
@@ -18,14 +18,14 @@ ROUND3 = json.loads((Path(ig.HERE) / "prompts-round3.json").read_text())
 
 class BuildPrompt(unittest.TestCase):
     def test_no_text_sentence_on_every_prompt_and_model(self):
-        # Captain: text in images is the weak side, so the rule must not depend on remembering it.
+        # Maintainer: text in images is the weak side, so the rule must not depend on remembering it.
         for model in ("qwen-turbo", "flux2-klein-4b"):
             for prompt in list(ROUND3.values()) + ["watercolour style vineyard"]:
                 self.assertTrue(ig.build_prompt(model, prompt).endswith(ig.NO_TEXT))
                 self.assertTrue(ig.build_prompt(model, prompt).startswith(prompt))
 
     def test_realism_cue_only_flux2_and_only_for_realistic_prompts(self):
-        # Captain: FLUX.2 cyberpunk looked cartoonish/plastic; Qwen's were fine, and stylised prompts must stay stylised.
+        # Maintainer: FLUX.2 cyberpunk looked cartoonish/plastic; Qwen's were fine, and stylised prompts must stay stylised.
         cyber, mars = ROUND3["cyberpunk-night"], ROUND3["mars-domes"]
         self.assertIn(ig.REALISM_CUE, ig.build_prompt("flux2-klein-4b", cyber))
         self.assertIn(ig.REALISM_CUE, ig.build_prompt("flux2-klein-4b", ROUND3["magazine-cover"]))
@@ -48,7 +48,7 @@ class Commands(unittest.TestCase):
             self.assertNotEqual(r["prompt"], r["prompt_sent"])
 
     def test_options_makes_variants_per_model_with_fresh_seeds_and_a_pick_page(self):
-        # Captain: both models, 3 variants each, 6 options to review for one request.
+        # Maintainer: both models, 3 variants each, 6 options to review for one request.
         tmp = tempfile.mkdtemp()
         ns = argparse.Namespace(prompt="realistic photograph of a market", models="fake,fake", variants=3, rng=5, out=tmp,
                                 plain=False, force=True, wait=0, timeout=60)

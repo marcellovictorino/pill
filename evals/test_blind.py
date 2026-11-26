@@ -1,8 +1,8 @@
 """Tests for the blind rating sheets (stdlib unittest, no browser, no model).
 
 Run: python3 -m unittest discover -s evals -p 'test_blind.py'
-Intent source: PILL-117 piece 2 (captain: rate Kanban polish blind like the landing pages; personal runs join the
-same shuffled sheet) and the captain's ask that the Kanban task be judged as a polished customer-facing app.
+Intent source: Kanban polish work, piece 2 (maintainer: rate Kanban polish blind like the landing pages; personal runs join the
+same shuffled sheet) and the maintainer's ask that the Kanban task be judged as a polished customer-facing app.
 """
 import json
 import tempfile
@@ -38,7 +38,7 @@ class KanbanSheet(unittest.TestCase):
         return out, key, calls
 
     def test_kanban_is_rated_blind_with_its_own_screenshot_and_polish_question(self):
-        # Captain: Kanban polish should be rated blind like the landing pages.
+        # Maintainer: Kanban polish should be rated blind like the landing pages.
         out, key, calls = self.build([row("web-kanban", "pi:a", 1), row("web-kanban", "pi:b", 1)])
         html = (out / "web-kanban.html").read_text()
         self.assertEqual({s for _, s in calls}, {"shot_kanban.mjs"})
@@ -55,7 +55,7 @@ class KanbanSheet(unittest.TestCase):
         self.assertIn("Mobile screenshot", html)
 
     def test_personal_run_joins_the_same_shuffled_sheet_without_a_tell(self):
-        # Captain: personal runs can join the same blind sheet; the sheet must not reveal which one is which.
+        # Maintainer: personal runs can join the same blind sheet; the sheet must not reveal which one is which.
         rows = [row("web-kanban", "pi:a", i) for i in range(3)] + [row("web-kanban", "pi:a", 9, personal=True)]
         out, key, _ = self.build(rows)
         html = (out / "web-kanban.html").read_text()

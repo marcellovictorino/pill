@@ -107,7 +107,7 @@ func TestHumanTable(t *testing.T) {
 	}
 }
 
-// Intent (captain): colour in the catalog report must not cost alignment.
+// Intent (maintainer): colour in the catalog report must not cost alignment.
 // The same report with colour on, once the escape codes are removed, is the
 // plain report, so a coloured mark does not push its row's columns along.
 func TestReportColourKeepsColumnsAligned(t *testing.T) {

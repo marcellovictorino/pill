@@ -47,7 +47,7 @@ func has(cell string, v float64) bool {
 	return regexp.MustCompile(`(^|[^0-9.])` + regexp.QuoteMeta(strconv.FormatFloat(v, 'f', -1, 64)) + `([^0-9]|$)`).MatchString(cell)
 }
 
-// Intent (PILL-55 A/B check 2): the records backfilled from
+// Intent (A/B check 2): the records backfilled from
 // tried-and-rejected.md match its table row by row on Tier 1 time, Tier 2
 // score, decode speed, free memory and swap, and every model row has a record.
 // A record that drifts from its report, or whose row was renamed, fails here.
@@ -93,7 +93,7 @@ func TestBackfilledRecordsMatchTheReportTable(t *testing.T) {
 	}
 }
 
-// Intent (PILL-55 A/B check 2): MiniCPM's Tier 3 record equals its report
+// Intent (A/B check 2): MiniCPM's Tier 3 record equals its report
 // table: six runs per task, median and range.
 func TestMiniCPMTier3MatchesItsReport(t *testing.T) {
 	c, err := Load()
