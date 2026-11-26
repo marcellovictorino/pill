@@ -9,11 +9,11 @@ models[13]{id,quant,ctx,tier_1,tier_2,tier_3,tok_s,free_mem,verdict,source}:
   qwen3.8-27b-pi,Q3,32k,pass (157s),22/22 30m,"90|96|0|100|(94,96,96)",6.5,15%,ok,"-"
   muse-30b,Q2,64k,pass (140s),22/22 11m,"-",5,14%,ok,"-"
   gemma4-26b,Q3KXL,64k,pass (48s),22/22 4.9m,"-",22.4,11%,FAIL,"hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q3_K_XL"
+  qwen3.8-27b-mtp,Q3,32k,pass (147s),22/22 15m,"-",14,12%,FAIL,"-"
   arete-27b,Q4,32k,fail (144s),22/22 11m,"-",6.2,8%,FAIL,"-"
   qwen3.6-dflash,Q2,64k,pass (26s),21/22 15m,"-",50,8%,FAIL,"-"
-  cpm47-dflash,Q2,64k,pass (23s),21/22 12m,"-",13,12%,FAIL,"-"
-  qwen3.8-27b,IQ4XS,32k,pass (135s),21/22 24m,"-",6.4,8%,FAIL,"-"
+  qwen3.8-q4-mtp,Q4,32k,pass (148s),21/22 15m,"-",14,6%,FAIL,"-"
   gemma4-26b,Q4,64k,"-","-","-","-","-","-","hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-IQ4_XS"
 help[1]: test one on this Mac: pill bench run <id> (a Q3KXL style quant goes after a colon: <id>:q3kxl)
 help[2]: make one your default: pill default <id>
-help[3]: 27 more tried results are in the catalog records
+help[3]: 28 more tried results are in the catalog records
