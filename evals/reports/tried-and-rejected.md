@@ -7,8 +7,7 @@ different quantisation, a faster machine, or an engine fix that changes the caus
 ## Seen issues
 
 Every model that lost or could not run, with the numbers pill recorded. Tier 1 is the time for a 7,400-token agent prompt (limit 60 s
-by default). Tier 2 is the 22-task hidden test. "Lowest free" is the lowest free memory during the run. The nine models with a
-build 11429 result were deleted from disk on 25 October; re-pull one with `pill pull` and register it with `pill add` to test it again.
+by default). Tier 2 is the 22-task hidden test. "Lowest free" is the lowest free memory during the run.
 
 Issue kinds: latency (Tier 1 time, or Tier 2 hitting its cap), accuracy (Tier 2 score, or a loop), memory (lowest free, swap
 growth), load (the engine cannot open the file), thinking (the model thinks although thinking is off).
@@ -27,25 +26,25 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | MiniCPM-V 4.7 AD-IQ2_XS/IQ2_XXS, 64k, Qwen3.6 DFlash drafter | Failed, 3 runs, build 12359, 23–24 Nov (default gate, free memory floor 5%); the drafter loads and runs | 23 s | 22/22 in 6.5 min; 22/22 in 10.9 min; 21/22 in 11.9 min | 13 | 12% | Accuracy on run 3; decode is half the 27 tok/s of the same file without the drafter; 0 swap |
 | Qwen3.8 27B UD-IQ3_XXS, 32k, MTP head, 26 Nov retest | Failed, 1 run, build 12359, 26 Nov (relaxed Tier 1 300 s, free memory floor 5%) | 147 s | 22/22 at the 15-min cap | 14 | 12% | Latency: Tier 2 reached 22/22 only at the cap; 0 swap |
 | Qwen3.8 27B UD-IQ4_XS, 32k, MTP head, 26 Nov | Failed, 1 run, build 12359, 26 Nov (relaxed Tier 1 300 s, free memory floor 5%) | 148 s | 21/22 at the 15-min cap | 14 | 6% | Latency and accuracy; swap up 1686 MB |
-| Qwen3.6 27B UD-IQ3_XXS, 64k | Failed, 3 runs, build 11669, 25 Oct (PILL-8) | 130–147 s | Not run at the default limits; one relaxed run 20/22 at the 30-min cap | 6.3–6.6 | 9–10% | Latency; swap up to 2.4 GB; thinking partly on in the relaxed run |
+| Qwen3.6 27B UD-IQ3_XXS, 64k | Failed, 3 runs, build 11669, 25 Oct | 130–147 s | Not run at the default limits; one relaxed run 20/22 at the 30-min cap | 6.3–6.6 | 9–10% | Latency; swap up to 2.4 GB; thinking partly on in the relaxed run |
 | Qwen3.8 27B UD-IQ3_XXS, 32k, thinking off, DFlash2 drafter | Passed the repo gate by hand count, 3 runs, build 12359, 25 Nov (Tier 1 300 s, free memory floor 5%); pill 0.6.0 printed failed | 132–144 s | 22/22 at the cap; 22/22 in 8.6 min; 22/22 at the cap | 29 | 8% | Latency: two runs at the cap; swap up 0.6–1.4 GB; Tier 1 answer wrong in 2 of 3 (informational) |
-| Qwen3.8 27B UD-IQ3_XXS, 64k, thinking on | Failed, 3 runs, build 11429, 14 Oct | 130–144 s | Not run; one relaxed run 0/22 | 6.7–6.8 | 13–18% | Thinking: an 8,192-token thinking block and no tool call (PILL-9) |
-| Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off | Relaxed gate, 3 runs, scratch home, 25 Oct (PILL-8) | 133–142 s (limit 300 s) | 22/22 in 4.3 min; 22/22 and 20/22 at the 30-min cap | 6.7 | 12% | Latency; Tier 1 answer wrong in every run (informational) |
-| Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off, MTP, 32k | Failed gate, 3 runs, 25 Oct (PILL-10) | 151–159 s (limit 300 s) | 20/22; 22/22 in 11.4 min; 20/22; two runs repeated one shell command 90–105 times | 6.7 without MTP; 14.8 with MTP | 8–10% | Latency; loops; swap up 4.5 GB in run 1 |
-| Qwen3.8 27B UD-IQ4_XS (unsloth, 14.3 GB), 32k, thinking off, no MTP | Not adopted, 6 runs, build 11960, 4–5 Nov (PILL-47; relaxed 300 s / 30 min; memory floor 10% on runs 1–3, 5% on runs 4–6). Runs 1–2 failed Tier 1 on memory; runs 3–6 passed Tier 1 | 183, 156, 150 s; then 148, 140, 135 s (limit 300 s) | Run 3: 22/22 at the 30-min cap; runs 4–6: 21/22 in 24.5 min, 21/22 at the cap, 22/22 in 28.3 min; runs 1–2 not run | 3.8–6.4 in short probes | 8–10% | Latency: Tier 1 2.3–3x the 60 s default and Tier 2 takes 24–30 min (never under 24 min). Memory: swap up 9.9 and 7.0 GB in runs 1–2 (Mac in use), 0.0–3.0 GB in runs 3–6. Accuracy stable at 21–22/22. Tier 3 not run |
+| Qwen3.8 27B UD-IQ3_XXS, 64k, thinking on | Failed, 3 runs, build 11429, 14 Oct | 130–144 s | Not run; one relaxed run 0/22 | 6.7–6.8 | 13–18% | Thinking: an 8,192-token thinking block and no tool call |
+| Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off | Relaxed gate, 3 runs, scratch home, 25 Oct | 133–142 s (limit 300 s) | 22/22 in 4.3 min; 22/22 and 20/22 at the 30-min cap | 6.7 | 12% | Latency; Tier 1 answer wrong in every run (informational) |
+| Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off, MTP, 32k | Failed gate, 3 runs, 25 Oct | 151–159 s (limit 300 s) | 20/22; 22/22 in 11.4 min; 20/22; two runs repeated one shell command 90–105 times | 6.7 without MTP; 14.8 with MTP | 8–10% | Latency; loops; swap up 4.5 GB in run 1 |
+| Qwen3.8 27B UD-IQ4_XS (unsloth, 14.3 GB), 32k, thinking off, no MTP | Not adopted, 6 runs, build 11960, 4–5 Nov (relaxed 300 s / 30 min; memory floor 10% on runs 1–3, 5% on runs 4–6). Runs 1–2 failed Tier 1 on memory; runs 3–6 passed Tier 1 | 183, 156, 150 s; then 148, 140, 135 s (limit 300 s) | Run 3: 22/22 at the 30-min cap; runs 4–6: 21/22 in 24.5 min, 21/22 at the cap, 22/22 in 28.3 min; runs 1–2 not run | 3.8–6.4 in short probes | 8–10% | Latency: Tier 1 2.3–3x the 60 s default and Tier 2 takes 24–30 min (never under 24 min). Memory: swap up 9.9 and 7.0 GB in runs 1–2 (Mac in use), 0.0–3.0 GB in runs 3–6. Accuracy stable at 21–22/22. Tier 3 not run |
 | Qwen3.8 27B UD-IQ4_XS, Unsloth Dynamic 3.1 (14.4 GB), 32k, thinking off, no MTP | Not adopted, 4 runs, build 12359, 16–17 Nov ([report](qwen38-27b.md)). Run 1 at the default gate failed Tier 1; runs 2–4 at the relaxed gate (300 s / 30 min, memory floor 5%) | 155 s (limit 60 s); then 144, 137, 137 s (limit 300 s) | Run 1 not run; runs 2–4: 22/22, 22/22 and 20/22, all at the 30-min cap | 5.8–6.1 | 9–10% | Latency: no faster than the 4–5 Nov file, and every Tier 2 run hit the cap. Accuracy: run 4 missed two `bestMove` checks. Memory: swap up 3.8 GB in run 1, 0.2–1.0 GB in runs 2–4 |
 | Qwen3.8 27B UD-Q3_K_XL, Unsloth Dynamic 3.1 (13.1 GB), 32k, thinking off, no MTP | Not adopted, 4 runs, build 12359, 16–17 Nov ([report](qwen38-27b.md)). Run 1 at the default gate failed Tier 1; runs 2–4 at the relaxed gate (300 s / 30 min, memory floor 5%) | 152 s (limit 60 s); then 152, 146, 146 s (limit 300 s) | Run 1 not run; runs 2–4: 22/22 in 8.5 min, 21/22 in 25.4 min, 22/22 at the 30-min cap | 6.3–6.6 | 12–18% | Latency: Tier 1 about 2.5x the 60 s default. Accuracy: run 3 missed `bestMove blocks`. Memory fits: no swap growth in any run |
-| Qwen3.8 27B pi-adapted LoRA (harness-hub, F16 GGUF adapter) on UD-IQ3_XXS (10.9 GB), 32k, thinking off, no MTP | Passes the gate of 300 s and full marks at the cap (slow; never the default): 3 runs, build 12359, 18 Nov, and bare overnight runs 19-20 Nov ([report](qwen38-27b-pi-adapted.md)); relaxed gate (300 s / 30 min, memory floor 7%) | 146, 138, 146 s (limit 300 s) | 22/22 in 12.6 min, 22/22 at the 30-min cap, 22/22 in 13.5 min | 6.6–7.0 | 12–17% | Latency: Tier 1 about 2.4x the 60 s default and one Tier 2 run hit the cap. Accuracy: 22/22 in every run, with 24–39 tool calls against 52–97 for base Qwen3.8 27B. Memory: swap up 0.7 GB in runs 2 and 3; on UD-IQ4_XS the adapter pushed swap up 5.5 GB at load, so that base was not benchmarked. Tier 3 with the MTP head (19 Nov, one run): Go 100, cleaning 100, insight 53, Kanban 95, nursery 54, Mars 100, tax 96, ahead of MiniCPM's medians on 5 of 7; ubatch 1024 or 2048 and a 16k context left Tier 1 at 143–157 s |
+| Qwen3.8 27B pi-adapted LoRA (harness-hub, F16 GGUF adapter) on UD-IQ3_XXS (10.9 GB), 32k, thinking off, no MTP | Passes the gate of 300 s and full marks at the cap (slow; never the default): 3 runs, build 12359, 18 Nov, and bare runs 19-20 Nov ([report](qwen38-27b-pi-adapted.md)); relaxed gate (300 s / 30 min, memory floor 7%) | 146, 138, 146 s (limit 300 s) | 22/22 in 12.6 min, 22/22 at the 30-min cap, 22/22 in 13.5 min | 6.6–7.0 | 12–17% | Latency: Tier 1 about 2.4x the 60 s default and one Tier 2 run hit the cap. Accuracy: 22/22 in every run, with 24–39 tool calls against 52–97 for base Qwen3.8 27B. Memory: swap up 0.7 GB in runs 2 and 3; on UD-IQ4_XS the adapter pushed swap up 5.5 GB at load, so that base was not benchmarked. Tier 3 with the MTP head (19 Nov, one run): Go 100, cleaning 100, insight 53, Kanban 95, nursery 54, Mars 100, tax 96, ahead of MiniCPM's medians on 5 of 7; ubatch 1024 or 2048 and a 16k context left Tier 1 at 143–157 s |
 | Qwen3.8 Flash Next GSQ-RCO Coder IQ1_M (ISTA-DASLab, 256 of 512 experts, 29.6 GB plus a 28.8 GB n-gram shard), 32k, `cpu-moe`, mmap | Failed, 2 runs, build 11960, 1 Nov ([report](qwen38-flash-next.md)) | No answer in the limit (default); 632 s (relaxed, limit 900 s) | Not run (default); 20/22 in 33.1 min (relaxed, 90-min cap) | 4.1; 2.3–2.6 on code with or without MTP | 17% | Latency: experts read from memory pages; every full Flash Next file is 70 GB or more |
 | flint (RecursiveSI) IQ2_XXS, 64k | Failed, 3 runs, build 11669, 23 Oct; build 11804 runs in the [Flint report](recursive-flint-iq2xxs.md) | Load failed in 0.2–0.3 s on 11669 | Not run on 11669 | Not measured on 11669 | 43–44% | Load on 11669: `unknown model architecture: 'flint'`, so no timing limit applies |
-| LiquidAI LFM2.5-24B-A2B UD-Q3_K_XL (unsloth, 10.9 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–28 s | 17/22 at the cap; 21/22 in 7.4 min; 16/22 at the cap; two runs repeated one tool call 154 and 320 times | 36 | 17–18% | Accuracy and loops; Tier 1 answer wrong in every run (informational) |
-| LiquidAI LFM2.5-24B-A2B Q4_K_M (LiquidAI, 14.5 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct; GGUF deleted after the run | 13–30 s | Not run on run 1 (Tier 1 memory gate); 19/22 and 21/22, both at the cap, repeating one tool call 105 and 182 times | 48 | 8–9% | Memory (below the 10% limit; swap up to 1.0 GB); accuracy and loops |
+| LiquidAI LFM2.5-24B-A2B UD-Q3_K_XL (unsloth, 10.9 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct | 13–28 s | 17/22 at the cap; 21/22 in 7.4 min; 16/22 at the cap; two runs repeated one tool call 154 and 320 times | 36 | 17–18% | Accuracy and loops; Tier 1 answer wrong in every run (informational) |
+| LiquidAI LFM2.5-24B-A2B Q4_K_M (LiquidAI, 14.5 GB), 64k, `reasoning-budget 0` | Failed, 3 runs, build 11669, 28 Oct | 13–30 s | Not run on run 1 (Tier 1 memory gate); 19/22 and 21/22, both at the cap, repeating one tool call 105 and 182 times | 48 | 8–9% | Memory (below the 10% limit; swap up to 1.0 GB); accuracy and loops |
 | NVIDIA Nemotron 3.5 Bolt E4B UD-Q8_K_XL (unsloth, 8.2 GB), 64k | Failed, 3 runs, build 11960, 29 Oct | 26–30 s | 16/22 in 4.1 min; 19/22 in 7.4 min; 21/22 in 6.6 min | 16–17 | 32–40% | Accuracy: never 22/22; no cap, no loops |
 | Meta Muse Glimmer 30B UD-IQ2_XXS (unsloth, 10.7 GB), 64k, dense | Failed, 9 runs, build 11960, 29 Oct (3 standard, 6 relaxed at 300 s / 30 min) | 113–140 s | Not run in 8 of 9; one relaxed run 22/22 in 11.1 min | 5–7 | 14–17% | Latency; thinking: empty visible reply in 8 of 9 runs |
 | Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template | Failed relaxed gate, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 108–127 s | 22/22, 20/22, 22/22 in 17.7–18.2 min | 7 | 14–16% | Latency (about double the default limits); accuracy on run 2 |
 | Meta Muse Glimmer 30B UD-IQ2_XXS, 64k, dense, thinking-off template, DFlash drafter | Passed relaxed gate only, 3 runs, build 11960, 30 Oct (300 s / 30 min) | 107–111 s | 22/22 in 5.9, 6.3 and 13.2 min | 12.8 in a 300-token probe (6.8 without) | 11% | Latency: Tier 1 still about twice the 60 s limit; memory close to the 10% floor; Tier 1 answer wrong in every run (informational) |
-| Gemma 4 26B-A4B UD-Q4_K_S (unsloth, 16.5 GB), 32k | Failed, 3 runs, build 12110, 8 Nov ([report](bigger-models-overnight.md)) | 26–27 s | Not run (Tier 1 memory gate) | 24.6 | 6–7% | Memory: 17.4 GB on the GPU; swap up to 729 MB |
-| Qwen3.6 35B-A3B UD-Q3_K_S (unsloth, 15.4 GB), 32k | Failed, 3 runs, build 12110, 8 Nov ([report](bigger-models-overnight.md)) | 20–21 s | 22/22 in 14.6 min; 22/22 in 9.0 min; 20/22 at the 15-min cap | 29–30 | 9–11% | Latency and accuracy: one run at the cap; 0 swap |
+| Gemma 4 26B-A4B UD-Q4_K_S (unsloth, 16.5 GB), 32k | Failed, 3 runs, build 12110, 8 Nov ([report](bigger-models.md)) | 26–27 s | Not run (Tier 1 memory gate) | 24.6 | 6–7% | Memory: 17.4 GB on the GPU; swap up to 729 MB |
+| Qwen3.6 35B-A3B UD-Q3_K_S (unsloth, 15.4 GB), 32k | Failed, 3 runs, build 12110, 8 Nov ([report](bigger-models.md)) | 20–21 s | 22/22 in 14.6 min; 22/22 in 9.0 min; 20/22 at the 15-min cap | 29–30 | 9–11% | Latency and accuracy: one run at the cap; 0 swap |
 | SenseNova-Loop-9B Q4_K_M (official GGUF, 5.8 GB), 32k, own llama.cpp fork | Failed, 1 run, fork build 12467 (OpenSenseNova/llama.cpp 24ea7bb78), 20 Nov. Needs that fork: stock llama.cpp cannot load the `sensenova_loop` architecture. Run through a scratch pill home with `PILL_LLAMA_SERVER`. No-go: do not re-test unless the fork or upstream gets faster Metal kernels for it | 86 s (relaxed rerun, limit 150 s: 75 s) | Not run at the default gate; relaxed rerun 19/22 at the 15-min cap | 6 (prompt 96 tok/s) | 31–35% | Latency; KV type, flash attention and batch size did not change speed (5.4–6.0 tok/s) |
 | Nemotron 3.5 Lightning 30B-A3B Q4_0 (ggml-org, 18.9 GB), 32k | Failed, 3 runs, build 12110, 10 Nov | 23–27 s | Not run (Tier 1 memory gate) | 23.5–24.4 | 3–4% | Memory: swap growth 441–728 MB; Tier 1 time and answers passed in all runs |
 
@@ -55,16 +54,16 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
   20/22 at the 30-minute cap in the other two. Its quality matches MiniCPM's 22/22 when it finishes; its speed does not (6.7 tok/s
   against 25).
 - MTP (`--spec-type draft-mtp`) raised decoding from 6.7 to 14.8 tok/s at 32k, with 94% of drafts accepted (llama-server's own
-  timings). PILL-8 measured 16–18 tok/s at a 16k context. Even so, it is well under MiniCPM's 25 tok/s.
+  timings). An earlier run measured 16–18 tok/s at a 16k context. Even so, it is well under MiniCPM's 25 tok/s.
 - The MTP gate failed: Tier 1 took 151–159 s, and two of the three Tier 2 runs repeated one shell command 90–105 times without
   fixing a `bestMove` bug. Without MTP, two of the three relaxed runs also kept re-running their own tests until the cap, so MTP
   is not proven to cause the loops.
-- Memory: MTP cut the lowest free memory from about 30% to 7% at 16k (PILL-8), and it was 8–10% at 32k.
-- Not tried: MTP with the thinking leak fixed (PILL-9), or MTP at 16k context through a full gate run.
+- Memory: MTP cut the lowest free memory from about 30% to 7% at 16k, and it was 8–10% at 32k.
+- Not tried: MTP with the thinking leak fixed, or MTP at 16k context through a full gate run.
 - Tier 3, one run with thinking off and MTP at 32k (1 November): Go 100, cleaning 80, insight 0, Kanban 71, nursery 100,
   Mars 100, tax 93, every task inside its cap. It has potential but is limited on this machine: the gate still fails on
   Tier 1. Do not re-test here unless the machine or the Tier 1 rule changes; the full list of what was tried is in the
-  [Qwen3.8 27B report](qwen38-27b.md). Files deleted on 2 November.
+  [Qwen3.8 27B report](qwen38-27b.md).
 
 ## Qwen3.8 Flash Next: the Coder IQ1_M file, 2026-11-01
 
@@ -86,7 +85,7 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 - Q4_K_M (14.5 GB) does not fit with 64k context and q8_0 KV: lowest free memory 8–9% and swap up 0.3–1.0 GB. Q3 fit (17–18%).
 - Not tried: a run with thinking on; the unsloth UD-Q4_K_XL (14.9 GB) and LiquidAI QAD-Q4_0 (13.6 GB) files; a smaller context.
   Tier 3 was not run, as Tier 2 never reached 22/22.
-- Both GGUFs were deleted on 28 October; re-pull with `pill pull hf.co/unsloth/LFM2.5-24B-A2B-GGUF:UD-Q3_K_XL` or
+- Re-pull with `pill pull hf.co/unsloth/LFM2.5-24B-A2B-GGUF:UD-Q3_K_XL` or
   `pill pull hf.co/LiquidAI/LFM2.5-24B-A2B-GGUF:Q4_K_M`.
 
 ## Nemotron 3.5 Bolt E4B and Muse Glimmer 30B, 2026-10-29
@@ -143,7 +142,7 @@ takes about twice the default limit.
   rest and two to three times slower, so it is not adopted. Details in [the Muse report](muse-glimmer-30b.md).
 - **Not tried:** Bolt E4B UD-Q4_K_XL (5.1 GB; a smaller quant would not fix accuracy); Muse with thinking left
   at `high` through a relaxed Tier 2; Tier 3 for Bolt E4B.
-- The Bolt E4B GGUF was deleted on 30 October. The Muse GGUF and its drafter are still in `~/.pill`; re-pull with
+- The Bolt E4B file was removed, and the Muse file and its drafter were kept; re-pull with
   `pill pull hf.co/unsloth/NVIDIA-Nemotron-3.5-Bolt-E4B-GGUF:UD-Q8_K_XL` or
   `pill pull hf.co/unsloth/Muse-Glimmer-30B-GGUF:UD-IQ2_XXS`.
 
@@ -191,7 +190,7 @@ Not adopted. It is slower than the default and no better in quality.
 Everything above ran on a 24 GB M4. This block is the first batch on a 16 GB M2 Pro (macOS 27.2, pill 0.4.1, llama.cpp
 build 11960, one run each, 32k context unless noted). None passed both tiers, so none is adopted; the default MiniCPM-V 4.7
 also fails Tier 1 on this Mac (6% free, 845 MB swap growth), so there is no champion to beat here. Full table, setup and
-caveats in [the report](m2-pro-16gb-2026-11-04.md). Every GGUF was deleted after its run; re-pull with the references below the table.
+caveats in [the report](m2-pro-16gb-2026-11-04.md). Re-pull with the references below the table.
 
 | Model | Result | Tier 1 | Tier 2 | tok/s | Lowest free | Issues seen |
 |---|---|---|---|---|---|---|
@@ -300,7 +299,7 @@ result. The table rows above still stand as the build 11429 results.
 
 ## Qwen3.6 with and without the DFlash drafter, MiniCPM with Qwen3.6's drafter, 2026-11-23
 
-Overnight on the 24 GB M4, llama.cpp 1.0.0 (build 12359), pill 0.6.0, default gate except the free memory floor of 5%. Localcode
+On the 24 GB M4, llama.cpp 1.0.0 (build 12359), pill 0.6.0, default gate except the free memory floor of 5%. Localcode
 recommends Qwen3.6 35B-A3B UD-IQ2_M with ggml-org's DFlash drafter on 24 GB, so I re-tested that pair. The drafter file's
 sha256 matches Localcode's pin. A 5-minute speed check first compared 3 and 8 guesses ahead: 3 gave 48.6–51.4 tok/s with
 71–77% accepted, 8 gave 16.5–19.2 tok/s with 40–47% accepted, so 3 stayed.
@@ -318,20 +317,20 @@ sha256 matches Localcode's pin. A 5-minute speed check first compared 3 and 8 gu
   `stopReason: length` after 1 output token (a reasoning block that never reached a reply) with no output file written
   (cleaning) or no predictions or report (insight). Run times 5.6 to 13.5 minutes, none at its cap; lowest free memory 8%, swap up
   3.5 GB on Go, 1.0 GB on insight, 1.5 GB on Kanban and 2.0 GB on nursery.
-- **Verdict:** no setup passed 3 of 3 on Tier 2. The Qwen3.6 drafter setup was run through Tier 3 anyway at the captain's
+- **Verdict:** no setup passed 3 of 3 on Tier 2. The Qwen3.6 drafter setup was run through Tier 3 anyway at the maintainer's
   request: it is a landing-page and Kanban model, unreliable on multi-step Python and Go tool work (one run per task, so read
   as a signal, not a median). Nothing replaces the default.
 - **Re-test only on:** a Qwen3.6 drafter or engine change that removes the 0/22 and 21/22 misses.
 
 ## Qwen3.6 Tier 3 control and drafter repeat, Qwen3.8 27B with MTP, 2026-11-26
 
-Run during working hours at the captain's request, one model at a time, on the 24 GB M4 (llama.cpp 1.0.0, build 12359, free memory floor 5%).
+Run one model at a time on the 24 GB M4 (llama.cpp 1.0.0, build 12359, free memory floor 5%).
 
 - **Tier 3, Qwen3.6 plain control (one run per task, 64k):** Go 66, cleaning 0, insight 0, Kanban 98, nursery 91, Mars 3, tax 56.
 - **Tier 3, Qwen3.6 with the DFlash drafter (two runs per task, 64k, mean of the two):** Go 74 (63, 84), cleaning 0, insight 0, Kanban 89, nursery 96, Mars 72 (56, 87), tax 94 (93, 96). Against the plain control the drafter is steadier on the landing pages (Mars 72 against 3, tax 94 against 56); both still score 0 on both Python tasks. One run per task for the control, so read it as a signal.
 - **Qwen3.8 27B UD-IQ3_XXS with the MTP head, 32k:** Tier 1 passed in 147 s; Tier 2 22/22 but only at the 15-minute cap, 14 tok/s, lowest free memory 12%, no swap growth. Failed the gate; Tier 3 not run.
 - **Qwen3.8 27B UD-IQ4_XS with the MTP head, 32k:** Tier 1 passed in 148 s; Tier 2 21/22 at the cap, 14 tok/s, lowest free memory 6%, swap up 1.7 GB. Failed the gate; Tier 3 not run.
-- **Qwen3.8 with the DFlash2 drafter:** not repeated here; the separate overnight run of 25 Nov (`qwen3-8-27b-iq3xxs-dflash2-32k`, 22/22 at the cap) is in the catalog.
+- **Qwen3.8 with the DFlash2 drafter:** not repeated here; the separate run of 25 Nov (`qwen3-8-27b-iq3xxs-dflash2-32k`, 22/22 at the cap) is in the catalog.
 - **Verdict:** nothing replaces the default. The MTP head doubles decode over plain Qwen3.8 (14 against 6 to 7 tok/s) but Tier 2 still reaches the cap.
 
 ## NariQ Qwen3.8-27B, not run, 2026-11-24
@@ -358,7 +357,7 @@ and its Tier 3 run scored 0 on both Python tasks. Details in [the report](ternar
 
 ## Qwen3.8 27B with the DFlash2 drafter, 2026-11-25
 
-Overnight on the 24 GB M4, llama.cpp 1.0.0 (build 12359), pill 0.6.0, UD-IQ3_XXS at 32k with thinking off. The drafter is
+On the 24 GB M4, llama.cpp 1.0.0 (build 12359), pill 0.6.0, UD-IQ3_XXS at 32k with thinking off. The drafter is
 z-lab's Qwen3.8-27B-DFlash2 Q4_K_M (1.1 GB) with `spec-type = "draft-dflash"`, `spec-draft-n-max = 7` and `spec-draft-ngl = 99`.
 It loads in the installed llama.cpp, which corrects the earlier note that DFlash2 needs the BeeLlama fork (that holds for
 Anbeeld's GGUFs only). Gate: Tier 1 300 s, Tier 2 15 min, free memory floor 5%, three runs.

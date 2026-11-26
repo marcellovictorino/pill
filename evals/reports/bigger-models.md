@@ -18,7 +18,7 @@
 ## Details
 
 - **Setup:** llama.cpp build 12110, Pi with thinking off, 32k context, `pill bench run --runs 3` at the default limits (Tier 1 60 s and 10% free; Tier 2 15 min). Files from unsloth on Hugging Face; sizes checked on the Hub before pulling, and pill verified each sha256. The Mac was in normal use with swap already 5.6–6.3 GB used, which counts against the memory floor.
-- **Nemotron 3.5 Lightning 30B-A3B Q4_0 (18.9 GB, ggml-org) was not run:** it needs `sudo sysctl iogpu.wired_limit_mb=20480`, which the captain could not run overnight. Filed as PILL-89.
+- **Nemotron 3.5 Lightning 30B-A3B Q4_0 (18.9 GB, ggml-org) was not run:** it needs `sudo sysctl iogpu.wired_limit_mb=20480`, which needs administrator rights.
 - **Run on a different file than planned:** unsloth has no Gemma Q4_0, so UD-Q4_K_S (16.5 GB) stood in for "Gemma Q4". Qwen3.6 used UD-Q3_K_S (15.4 GB), the smallest Q3 file, rather than the 16.6 GB Q3_K_M.
 - **Earlier results for the same models** (other quants, 64k) are in `tried-and-rejected.md`. These two files add the Q4_K_S and Q3_K_S points, not new models.
 - **Caveats:** a quieter Mac would lift Gemma's free memory a few points, but it sat 3–4 points under the floor with 17.4 GB on the GPU, so it is unlikely to pass at 32k. Qwen's miss was at the time cap, with a 22/22 in 9.0 minutes in another run, so it is variance in agent speed, not a loop. Tier 3 was not run because neither passed Tier 2.

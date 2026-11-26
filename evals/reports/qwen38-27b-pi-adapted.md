@@ -7,7 +7,7 @@ model's MTP head added, one Tier 3 run beat MiniCPM's six-run median on 5 of 7 t
 53, Kanban 95, Mars 100). Tier 1 still takes 143–157 s against the 60 s default, whatever the batch size, context or
 MTP setting, and Tier 3 tasks take 1.2 to 5.5 times as long as MiniCPM's. MiniCPM stays the default.
 
-**Bare overnight runs (19-20 Nov, three runs each, no personal setup):** Tier 2 scored 22/22 in all three runs, each stopped at the 30-minute cap, with Tier 1 at 142-157 s, 6.5 tok/s, at least 15% free memory and swap up 0 to 0.55 GB. Tier 3 medians: Go 90, cleaning 96, insight 0 (all three runs hit the task's 40-minute cap), Kanban 100, nursery 94, Mars 96, tax 96. The Tier 3 MTP setting of these runs is not recorded.
+**Bare runs (19-20 Nov, three runs each, no personal setup):** Tier 2 scored 22/22 in all three runs, each stopped at the 30-minute cap, with Tier 1 at 142-157 s, 6.5 tok/s, at least 15% free memory and swap up 0 to 0.55 GB. Tier 3 medians: Go 90, cleaning 96, insight 0 (all three runs hit the task's 40-minute cap), Kanban 100, nursery 94, Mars 96, tax 96. The Tier 3 MTP setting of these runs is not recorded.
 
 | Check | Result |
 |---|---|

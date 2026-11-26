@@ -63,7 +63,7 @@ the default. Tier 3 was not run.
 - **Not run:** Tier 3, because no arm passed Tier 2 at 22/22 in every run. The UD-IQ4_XS arm with the MTP head was
   skipped: MTP speeds up decoding only, and Tier 1 is bound by prompt processing on this dense model, so it could not
   pass the default gate. The MiniCPM control swap growth (7.9 GB) came while other apps were in use at the start of
-  the night.
+  the batch.
 - **Re-test only for** the reasons below: a faster machine or a pill change that relaxes Tier 1.
 
 Raw runs: `~/.pill/benchmark/` (not committed), folders `20261116T211724Z` (MiniCPM), `20261116T213822Z` and
@@ -72,7 +72,7 @@ Raw runs: `~/.pill/benchmark/` (not committed), folders `20261116T211724Z` (Mini
 
 ## Update: UD-IQ4_XS (4-bit, 14.3 GB) tested and discarded
 
-**Verdict:** Tested and discarded (PILL-47, 4–5 November, build 11960). The 4-bit quant from unsloth, 32k, thinking off,
+**Verdict:** Tested and discarded (4–5 November, build 11960). The 4-bit quant from unsloth, 32k, thinking off,
 no MTP, does not fix the problems above. Accuracy is stable but not perfect (21, 21 and 22 of 22 on the last three
 runs), Tier 2 takes 24–30 minutes, and Tier 1 takes 135–183 s, 2.3 to 3 times the 60 s default. Tier 3 was not run.
 MiniCPM stays the default. Runs and numbers: [`tried-and-rejected.md`](tried-and-rejected.md).
@@ -122,15 +122,14 @@ nursery 93, Mars 95, tax 98, at 3.5–22 minutes per task, and it passes the def
 
 ## Tested so far, and what would justify a re-test
 
-All on this 24 GB M4 with Unsloth's UD-IQ3_XXS (10.9 GB). The files were deleted on 2 November; `pill pull` them again
-to re-test.
+All on this 24 GB M4 with Unsloth's UD-IQ3_XXS (10.9 GB). Re-pull them with `pill pull` to re-test.
 
 | Setting | When | Result |
 |---|---|---|
 | Thinking on, 64k | 14 Oct, build 11429 | Tier 1 130–144 s; Tier 2 0/22 (8,192-token thinking block, no tool call) |
-| Thinking off, 64k | 25 Oct (PILL-8) | Tier 1 133–142 s; Tier 2 22, 22, 20 at 6.7 tok/s |
-| Thinking off, MTP, 16k | 25 Oct (PILL-8) | Decoding 16–18 tok/s; lowest free memory 7%; no full gate run |
-| Thinking off, MTP, 32k | 25 Oct (PILL-10) | Tier 1 151–159 s; Tier 2 20, 22, 20 with two runs looping; 14.8 tok/s |
+| Thinking off, 64k | 25 Oct | Tier 1 133–142 s; Tier 2 22, 22, 20 at 6.7 tok/s |
+| Thinking off, MTP, 16k | 25 Oct | Decoding 16–18 tok/s; lowest free memory 7%; no full gate run |
+| Thinking off, MTP, 32k | 25 Oct | Tier 1 151–159 s; Tier 2 20, 22, 20 with two runs looping; 14.8 tok/s |
 | Thinking off, MTP, 32k, Tier 3 | 1 Nov, build 11960 | The scores above, one run per task |
 
 Do not re-test for the Tier 1 gate on this machine. It is a dense model, so the 7,400-token prompt is bound by prompt

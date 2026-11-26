@@ -22,7 +22,7 @@ nursery 93, Mars 95, tax 98, at 3.5–22 minutes per task, and it passes the def
 - **Setup:** Pi with Muse's thinking reduced (a chat-template copy that pre-fills an empty reasoning message, plus
   `reasoning_strength` low; see `tried-and-rejected.md`), 64k context, Unsloth UD-IQ2_XXS (10.7 GB) with Unsloth's
   DFlash drafter (1.6 GB) through llama.cpp build 11960 and pill 0.4.1, 24 GB M4. Same tasks and caps as the other models.
-- **Runs:** one run per task, 30 to 31 October 2026, overnight on an otherwise idle machine. Go and cleaning hit their
+- **Runs:** one run per task, 30 to 31 October 2026, on an otherwise idle machine. Go and cleaning hit their
   30-minute caps while still working (106 and 169 agent turns, no loops); the other five finished. The insight task
   was not graded by the Opus judge and the landing pages were not rated blind.
 - **Discarded run:** an earlier run the same evening scored 33, 0 and 0 on the first three tasks. A Pi process left

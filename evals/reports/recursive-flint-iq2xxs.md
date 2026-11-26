@@ -103,20 +103,9 @@ The champion's score and memory values are the existing local gate results, not 
 
 **Recommendation:** keep `minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k` as the default; do not switch to Flint. Unsloth's best result (22/22) is stronger than Bartowski's best (19/22), but its other two runs scored below the champion and one reached the time cap. That is a promising single run, not stable evidence that Unsloth is better than MiniCPM. Both Flint quantisations lack Tier 3 task-quality evidence.
 
-The owner subsequently removed the original Bartowski registration with `pill rm recursivesi-flint-iq2xxs-64k`; pill reported the IQ2_XXS GGUF deleted and 12.0 GB freed. It was not re-registered, and its completed benchmark results remain documented above. The Unsloth GGUF remains at `/Users/marcellovictorino/.pill/models/flint-UD-IQ2_XXS.gguf` (11,855,541,696 bytes; SHA-256 above). It is registered only in the isolated task benchmark root as `flint-iq2xxs-64k` (failed; not default); it was not added to the owner's actual `pill ls` registry. At final check the owner's actual registry had these ten entries, with MiniCPM still the default:
+The original Bartowski registration was then removed with `pill rm recursivesi-flint-iq2xxs-64k`, which deleted its 12.0 GB GGUF. It was not re-registered, and its completed benchmark results remain documented above. The Unsloth GGUF was benchmarked from an isolated pill home as `flint-iq2xxs-64k` (failed; not default); its file is `~/.pill/models/flint-UD-IQ2_XXS.gguf` (11,855,541,696 bytes; SHA-256 above).
 
-- `devstral-small-2-24b-instruct-2512-q3-k-m-32k`
-- `devstral-small-2-24b-instruct-2512-q3-k-m-64k`
-- `devstral-small-2-24b-instruct-2512-ud-q3-k-xl-64k`
-- `gemma-4-26b-a4b-it-ud-iq3-s-64k`
-- `gemma4-26b-q3kxl-64k`
-- `glm-4-7-flash-ud-iq2-m-64k`
-- `minicpm-v-4-7-35b-a3b-ad-iq2-xs-iq2-xxs-64k` (default)
-- `ornith-1-5-35b-a3b-ad-iq3-xxs-iq2-s-64k`
-- `qwen3-6-35b-a3b-ud-iq2-m-64k`
-- `qwen3-8-27b-ud-iq3-xxs-64k`
-
-The isolated b11804 router was stopped after benchmarking. The compatibility runtime, diagnostic scripts, and benchmark outputs remain in the authorized task scratch directory. No Tier 3 screenshots were produced.
+The isolated b11804 router was stopped after benchmarking. No Tier 3 screenshots were produced.
 
 ## Caveats
 

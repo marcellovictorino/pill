@@ -1,7 +1,7 @@
 # <Model name and quantisation>
 
 **Setup:** how it was run (agent, thinking on or off, context size, quantisation, file size).
-**Runs:** how many runs per task, when, and on what machine.
+**Runs:** how many runs per task, and on what machine (memory, free memory, other load).
 
 ## In one paragraph
 

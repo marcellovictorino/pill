@@ -45,7 +45,7 @@ python3 evals/summary.py --personal      # bare and personal medians side by sid
 - `summary.py --personal` calls a difference noise unless the personal median falls outside the range the bare
   runs themselves span. Run the bare task three or more times first.
 - Do not commit, quote in reports or add personal results to the catalog. Personal runs add the size of your setup
-  to every prompt, so they are slower than bare runs; run them overnight, one model at a time.
+  to every prompt, so they are slower than bare runs; run them one model at a time on an otherwise idle machine.
 - `python3 -m unittest discover -s evals -p 'test_*.py'` tests this (fake `pi`, no model).
 
 ## Tasks
