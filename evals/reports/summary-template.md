@@ -23,7 +23,7 @@
 Only what a decision needs. Each point is one or two short bullets, or one table.
 
 - **Setup:** agent, thinking on or off, context, quantisation, file size, machine.
-- **Runs:** how many per task, when, and any run that hit a time cap or looped.
+- **Runs:** how many per task, on what machine (memory, free memory, other load), and any run that hit a time cap or looped.
 - **Caveats:** what was not tested, and what would change the verdict.
 
 ## Sources

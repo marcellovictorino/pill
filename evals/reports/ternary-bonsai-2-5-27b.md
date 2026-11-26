@@ -18,7 +18,7 @@
 ## Details
 
 - **Setup:** `prism-ml/Ternary-Bonsai-2.5-27B-GGUF` (Qwen3.8-27B base, ternary, dense, released 24 November). `Q2_0` is 7.7 GB and `Q2_0-mtp` 7.9 GB, both run on stock llama.cpp 1.0.0 (build 12359, newer than the b11556 the card requires). The MTP file carries its own draft head, so it runs with `spec-type = draft-mtp` and no separate drafter file. pill 0.6.0, Pi 1.6.0, 24 GB M4, thinking off (`enable_thinking` false), 32k context. `PQ2_0` and `PTQ1_0` need PrismML's fork and were not run.
-- **Gate:** run at Tier 1 300 s, Tier 2 15 min, free memory floor 5%, one run per file, with explicit approval to run during working hours. The installed pill binary reports both runs as failed because Tier 2 hit the cap; the repository's current rule counts a capped run with full marks and no tool-call loop as a pass, which the MTP run meets (one repeated call).
+- **Gate:** run at Tier 1 300 s, Tier 2 15 min, free memory floor 5%, one run per file. The installed pill binary reports both runs as failed because Tier 2 hit the cap; the repository's current rule counts a capped run with full marks and no tool-call loop as a pass, which the MTP run meets (one repeated call).
 - **MTP effect:** decode 9 to 11 tok/s (22% faster), Tier 1 144 to 160 s (no faster: prefill of the 7,400-token prompt dominates on a dense model). MTP changed Tier 2 from 20/22 to 22/22, but with one run each that may be noise.
 - **Tier 3 misses:** cleaning ran to the 30-minute cap with no output file; insight ended after 27 minutes with no predictions and no report. Go 80 took 24.8 minutes.
 - **Not run:** a second Tier 1 and 2 run, the plain file on Tier 3, personal Tier 3 (the baseline did not hold up against MiniCPM), PrismML's fork.

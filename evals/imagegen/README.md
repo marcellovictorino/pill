@@ -13,9 +13,9 @@ The only shared code is `MemorySampler`, imported read-only from `../run.py`.
 
 Every model gets the same three prompts (`prompts.json`, or the file named by `IMAGEGEN_PROMPTS`, e.g.
 `prompts-round3.json`), three seeds (7, 42, 1234) at 1024x1024. FLUX 3 Image Klein was dropped after round 3
-(captain's call, human mean 3.44); the runner supports Qwen Turbo (default), FLUX.2 klein 4B and the other Draw Things models.
+(maintainer's call, human mean 3.44); the runner supports Qwen Turbo (default), FLUX.2 klein 4B and the other Draw Things models.
 
-**Standing prompt rules** (`build_prompt`, on by default, `--plain` turns them off). The captain's prompt is kept
+**Standing prompt rules** (`build_prompt`, on by default, `--plain` turns them off). The maintainer's prompt is kept
 verbatim in `results.json` as `prompt`; what the model got is saved beside it as `prompt_sent`; the judge sees only `prompt`.
 1. Every prompt ends with a short no-text sentence ("No text, letters, numbers or logos anywhere. All surfaces are
    plain and unmarked; nothing is written on anything."), because lettering in these models comes out garbled. It
@@ -65,7 +65,7 @@ Other checks: `validate determinism <model>` (same seed twice, free) and `valida
 
 ## Best sample per prompt
 
-Chosen by the captain's blind rating, then the Opus score. Images are 640 px WebP copies of the 1024 px outputs.
+Chosen by the maintainer's blind rating, then the Opus score. Images are 640 px WebP copies of the 1024 px outputs.
 Full results and caveats are in [`../reports/image-generation.md`](../reports/image-generation.md).
 
 | Prompt | FLUX 3 Image Klein (4-bit S, Draw Things) | Qwen-Image 2.1 Turbo (4-bit S, 8 steps) |
