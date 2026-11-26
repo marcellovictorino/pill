@@ -678,6 +678,34 @@ tier2_minutes = 15.0
 tier2_timed_out = true
 min_free_pct = 8
 swap_mb = 1400
+[[tried.measurement.tier3]]
+task = "go-notes"
+median = 100
+runs = 1
+[[tried.measurement.tier3]]
+task = "py-clean"
+median = 0
+runs = 1
+[[tried.measurement.tier3]]
+task = "py-insight"
+median = 0
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-kanban"
+median = 100
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-landing-nursery"
+median = 56
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-landing-mars"
+median = 100
+runs = 1
+[[tried.measurement.tier3]]
+task = "web-landing-tax"
+median = 96
+runs = 1
 
 [[tried]]
 name = "Qwen3.8 Flash Next GSQ-RCO Coder IQ1_M"

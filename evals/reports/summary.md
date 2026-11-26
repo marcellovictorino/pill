@@ -14,6 +14,7 @@ Every other local model tried is in [tried-and-rejected.md](tried-and-rejected.m
 |---|---|---|---|---|---|
 | MiniCPM-V 4.7 IQ2 (default) | Pass | Pass, 5 of 5 | 6 runs per task | All-rounder: medians 88 to 98 on Go, cleaning, Kanban and all three landing pages | Open-ended analysis (insight 40, judge 17); about one run in five under 70 |
 | Muse Glimmer 30B IQ2 (DFlash drafter) | Relaxed limit only (107–111 s) | Pass, 3 of 3 | 1 run per task | Landing pages: nursery 99 and Mars 100, above MiniCPM's medians | Go 77 and cleaning 53 (both timed out); Kanban 84; two to three times slower |
+| Qwen3.8 27B UD-IQ3_XXS (DFlash2 drafter, 32k, thinking off) | Relaxed limit only (132–144 s) | Pass, 3 of 3 (two at the 15-minute cap) | 1 run per task | Go 100, Kanban 100, Mars 100 (at the 40-minute cap) and tax 96, against MiniCPM's medians of 88, 90, 95 and 98 | Insight 0 (output limit) and cleaning 0 (context overflow at 32k), nursery 56 against 93; 15 to 40 minutes per task |
 
 Muse against MiniCPM's medians, task by task, from Muse's single run:
 
@@ -27,22 +28,22 @@ Tier 2 scored 20, 22, 20. Its one Tier 3 run scored Go 100, nursery 100 and Mars
 insight 0 and Kanban 71; see [the Qwen3.8 27B report](qwen38-27b.md). The same base with harness-hub's Pi-adapted LoRA and the MTP head
 (Tier 1 143–157 s; Tier 2 22, 22, 22 at the relaxed caps) scored Go 100, cleaning 100, insight 53, Kanban 95 and Mars
 100 in one run, above MiniCPM's medians on 5 of 7 tasks, but nursery 54 and 1.2 to 5.5 times MiniCPM's time per task; see
-[the Pi-adapted report](qwen38-27b-pi-adapted.md). Muse would fail the default Tier 1 limit, so MiniCPM stays the default; use Muse only where a
+[the Pi-adapted report](qwen38-27b-pi-adapted.md). The Qwen3.8 27B DFlash2 run does not change the default. Against MiniCPM's medians it is ahead on Go, Kanban and Mars, level on tax, and behind on nursery and on both Python tasks it scored 0 on, from one run per task. Muse would fail the default Tier 1 limit, so MiniCPM stays the default; use Muse only where a
 landing page is worth a slower run.
 
 ## Scores
 
-| Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | Muse Glimmer 30B IQ2 (DFlash) | Qwen3.8 27B IQ3_XXS (MTP) | Qwen3.8 27B Pi-adapted IQ3_XXS (MTP) | Qwen3.5 9B UD-Q4_K_XL (M2 Pro 16 GB) | MiniCPM-V 4.7 IQ2  |
-|---|---|---|---|---|---|---|---|---|---|---|
-| Runs per cell | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | **6**  |
-| `go-notes` (Go CLI feature) | 100 | 100 | 100 | 100 | 13 (timeout) | 77 (timeout) | 100 | 100 | 15 | 88 median (67–94)  |
-| `py-clean` (data cleaning) | 100 | 100 | 100 | 100 | 68 | 53 (timeout) | 80 | 100 | 21 | 90.5 median (57–96)  |
-| `py-insight` (automated) | 100 | 92 | 95 | 90 | 0 (timeout) | 35 | 0 (output limit) | 53 (timeout) | 0 (no report) | 40 median (40–60)  |
-| `py-insight` (Opus judge) | 96 | 87 | 91 | 64 | 0 (no report) | not judged | 0 (no report) | 0 (no report) | not judged | 17 mean (9–30)  |
-| `web-kanban` | 100 | 100 | 100 | 98 | 100 | 84 | 71 | 95 | 2 (timeout) | 90 median (40–92)  |
-| `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 99 | 100 | 54 | 90 | 93 median (18–96)  |
-| `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 100 | 100 | 100 | 95 | 95 median (87–100)  |
-| `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 90 | 93 | 96 | 76 | 98 median (54–100)  |
+| Task | Opus 5.5 (medium) | Sonnet 5.5 (medium) | Haiku 5.5 (high) | GPT-5.6 Luna (high) | Gemma 4 UD-IQ3_S | Muse Glimmer 30B IQ2 (DFlash) | Qwen3.8 27B IQ3_XXS (MTP) | Qwen3.8 27B IQ3_XXS (DFlash2) | Qwen3.8 27B Pi-adapted IQ3_XXS (MTP) | Qwen3.5 9B UD-Q4_K_XL (M2 Pro 16 GB) | MiniCPM-V 4.7 IQ2  |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Runs per cell | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | **6**  |
+| `go-notes` (Go CLI feature) | 100 | 100 | 100 | 100 | 13 (timeout) | 77 (timeout) | 100 | 100 | 100 | 15 | 88 median (67–94)  |
+| `py-clean` (data cleaning) | 100 | 100 | 100 | 100 | 68 | 53 (timeout) | 80 | 0 (context limit) | 100 | 21 | 90.5 median (57–96)  |
+| `py-insight` (automated) | 100 | 92 | 95 | 90 | 0 (timeout) | 35 | 0 (output limit) | 0 (output limit) | 53 (timeout) | 0 (no report) | 40 median (40–60)  |
+| `py-insight` (Opus judge) | 96 | 87 | 91 | 64 | 0 (no report) | not judged | 0 (no report) | not judged | 0 (no report) | not judged | 17 mean (9–30)  |
+| `web-kanban` | 100 | 100 | 100 | 98 | 100 | 84 | 71 | 100 | 95 | 2 (timeout) | 90 median (40–92)  |
+| `web-landing-nursery` | 100 | 96 | 100 | 89 | 92 | 99 | 100 | 56 | 54 | 90 | 93 median (18–96)  |
+| `web-landing-mars` | 100 | 100 | 100 | 93 | 3 (timeout) | 100 | 100 | 100 (timeout) | 100 | 95 | 95 median (87–100)  |
+| `web-landing-tax` | 100 | 100 | 100 | 88 | 3 (timeout) | 90 | 93 | 96 | 96 | 76 | 98 median (54–100)  |
 
 The Qwen3.5 9B column is a different device: one run per task on a 16 GB M2 Pro (32k, thinking off, 5 November), while every other column ran on the 24 GB M4. Read its scores as a profile of that model, not as a like-for-like comparison; it did not pass the Tier 2 gate (21/22 at the cap), so it is also absent from the passing-models table above. Setup in [the M2 Pro report](m2-pro-16gb-2026-11-04.md).
 

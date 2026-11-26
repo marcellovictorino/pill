@@ -359,4 +359,4 @@ Anbeeld's GGUFs only). Gate: Tier 1 300 s, Tier 2 15 min, free memory floor 5%, 
   gate counts a run stopped by the cap with full marks and no tool-call loop as a pass, so by the repository's rule all three
   runs pass. I counted that by hand from `results.json`; the installed binary predates it.
 - **Tier 1 answer** (informational) was wrong in two of three runs (48 and 58, against 168 in the right run).
-- **Not done:** Tier 3, which belongs on a separate night at the captain's word.
+- **Tier 3:** run on 26 November, one run per task; scores and the caveats are in [the Qwen3.8 27B report](qwen38-27b.md#update-tier-3-with-the-dflash2-drafter-26-november).
