@@ -224,15 +224,22 @@ func Merge(path string, provider json.RawMessage) (changed bool, err error) {
 	}
 	out.WriteByte('\n')
 
-	if readErr == nil {
-		if bytes.Equal(bytes.TrimSpace(existing), bytes.TrimSpace(out.Bytes())) {
+	return writeWithBackup(path, existing, readErr == nil, out.Bytes())
+}
+
+// writeWithBackup writes out to path atomically. When the file already exists
+// it returns false for identical content and otherwise copies the old bytes to
+// path+".bak" first. It reports whether the file changed.
+func writeWithBackup(path string, existing []byte, exists bool, out []byte) (bool, error) {
+	if exists {
+		if bytes.Equal(bytes.TrimSpace(existing), bytes.TrimSpace(out)) {
 			return false, nil
 		}
 		if err := config.WriteFileAtomic(path+".bak", existing, 0o600); err != nil {
 			return false, fmt.Errorf("back up %s: %w", path, err)
 		}
 	}
-	if err := config.WriteFileAtomic(path, out.Bytes(), 0o600); err != nil {
+	if err := config.WriteFileAtomic(path, out, 0o600); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -337,5 +344,8 @@ func WriteBenchAgentDir(dir string, port int, m Model) error {
 	if err != nil {
 		return err
 	}
-	return config.WriteFileAtomic(ModelsPath(dir), append(data, '\n'), 0o600)
+	if err := config.WriteFileAtomic(ModelsPath(dir), append(data, '\n'), 0o600); err != nil {
+		return err
+	}
+	return WriteBenchSettings(dir, m)
 }

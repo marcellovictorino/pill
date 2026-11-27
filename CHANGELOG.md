@@ -25,6 +25,8 @@ All notable changes to pill are documented here. The format follows
 
 ### Changed
 
+- Models outside the catalog now default to a 64k context window (was 32k): `pill add` without `--ctx`. Pass `--ctx` to keep another size.
+- pill writes a per-model compaction rule into Pi's `settings.json` (`compaction.modelOverrides["pill/<model>"].reserveTokens`, a fifth of the window), so Pi starts compacting at 80% of each pill model's window. Only `pill/` entries are touched, with a `settings.json.bak` backup and an atomic write; benchmark runs get the same rule in their throwaway Pi folder.
 - The benchmark gate is less strict about speed so slow but accurate models are not thrown away: Tier 1 now allows 300 s (it was 60 s), and a Tier 2 run that scores full marks but is stopped by the time cap passes (a tool-call loop still fails). `pill catalog` reads the same rule, so four 24 GB M4 results now pass: Qwen3.8 27B with the Pi-adapted LoRA (`qwen3.8-27b-pi`, Tier 1 142-157 s, Tier 2 22/22 at the 30-minute cap, Tier 3 medians Go 90, cleaning 96, insight 0, Kanban 100, nursery 94, Mars 96, tax 96), Muse 30B with DFlash, Muse 30B and Gemma 4 26B IQ3_S. Speed stays visible in the seconds, minutes and tokens-per-second columns, and passes are listed fastest first; MiniCPM stays the default. The separate `relaxed` verdict is gone.
 - The pill skill and README state the benchmark ladder for a new model: Tier 1 and 2 first, Tier 3 only if it passes, the personal Tier 3 only if it performs well there.
 - `pill catalog` shows the default MiniCPM model's Tier 1 and Tier 2 times again (`pass (36s)`, `22/22 3.6m`), taken from its 29 October 2026 benchmark run.

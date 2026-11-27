@@ -118,3 +118,18 @@ func TestSetupHashResolvesRelativeReferencesAgainstThePiFolder(t *testing.T) {
 		t.Error("an edit under the Pi folder's relative reference must change the hash")
 	}
 }
+
+// pill rewrites its own per-model compaction rules whenever a model is added,
+// removed or resized; that is no change to the user's setup.
+func TestSetupHashIgnoresPillCompactionRules(t *testing.T) {
+	a, b := t.TempDir(), t.TempDir()
+	write(t, a, "settings.json", `{"theme":"dark","compaction":{"reserveTokens":400000,"modelOverrides":{"pill/a":{"reserveTokens":13107}}}}`)
+	write(t, b, "settings.json", `{"theme":"dark","compaction":{"reserveTokens":400000,"modelOverrides":{"pill/b":{"reserveTokens":6553},"pill/c":{"reserveTokens":1}}}}`)
+	if SetupHash(a) != SetupHash(b) {
+		t.Error("settings differing only in pill/ rules must hash the same")
+	}
+	write(t, b, "settings.json", `{"theme":"dark","compaction":{"reserveTokens":300000,"modelOverrides":{"pill/b":{"reserveTokens":6553}}}}`)
+	if SetupHash(a) == SetupHash(b) {
+		t.Error("a changed general rule must still change the hash")
+	}
+}

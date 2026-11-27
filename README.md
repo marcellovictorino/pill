@@ -42,7 +42,7 @@ pill doctor                                  # check prerequisites and configura
 pill                                         # start the router if needed, open Pi
 ```
 
-Models outside the catalog work too: `pill pull hf.co/owner/repo:Q4_K_M`, then `pill add hf.co/owner/repo:Q4_K_M --unverified --ctx 32768`. Gated repos need `HF_TOKEN` in your environment (it is never stored).
+Models outside the catalog work too: `pill pull hf.co/owner/repo:Q4_K_M`, then `pill add hf.co/owner/repo:Q4_K_M --unverified --ctx 65536`. Gated repos need `HF_TOKEN` in your environment (it is never stored).
 
 `--unverified` is explicit on purpose. A model that has not passed `pill bench run` on this machine shows `(unverified)` everywhere. A `candidate` has an entry but is not offered to Pi: it is being benchmarked, or it failed and its settings or file changed since; `pill add <name> --unverified` offers it.
 

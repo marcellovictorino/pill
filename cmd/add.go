@@ -42,7 +42,7 @@ on this machine. --unverified is required so that choice is always explicit.`,
 		},
 	}
 	c.Flags().BoolVar(&unverified, "unverified", false, "confirm registering a model that has not been benchmarked")
-	c.Flags().IntVar(&ctxSize, "ctx", 0, "context size in tokens (default: the catalog value, else 32768)")
+	c.Flags().IntVar(&ctxSize, "ctx", 0, "context size in tokens (default: the catalog value, else 65536)")
 	return c
 }
 
