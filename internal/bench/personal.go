@@ -141,7 +141,7 @@ func copyFile(from, to string, perm os.FileMode) error {
 func SetupHash(dir string) string {
 	h := sha256.New()
 	var files []string
-	for _, f := range []string{"settings.json", "AGENTS.md", "npm/package.json", "npm/package-lock.json"} {
+	for _, f := range []string{"AGENTS.md", "npm/package.json", "npm/package-lock.json"} {
 		files = append(files, filepath.Join(dir, f))
 	}
 	walk := func(root string) {
@@ -163,9 +163,14 @@ func SetupHash(dir string) string {
 	}
 	// Settings can name extensions, skills and packages that live outside the
 	// folder: their contents steer the agent too.
+	// pill's own per-model compaction rules are left out of the hash: pill
+	// rewrites them whenever a model is added, removed or resized, which is no
+	// change to the setup.
 	if data, err := os.ReadFile(filepath.Join(dir, "settings.json")); err == nil {
 		var cfg map[string]any
 		if json.Unmarshal(data, &cfg) == nil {
+			stripPillRules(cfg)
+			data, _ = json.Marshal(cfg) // map keys marshal sorted, so the bytes are stable
 			for _, key := range []string{"extensions", "skills", "packages"} {
 				list, _ := cfg[key].([]any)
 				for _, e := range list {
@@ -177,6 +182,7 @@ func SetupHash(dir string) string {
 				}
 			}
 		}
+		_, _ = fmt.Fprintf(h, "settings.json\x00%s\x00", data)
 	}
 	sort.Strings(files)
 	for _, f := range files {
@@ -219,14 +225,22 @@ func preparePersonalAgentDir(src, dir string, port int, m pi.Model) (string, err
 	if _, err := pi.Merge(pi.ModelsPath(dir), pi.BuildProvider(port, []pi.Model{m})); err != nil {
 		return "", err
 	}
-	// Hashed before the rule below goes in, so one setup hashes the same for
-	// every model.
-	hash := SetupHash(dir)
 	if err := pi.WriteBenchSettings(dir, m); err != nil {
 		return "", err
 	}
 	// The copy holds a settings.json already, so the merge left a backup of it;
 	// the copy never carries backups (see personalSkip).
 	_ = os.Remove(pi.SettingsPath(dir) + ".bak")
-	return hash, nil
+	return SetupHash(dir), nil
+}
+
+// stripPillRules drops compaction.modelOverrides entries keyed "pill/...".
+func stripPillRules(cfg map[string]any) {
+	c, _ := cfg["compaction"].(map[string]any)
+	o, _ := c["modelOverrides"].(map[string]any)
+	for k := range o {
+		if strings.HasPrefix(k, pi.ProviderKey+"/") {
+			delete(o, k)
+		}
+	}
 }
