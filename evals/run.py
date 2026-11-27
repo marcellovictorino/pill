@@ -241,12 +241,17 @@ def setup_hash(d):
     """Short hash of what steers the agent in a copied Pi folder, so a changed setup shows later."""
     d = Path(d)
     h = hashlib.sha256()
-    parts = [d / "settings.json", d / "AGENTS.md", d / "npm" / "package.json", d / "npm" / "package-lock.json"]
+    parts = [d / "AGENTS.md", d / "npm" / "package.json", d / "npm" / "package-lock.json"]
     for sub in ("skills", "extensions"):
         parts += sorted(p for p in (d / sub).rglob("*") if p.is_file()) if (d / sub).is_dir() else []
     # Settings can name extensions, skills and packages that live outside the folder: hash their contents too.
+    # The per-model compaction rule the runner adds for pill is left out, so one setup hashes the same for every model.
     if (d / "settings.json").is_file():
         cfg = json.loads((d / "settings.json").read_text())
+        overrides = cfg.get("compaction", {}).get("modelOverrides", {})
+        for k in [k for k in overrides if k.startswith("pill/")]:
+            del overrides[k]
+        h.update(b"settings.json\0" + json.dumps(cfg, sort_keys=True).encode() + b"\0")
         for key in ("extensions", "skills", "packages"):
             for e in cfg.get(key, []) if isinstance(cfg.get(key), list) else []:
                 ext = Path(os.path.expanduser(e)) if isinstance(e, str) else None
@@ -279,7 +284,8 @@ def pi_agent_dir(outdir, model, reasoning=False, personal=False):
                 shutil.copy(src / f, d / f)
     cfg = json.loads((d / "models.json").read_text())
     models = cfg["providers"]["pill"]["models"]
-    if not any(m["id"] == model for m in models):
+    cloned = not any(m["id"] == model for m in models)
+    if cloned:
         entry = dict(models[0])
         entry["id"] = entry["name"] = model
         models.append(entry)
@@ -290,7 +296,9 @@ def pi_agent_dir(outdir, model, reasoning=False, personal=False):
             if m["id"] == model:
                 m["reasoning"] = True
     (d / "models.json").write_text(json.dumps(cfg, indent=2))
-    write_compaction_rule(d, model, next(m for m in models if m["id"] == model)["contextWindow"])
+    ctx = next(m for m in models if m["id"] == model).get("contextWindow")
+    if ctx and not cloned:  # a cloned entry carries another model's window, so no rule is derived from it
+        write_compaction_rule(d, model, ctx)
     return d
 
 

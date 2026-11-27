@@ -364,9 +364,11 @@ func (r *Registry) Apply(s *Snapshot) (Applied, error) {
 	}
 	// The models Pi lists are the models pill owns compaction rules for; a
 	// removed model's rule goes with it.
+	// A settings.json pill cannot parse must not block registering models: the
+	// rule is skipped with a note on stderr (stdout stays machine-readable).
 	settingsChanged, err := pi.MergeCompaction(pi.SettingsPath(r.PiDir), piModels)
 	if err != nil {
-		return out, err
+		fmt.Fprintf(os.Stderr, "warning: compaction rule not written: %v\n", err)
 	}
 	out.PiChanged = changed || settingsChanged
 	for _, m := range piModels {

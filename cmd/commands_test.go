@@ -169,6 +169,22 @@ func TestAddWritesCompactionRuleKeepingUserSettings(t *testing.T) {
 	}
 }
 
+func TestAddStillWorksWithUnparsableSettings(t *testing.T) {
+	e := newEnv(t)
+	settings := filepath.Join(e.dir, "piagent", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(settings, []byte("{oops"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e.gguf("tiny-Q4_K_M.gguf")
+	e.run("add", "tiny-Q4_K_M.gguf", "--unverified").ok(t)
+	if got := readFile(t, settings); got != "{oops" {
+		t.Errorf("an unparsable settings.json must stay as it was: %q", got)
+	}
+}
+
 func TestDefaultFlow(t *testing.T) {
 	e := newEnv(t)
 	e.run("default", "gemma4-26b-iq4xs-64k").fails(t, 1, "is not registered")
