@@ -219,5 +219,11 @@ func preparePersonalAgentDir(src, dir string, port int, m pi.Model) (string, err
 	if _, err := pi.Merge(pi.ModelsPath(dir), pi.BuildProvider(port, []pi.Model{m})); err != nil {
 		return "", err
 	}
+	if err := pi.WriteBenchSettings(dir, m); err != nil {
+		return "", err
+	}
+	// The copy holds a settings.json already, so the merge left a backup of it;
+	// the copy never carries backups (see personalSkip).
+	_ = os.Remove(pi.SettingsPath(dir) + ".bak")
 	return SetupHash(dir), nil
 }

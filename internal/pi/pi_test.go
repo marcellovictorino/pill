@@ -208,3 +208,108 @@ func TestExecUsesInjectedFunc(t *testing.T) {
 		t.Errorf("bin=%s args=%v", gotBin, gotArgs)
 	}
 }
+
+// A hand-edited settings.json of the shape the captain runs: a large general
+// reserve for Claude models, a Claude-only override, and a stale pill entry.
+const userSettings = `{
+  "theme": "dark",
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 400000,
+    "modelOverrides": {
+      "anthropic/claude-opus": {"reserveTokens": 300000},
+      "pill/removed-model": {"reserveTokens": 1}
+    }
+  }
+}
+`
+
+func TestMergeCompactionStartsAt80PercentAndKeepsForeignKeys(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(userSettings), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := MergeCompaction(path, []Model{{ID: "qwen-64k", Ctx: 65536}, {ID: "small-32k", Ctx: 32768}})
+	if err != nil || !changed {
+		t.Fatalf("changed=%v err=%v", changed, err)
+	}
+	var got struct {
+		Theme      string `json:"theme"`
+		Compaction struct {
+			Enabled        bool `json:"enabled"`
+			ReserveTokens  int  `json:"reserveTokens"`
+			ModelOverrides map[string]struct {
+				ReserveTokens int `json:"reserveTokens"`
+			} `json:"modelOverrides"`
+		} `json:"compaction"`
+	}
+	if err := json.Unmarshal([]byte(readFileT(t, path)), &got); err != nil {
+		t.Fatal(err)
+	}
+	c := got.Compaction
+	// 65536/5 = 13107 and 32768/5 = 6553 tokens held back: compaction at 80%.
+	if c.ModelOverrides["pill/qwen-64k"].ReserveTokens != 13107 || c.ModelOverrides["pill/small-32k"].ReserveTokens != 6553 {
+		t.Errorf("overrides = %+v", c.ModelOverrides)
+	}
+	if _, stale := c.ModelOverrides["pill/removed-model"]; stale {
+		t.Error("a removed model's pill rule must go")
+	}
+	if c.ModelOverrides["anthropic/claude-opus"].ReserveTokens != 300000 || c.ReserveTokens != 400000 || !c.Enabled || got.Theme != "dark" {
+		t.Errorf("foreign settings changed: %+v", got)
+	}
+	if bak := readFileT(t, path+".bak"); bak != userSettings {
+		t.Errorf("backup differs from the original:\n%s", bak)
+	}
+	if again, err := MergeCompaction(path, []Model{{ID: "qwen-64k", Ctx: 65536}, {ID: "small-32k", Ctx: 32768}}); err != nil || again {
+		t.Errorf("an up-to-date file is left alone: changed=%v err=%v", again, err)
+	}
+}
+
+func TestMergeCompactionRefusesInvalidJSONAndCreatesNothingWithoutModels(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	if changed, err := MergeCompaction(path, nil); err != nil || changed {
+		t.Fatalf("no models, no file: changed=%v err=%v", changed, err)
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Error("no file should be created for no models")
+	}
+	if err := os.WriteFile(path, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := MergeCompaction(path, []Model{{ID: "m", Ctx: 65536}}); err == nil {
+		t.Fatal("invalid JSON must be refused")
+	}
+	if got := readFileT(t, path); got != "{not json" {
+		t.Errorf("a refused file must stay as it was: %q", got)
+	}
+}
+
+func TestWriteBenchAgentDirHoldsOnlyTheModelRule(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "pi-agent")
+	if err := WriteBenchAgentDir(dir, 11435, Model{ID: "qwen-64k", Ctx: 65536, MaxTokens: 8192}); err != nil {
+		t.Fatal(err)
+	}
+	want := `{
+  "compaction": {
+    "modelOverrides": {
+      "pill/qwen-64k": {
+        "reserveTokens": 13107
+      }
+    }
+  }
+}
+`
+	if got := readFileT(t, filepath.Join(dir, "settings.json")); got != want {
+		t.Errorf("bench settings:\n%s", got)
+	}
+}
+
+func readFileT(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
+}

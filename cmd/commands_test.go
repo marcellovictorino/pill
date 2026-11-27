@@ -142,8 +142,30 @@ func TestAddAcceptsLocalGGUFFile(t *testing.T) {
 	e := newEnv(t)
 	e.gguf("tiny-Q4_K_M.gguf")
 	r := e.run("add", "tiny-Q4_K_M.gguf", "--unverified").ok(t)
-	if !strings.Contains(r.out, "model: tiny-q4-k-m-32k") || !strings.Contains(r.out, "ctx: 32768") {
+	if !strings.Contains(r.out, "model: tiny-q4-k-m-64k") || !strings.Contains(r.out, "ctx: 65536") {
 		t.Errorf("generic file:\n%s", r.out)
+	}
+}
+
+// Captain's ask: Pi compacts at 80% of the window for pill models, written by
+// pill into Pi's settings.json without touching the user's other settings.
+func TestAddWritesCompactionRuleKeepingUserSettings(t *testing.T) {
+	e := newEnv(t)
+	settings := filepath.Join(e.dir, "piagent", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(settings, []byte(`{"compaction":{"reserveTokens":400000}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	e.gguf("tiny-Q4_K_M.gguf")
+	e.run("add", "tiny-Q4_K_M.gguf", "--unverified").ok(t)
+	got := readFile(t, settings)
+	if !strings.Contains(got, `"reserveTokens": 400000`) || !strings.Contains(got, `"pill/tiny-q4-k-m-64k"`) || !strings.Contains(got, "13107") {
+		t.Errorf("settings.json:\n%s", got)
+	}
+	if bak := readFile(t, settings+".bak"); !strings.Contains(bak, "400000") || strings.Contains(bak, "pill/") {
+		t.Errorf("backup should hold the original: %s", bak)
 	}
 }
 

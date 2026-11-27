@@ -290,7 +290,21 @@ def pi_agent_dir(outdir, model, reasoning=False, personal=False):
             if m["id"] == model:
                 m["reasoning"] = True
     (d / "models.json").write_text(json.dumps(cfg, indent=2))
+    write_compaction_rule(d, model, next(m for m in models if m["id"] == model)["contextWindow"])
     return d
+
+
+def write_compaction_rule(d, model, ctx):
+    """Start compaction at 80% of the window, as pill sets it in Pi's own settings.
+
+    Pi has no percentage setting: it compacts once the context passes the window minus
+    reserveTokens, so ctx/5 is held back. A per-model override wins over any general rule.
+    """
+    path = d / "settings.json"
+    cfg = json.loads(path.read_text()) if path.exists() else {}
+    overrides = cfg.setdefault("compaction", {}).setdefault("modelOverrides", {})
+    overrides.setdefault("pill/" + model, {})["reserveTokens"] = ctx // 5
+    path.write_text(json.dumps(cfg, indent=2))
 
 
 def agent_command(spec, prompt, ws, outdir, env, personal=False):

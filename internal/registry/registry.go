@@ -23,7 +23,7 @@ import (
 
 // Generic defaults for models that are not in the catalog.
 const (
-	genericCtx       = 32768
+	genericCtx       = 65536
 	genericMaxTokens = 8192
 )
 
@@ -362,7 +362,13 @@ func (r *Registry) Apply(s *Snapshot) (Applied, error) {
 	if err != nil {
 		return out, err
 	}
-	out.PiChanged = changed
+	// The models Pi lists are the models pill owns compaction rules for; a
+	// removed model's rule goes with it.
+	settingsChanged, err := pi.MergeCompaction(pi.SettingsPath(r.PiDir), piModels)
+	if err != nil {
+		return out, err
+	}
+	out.PiChanged = changed || settingsChanged
 	for _, m := range piModels {
 		out.PiModels = append(out.PiModels, m.ID)
 	}
