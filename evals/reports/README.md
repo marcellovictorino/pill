@@ -17,6 +17,7 @@ One focused report per model, plus a comparison across models. These are written
 | `daisyrose-27b.md` | RadixArk DaisyRose-27B (Qwen3.8 27B fine-tune) on the 16 GB M2 Pro: IQ2 quants with and without its own MTP head, Tier 1/2, TLDR first (none passed, Tier 3 not run) |
 | `ternary-bonsai-2-5-27b.md` | PrismML Ternary Bonsai 2.5 27B (Q2_0, with and without its MTP head) on stock llama.cpp: Tier 1/2, MTP speed effect, one Tier 3 run; TLDR first |
 | `tried-and-rejected.md` | Models benchmarked and not adopted, with dates, numbers and what would justify a re-test |
+| `llama-cpp-overnight-batch.md` | Follow-up batch on MiniCPM and Qwen3.6: DSpark 7 against base over five pairs (prompt reading and decode split per run), MiniCPM model-card sampling and Qwen thinking off, Tier 2 only; TLDR first |
 | `llama-cpp-1-0-rebench.md` | MiniCPM (default), Gemma 4 UD-Q4_K_S and Qwen3.6 UD-Q3_K_S on llama.cpp 1.0.0 against the build 12110 records, including the MoE expert cache on the memory gate; TLDR first |
 | `recursive-flint-iq2xxs.md` | RecursiveSI Flint Bartowski and Unsloth IQ2 variants, Tier 1/2 comparison (Tier 3 not run) |
 | `image-generation.md` | FLUX 3 Image Klein against Qwen-Image 2.1 Turbo on three prompts, Opus 5.5 scores and timings |
