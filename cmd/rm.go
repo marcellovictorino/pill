@@ -147,7 +147,6 @@ func rmPulledFile(a *App, snap *snapshot, arg string) (doc output.Obj, removed b
 		Set("help", []string{"list what exists: pill ls"}), false, nil
 }
 
-// usersOf names the other entries that use a GGUF file ("" when none).
 // removeGGUF deletes one file from the models dir and its download record,
 // and reports what happened and how many bytes it freed.
 func removeGGUF(a *App, snap *snapshot, file string) (string, int64, error) {
@@ -169,7 +168,8 @@ func removeGGUF(a *App, snap *snapshot, file string) (string, int64, error) {
 	return status, size, nil
 }
 
-// usersOf names the entries that use file, as their GGUF or their drafter.
+// usersOf names the other entries that use file, as their GGUF or their
+// drafter ("" when none).
 func usersOf(snap *snapshot, file string) string {
 	var names []string
 	for _, m := range snap.Models.Models {
