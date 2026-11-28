@@ -5,13 +5,13 @@
 **Verdicts:**
 - **DSpark drafter (MiniCPM, 7 tokens ahead): Undecided.** Tier 2 averaged 250 s against 276 s for MiniCPM base over five pairs, but the medians were 252 s and 225 s, and single runs ranged from 73 s to 577 s. Decode is about 27% faster per token (30.9 against 24.4 tok/s), so the wall-clock result depends on how many tokens the agent writes. Next: five more pairs, reporting tokens per run beside the time.
 - **Model-card sampling (MiniCPM): Undecided.** Two of three runs scored 22/22, against two of five for the base arm. Three runs are too few to call it. Next: five more sampling runs.
-- **Thinking off with 32k replies (Qwen3.6): No, for now.** None of three runs passed the gate: 21/22, 22/22 at the 15-minute cap with free memory down to 1%, and 21/22.
+- **Thinking off with 32k replies (Qwen3.6): No, for now.** None of three runs passed the gate: run 1 scored 21/22 and missed draw detection; run 2 scored 22/22 at the 15-minute cap with free memory down to 1%; run 3 scored 21/22 and missed bestMove blocks.
 - **Ngram-mod:** not in this batch. The verdict from the retest stands (no).
 
 | Check | Result |
 |---|---|
 | Tier 1 gate | Passed in every run of every arm |
-| Tier 2 (22 tasks; champion bar 22/22) | DSpark 7: 22, 22, 22, 22, 22. MiniCPM base: 22, 20, 22, 17, 17. Sampling: 17, 22, 22. Qwen thinking off: 21, 22 (capped), 21 |
+| Tier 2 (22 tasks; champion bar 22/22) | DSpark 7: 22, 22, 22, 22, 22. MiniCPM base: 22, 20, 22, 17, 17. Sampling: 17, 22, 22. Qwen thinking off: 21 (missed draw detection), 22 (capped), 21 (missed bestMove blocks) |
 | Tier 2 gate passes | DSpark 7: 4 of 5 (run 5 failed on memory). MiniCPM base: 2 of 5. Sampling: 2 of 3. Qwen thinking off: 0 of 3 |
 | Time (Tier 2 mean, median) | DSpark 7: 250 s, 252 s. MiniCPM base: 276 s, 225 s. Sampling: 316 s, 321 s. Qwen thinking off: 502 s, 406 s |
 | Prompt reading against decode | Prompt reading was 7 to 76 s per run (mean 13 to 40 s), against 64 to 793 s of decode. Decode is about 95% of Tier 2 time on every arm |
@@ -22,7 +22,7 @@
 ## Details
 
 - **Setup:** Pi with no extensions, skills or context files; 24 GB M4; llama.cpp 1.1.0 (build 12774); pill 0.6.0. All four arms at 64k context. DSpark drafter: `dspark-MiniCPM-V-4_7-35B-A3B-Q8_0.gguf` (`spec-type draft-dspark`, 7 tokens ahead). Sampling: temperature 0.7, top-p 0.95, top-k 100, repeat penalty 1.03. Qwen: `enable_thinking` false, 32,768 max tokens.
-- **Runs:** each arm ran one cold start at a time, serially, with pill's bench lock held and nothing else loading a model. Gate: Tier 1 300 s, Tier 2 15 minutes, free memory 5%.
+- **Runs:** each arm ran one cold start at a time, serially, with pill's bench lock held and nothing else loading a model. Gate as run: Tier 1 60 s, Tier 2 15 minutes, free memory 5%.
 - **Prompt reading and decode, per Tier 2 run (seconds):**
 
 | Arm | Run | Tier 2 | Prompt reading | Decode | Tokens generated | Decode tok/s | Turns | Lowest free |
