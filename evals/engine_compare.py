@@ -5,7 +5,8 @@ Throwaway dev tooling under evals/, not part of pill. pill bench cannot target m
 Kintsugi-27B Mac kit (it unloads models through the llama-server router), so this script does the
 same steps by hand, one engine at a time:
 
-  1. refuse to start while any other local model is loaded (the pill router or another run)
+  1. wait for pill's benchmark lock and hold it for every run, then refuse to start while any other
+     local model is loaded (the pill router or another run)
   2. start the one engine it was asked for, on a free port, with the catalog's sampling settings
   3. run Tier 1 (agent-sized request, decode speed, Pi tool-calling turn) and Tier 2 (Pi builds the
      tic-tac-toe task, then the hidden verify.mjs) with the same gates as internal/bench/bench.go
@@ -23,6 +24,7 @@ own runtimes can load): clone github.com/professorpalmer/Kintsugi-27B, run `mac/
 then pass its mac folder as --kit-dir. It runs with the kit's own defaults (Qwen's sampling, MTP on).
 """
 import argparse
+import fcntl
 import json
 import os
 import signal
@@ -46,6 +48,9 @@ LLAMA_BIN = "/opt/homebrew/bin/llama-server"
 PI_BIN = "/opt/homebrew/bin/pi"
 NODE_BIN = "node"
 ROUTER_PORT = 11435  # pill's router: read-only status check only
+# pill bench run holds an exclusive flock on this file (internal/config Paths.BenchLock); every
+# benchmark that loads a model takes it, so two overnight runs never share the GPU and memory.
+BENCH_LOCK = Path(os.environ.get("PILL_HOME") or Path.home() / ".pill") / "run" / "bench.lock"
 DEFAULT_GGUF = Path.home() / ".pill" / "models" / "gemma-4-26B-A4B-it-UD-IQ4_XS.gguf"
 
 # Gates from internal/bench/bench.go (DefaultThresholds); --tier1-max-seconds and --min-free-pct
@@ -94,8 +99,15 @@ def engine_env(engine):
 def other_local_models():
     """Anything holding a model right now that this script did not start. Empty means safe to start."""
     found = []
-    routers = set(subprocess.run(["pgrep", "-f", "llama-server --models-dir"], capture_output=True,
-                                 text=True).stdout.split())
+    router_lines = subprocess.run(["pgrep", "-fl", "llama-server --models-dir"], capture_output=True,
+                                  text=True).stdout.splitlines()
+    routers = {line.split(maxsplit=1)[0] for line in router_lines}
+    # A pill router in a scratch home listens on its own port, not 11435; ask each one.
+    ports = {ROUTER_PORT}
+    for line in router_lines:
+        args = line.split()
+        if "--port" in args[:-1]:
+            ports.add(int(args[args.index("--port") + 1]))
     out = subprocess.run(["pgrep", "-fl", "llama-server|mlx_lm|kit/serve.py"], capture_output=True,
                          text=True).stdout
     for line in out.splitlines():
@@ -106,14 +118,31 @@ def other_local_models():
         if ppid in routers:  # a model server the router started: loaded or asleep, so the router's status decides
             continue
         found.append(line.strip())
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{ROUTER_PORT}/models", timeout=5) as r:
-            for m in json.load(r).get("data", []):
-                if m.get("status", {}).get("value") == "loaded":
-                    found.append(f"pill router has {m['id']} loaded")
-    except Exception:
-        pass  # router not answering: nothing is loaded through it
+    for port in sorted(ports):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/models", timeout=5) as r:
+                for m in json.load(r).get("data", []):
+                    if m.get("status", {}).get("value") == "loaded":
+                        found.append(f"pill router on port {port} has {m['id']} loaded")
+        except Exception:
+            pass  # router not answering: nothing is loaded through it
     return found
+
+
+def hold_bench_lock():
+    """Block until pill's benchmark lock is free, then hold it until this process exits."""
+    BENCH_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    f = open(BENCH_LOCK, "a+")
+    waited = False
+    while True:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return f
+        except BlockingIOError:
+            if not waited:
+                print("waiting for another pill benchmark to finish", flush=True)
+                waited = True
+            time.sleep(30)
 
 
 def engine_version(engine, kit_dir=None):
@@ -444,6 +473,8 @@ def main():
     if args.engine == "kintsugi" and not (args.kit_dir and (args.kit_dir / "models" / "Kintsugi-27B-MLX" /
                                                             "config.json").exists()):
         sys.exit("kintsugi needs --kit-dir pointing at an installed kit's mac folder (run.sh install done)")
+    if not args.check:
+        lock = hold_bench_lock()  # the flock lasts as long as this open file
     busy = other_local_models()
     if args.check:
         print(json.dumps({"engine": args.engine, "other_local_models": busy,
