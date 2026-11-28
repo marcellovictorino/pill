@@ -179,13 +179,27 @@ func (r *Registry) GGUFPath(m config.Model) string {
 	return filepath.Join(r.Settings.ModelsDir, m.File)
 }
 
-// FileSize returns the GGUF size, or 0 when the file is missing.
+// FileSize returns the GGUF size, or 0 when the file is missing. A model
+// whose drafter is missing also counts as missing: llama-server cannot load
+// one without the other.
 func (r *Registry) FileSize(m config.Model) int64 {
 	st, err := os.Stat(r.GGUFPath(m))
-	if err != nil || !st.Mode().IsRegular() {
+	if err != nil || !st.Mode().IsRegular() || r.MissingFile(m) != "" {
 		return 0
 	}
 	return st.Size()
+}
+
+// MissingFile names the first of m's files (the GGUF, then its drafter) that
+// is not in the models dir, or "" when every one is there.
+func (r *Registry) MissingFile(m config.Model) string {
+	if !config.FileExists(r.GGUFPath(m)) {
+		return m.File
+	}
+	if m.Draft != nil && !config.FileExists(filepath.Join(r.Settings.ModelsDir, m.Draft.File)) {
+		return m.Draft.File
+	}
+	return ""
 }
 
 // State is the effective gate state of an entry (see config.EffectiveState).
@@ -199,9 +213,13 @@ func FromCatalog(e catalog.Entry) config.Model {
 	for k, v := range e.Family.Preset {
 		preset[k] = v
 	}
+	var draft *config.Draft
+	if d := e.Family.Draft; d != nil {
+		draft = &config.Draft{Repo: d.Repo, File: d.File}
+	}
 	return config.Model{
 		Name: e.Name, Repo: e.Family.Repo, File: e.Variant.File, Quant: e.Variant.Quant,
-		Ctx: e.Ctx, Reasoning: e.Family.Reasoning, MaxTokens: e.Family.MaxTokens, Preset: preset,
+		Ctx: e.Ctx, Reasoning: e.Family.Reasoning, MaxTokens: e.Family.MaxTokens, Draft: draft, Preset: preset,
 	}
 }
 
@@ -455,6 +473,9 @@ func (r *Registry) Rows(s *Snapshot) []Row {
 	used := map[string]bool{}
 	for _, m := range s.Models.Models {
 		used[m.File] = true
+		if m.Draft != nil {
+			used[m.Draft.File] = true
+		}
 		size := r.FileSize(m)
 		row := Row{Name: m.Name, State: r.State(s, m), Default: m.Name == r.Settings.Default, Size: size, File: m.File, Missing: size == 0}
 		rows = append(rows, row)

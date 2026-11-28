@@ -18,9 +18,9 @@ func newRmCmd(a *App) *cobra.Command {
 	return &cobra.Command{
 		Use:   "rm <name>",
 		Short: "Remove a model: its entry, Pi registration, and its GGUF when unused",
-		Long: `Remove a model from models.toml, the generated models.ini and Pi. The GGUF is
-deleted too, unless another entry (a different context size, say) still uses
-the same file. A downloaded GGUF that was never registered can be removed by
+		Long: `Remove a model from models.toml, the generated models.ini and Pi. The GGUF,
+and its drafter if it has one, are deleted too, unless another entry (a
+different context size, say) still uses the same file. A downloaded GGUF that was never registered can be removed by
 its name as shown in 'pill ls'.
 
 Removing something that is already gone is a no-op, not an error.`,
@@ -79,18 +79,21 @@ func runRm(ctx context.Context, a *App, arg string) error {
 
 		fileStatus, freed := "kept (still used by "+usersOf(snap, entry.File)+")", int64(0)
 		if users := usersOf(snap, entry.File); users == "" {
-			path := a.reg.GGUFPath(entry)
-			freed = a.reg.FileSize(entry)
-			switch err := os.Remove(path); {
-			case err == nil:
-				fileStatus = "deleted"
-			case os.IsNotExist(err):
-				fileStatus, freed = "not on disk", 0
-			default:
-				return output.Fail(nil, "cannot delete %s: %v", path, err)
+			var err error
+			if fileStatus, freed, err = removeGGUF(a, snap, entry.File); err != nil {
+				return err
 			}
-			_ = os.Remove(path + ".partial")
-			delete(snap.Results.Files, entry.File)
+		}
+		draftStatus := ""
+		if entry.Draft != nil {
+			draftStatus = "kept (still used by " + usersOf(snap, entry.Draft.File) + ")"
+			if usersOf(snap, entry.Draft.File) == "" {
+				status, size, err := removeGGUF(a, snap, entry.Draft.File)
+				if err != nil {
+					return err
+				}
+				draftStatus, freed = status, freed+size
+			}
 		}
 
 		if a.settings.Default == entry.Name {
@@ -100,6 +103,9 @@ func runRm(ctx context.Context, a *App, arg string) error {
 			help = append(help, "the default model was removed; choose another: pill default <name>")
 		}
 		doc = output.Obj{}.Set("model", entry.Name).Set("status", "removed").Set("file", fileStatus)
+		if draftStatus != "" {
+			doc = doc.Set("draft", draftStatus)
+		}
 		if freed > 0 {
 			doc = doc.Set("freed", humanBytes(freed))
 		}
@@ -141,11 +147,33 @@ func rmPulledFile(a *App, snap *snapshot, arg string) (doc output.Obj, removed b
 		Set("help", []string{"list what exists: pill ls"}), false, nil
 }
 
-// usersOf names the other entries that use a GGUF file ("" when none).
+// removeGGUF deletes one file from the models dir and its download record,
+// and reports what happened and how many bytes it freed.
+func removeGGUF(a *App, snap *snapshot, file string) (string, int64, error) {
+	path := filepath.Join(a.settings.ModelsDir, file)
+	var size int64
+	if st, err := os.Stat(path); err == nil {
+		size = st.Size()
+	}
+	status := "deleted"
+	switch err := os.Remove(path); {
+	case err == nil:
+	case os.IsNotExist(err):
+		status, size = "not on disk", 0
+	default:
+		return "", 0, output.Fail(nil, "cannot delete %s: %v", path, err)
+	}
+	_ = os.Remove(path + ".partial")
+	delete(snap.Results.Files, file)
+	return status, size, nil
+}
+
+// usersOf names the other entries that use file, as their GGUF or their
+// drafter ("" when none).
 func usersOf(snap *snapshot, file string) string {
 	var names []string
 	for _, m := range snap.Models.Models {
-		if m.File == file {
+		if m.File == file || (m.Draft != nil && m.Draft.File == file) {
 			names = append(names, m.Name)
 		}
 	}

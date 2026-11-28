@@ -103,9 +103,11 @@ tier2_minutes = 4.9
 min_free_pct = 11
 swap_mb = 4750
 
+# MiniCPM on its own, without a drafter. It was the default until the DSpark
+# setup below replaced it, and keeps its name, records and settings.
 [[model]]
 name = "minicpm-v4-7"
-id = "minicpm"
+id = "minicpm-base"
 source = "huggingface"
 repo = "AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF"
 strengths = ["all-rounder", "landing pages", "small apps", "Go features", "data cleaning"]
@@ -196,7 +198,7 @@ min = 54
 max = 100
 runs = 6
 
-# The default on a 16 GB M2 Pro: Tier 1 fails on memory (6% free against the 10% limit), so Tier 2 never ran.
+# On a 16 GB M2 Pro: Tier 1 fails on memory (6% free against the 10% limit), so Tier 2 never ran.
 [[model.variant.measurement]]
 chip = "Apple M2 Pro"
 ram_gb = 16
@@ -215,6 +217,69 @@ tier1_seconds = 31
 min_free_pct = 6
 swap_mb = 845
 fail_reason = "Tier 1 free memory fell below the limit: minimum 6% (limit 10%)"
+
+# The default way to run MiniCPM: the same weights with openbmb's DSpark
+# drafter proposing 7 tokens ahead, at 64k with thinking off, as the overnight
+# batch measured it. It comes after minicpm-base so that a file name or a
+# Hugging Face reference to the weights alone still means the bare model.
+[[model]]
+name = "minicpm-v4-7-dspark"
+id = "minicpm"
+source = "huggingface"
+repo = "AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF"
+strengths = ["all-rounder", "landing pages", "small apps", "Go features", "data cleaning"]
+reasoning = false
+max_tokens = 8192
+
+[model.draft]
+repo = "openbmb/MiniCPM-V-4.7-35B-A3B-DSpark-gguf"
+file = "dspark-MiniCPM-V-4_7-35B-A3B-Q8_0.gguf"
+
+[model.preset]
+spec-type = "draft-dspark"
+spec-draft-n-max = 7
+spec-draft-ngl = 99
+
+[[model.variant]]
+quant = "AD-IQ2_XS-IQ2_XXS"
+file = "MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf"
+size_gb = 11.7 # 11.3 GB of weights plus the 0.4 GB drafter
+ctx = 65536
+min_ram_gb = 24
+default = true
+
+# Five cold-start runs; each field keeps the least favourable run. Four of
+# five passed the gate: run 5 scored 22/22 but free memory dipped to 4%. The
+# bare model passed two of five in the same batch, and the maintainer adopted
+# this setup as the default for its faster replies. Tier 3 (py-clean) is the
+# two runs of the earlier retest, evals/reports/llama-cpp-tricks-retest.md.
+[[model.variant.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "pass"
+tier2 = "pass"
+tok_per_s = 34.6
+runs = 5
+date = "2026-11-28"
+pill = "0.6.0"
+llama_cpp = "1.1.0 (build 12774)"
+gate = "tier 1 60 s, tier 2 15 min, free memory 5%"
+source = "evals/reports/llama-cpp-overnight-batch.md"
+note = "4 of 5 gate runs passed (run 5: 4% free memory); pill's speed check read 67.5-71.0 tok/s in four runs and 34.6 in one; thinking off"
+tier1_seconds = 31
+tier2_score = 22
+tier2_total = 22
+tier2_minutes = 9.6
+min_free_pct = 4
+swap_mb = 727
+
+[[model.variant.measurement.tier3]]
+task = "py-clean"
+median = 85
+min = 77
+max = 93
+runs = 2
 
 [[tried]]
 name = "Devstral Small 2 24B Q3_K_M"

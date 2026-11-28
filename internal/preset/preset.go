@@ -40,6 +40,9 @@ func Section(m config.Model, modelsDir string) string {
 	fmt.Fprintf(&b, "[%s]\n", m.Name)
 	fmt.Fprintf(&b, "model = %s\n", filepath.Join(modelsDir, m.File))
 	fmt.Fprintf(&b, "c = %d\n", m.Ctx)
+	if m.Draft != nil {
+		fmt.Fprintf(&b, "spec-draft-model = %s\n", filepath.Join(modelsDir, m.Draft.File))
+	}
 	for _, k := range orderedKeys(m.Preset) {
 		fmt.Fprintf(&b, "%s = %s\n", k, formatValue(m.Preset[k]))
 	}

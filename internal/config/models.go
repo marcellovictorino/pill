@@ -21,9 +21,19 @@ type Model struct {
 	Ctx       int    `toml:"ctx"`             // llama-server context size in tokens
 	Reasoning bool   `toml:"reasoning"`
 	MaxTokens int    `toml:"max_tokens"`
+	// Draft is the speculative-decoding drafter served beside the model, or
+	// nil. Its GGUF lives in the models dir like the model's own.
+	Draft *Draft `toml:"draft,omitempty"`
 	// Preset holds extra llama-server options (sampling etc.), written as-is
 	// into the generated models.ini section.
 	Preset map[string]any `toml:"preset,omitempty"`
+}
+
+// Draft is a drafter GGUF: a small model that proposes tokens for the main
+// one to check. Repo is where pill downloads it from.
+type Draft struct {
+	Repo string `toml:"repo,omitempty"`
+	File string `toml:"file"`
 }
 
 // ModelsFile is the on-disk shape of models.toml ([[model]] tables).

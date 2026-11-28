@@ -54,12 +54,15 @@ func runPull(ctx context.Context, a *App, arg string, ctxSize int) error {
 	if err != nil {
 		return err
 	}
-	a.printer.Emit(output.Obj{}.
+	doc := output.Obj{}.
 		Set("file", file.Name()).
 		Set("status", status).
 		Set("size", humanBytes(file.Size)).
-		Set("sha256", orDash(sum)).
-		Set("help", []string{"register it: pill add " + arg + " --unverified"}))
+		Set("sha256", orDash(sum))
+	if m.Draft != nil {
+		doc = doc.Set("draft", m.Draft.File)
+	}
+	a.printer.Emit(doc.Set("help", []string{"register it: pill add " + arg + " --unverified"}))
 	return nil
 }
 
@@ -76,9 +79,10 @@ func remotePathOf(arg string) string {
 	return ref.File
 }
 
-// pullModel downloads the GGUF for m (when it is not already present) and
-// records where it came from. It never registers the model. remote, when not
-// empty, is the exact path of the file inside the repository.
+// pullModel downloads the GGUF for m and its drafter, if it has one (each
+// only when it is not already present), and records where they came from.
+// It never registers the model. remote, when not empty, is the exact path of
+// the model's file inside the repository.
 func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model, remote string) (hf.File, string, string, error) {
 	if m.Repo == "" {
 		return hf.File{}, "", "", output.Fail([]string{"use a catalog name or a Hugging Face reference"}, "%s has no known download source", m.Name)
@@ -90,15 +94,33 @@ func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model, rem
 	if remote != "" {
 		ref.File = remote
 	}
+	if m.Draft != nil && m.Draft.Repo == "" {
+		return hf.File{}, "", "", output.Fail([]string{"copy " + m.Draft.File + " into " + a.settings.ModelsDir}, "%s has no known download source for its drafter", m.Name)
+	}
+	file, status, sum, err := a.pullFile(ctx, snap, ref, m.Quant)
+	if err != nil || m.Draft == nil {
+		return file, status, sum, err
+	}
+	// The drafter is part of the model: without it the router cannot load it.
+	if _, _, _, err := a.pullFile(ctx, snap, hf.Ref{Repo: m.Draft.Repo, File: m.Draft.File}, ""); err != nil {
+		return hf.File{}, "", "", err
+	}
+	return file, status, sum, nil
+}
+
+// pullFile downloads one GGUF named by ref (when it is not already present)
+// and records where it came from. quant is the quantisation to record.
+func (a *App) pullFile(ctx context.Context, snap *snapshot, ref hf.Ref, quant string) (hf.File, string, string, error) {
+	repo := ref.Repo
 	client := hf.NewClient()
-	a.printer.Progress("looking up %s on Hugging Face...", m.Repo)
-	files, err := client.ListFiles(ctx, m.Repo)
+	a.printer.Progress("looking up %s on Hugging Face...", repo)
+	files, err := client.ListFiles(ctx, repo)
 	if err != nil {
 		return hf.File{}, "", "", hfFailure(err)
 	}
 	file, err := hf.FindFile(files, ref)
 	if err != nil {
-		return hf.File{}, "", "", output.Fail([]string{"check the name on https://huggingface.co/" + m.Repo}, "%v", err)
+		return hf.File{}, "", "", output.Fail([]string{"check the name on https://huggingface.co/" + repo}, "%v", err)
 	}
 
 	// Files live in one flat directory under their base name, so two
@@ -120,12 +142,12 @@ func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model, rem
 	}
 	dest := filepath.Join(a.settings.ModelsDir, file.Name())
 	rec, recorded := current.Files[file.Name()]
-	if recorded && rec.Repo != "" && !strings.EqualFold(rec.Repo, m.Repo) {
-		return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, rec.Repo)
+	if recorded && rec.Repo != "" && !strings.EqualFold(rec.Repo, repo) {
+		return hf.File{}, "", "", nameClash(a, file.Name(), repo, rec.Repo)
 	}
 	// The same repository can hold two folders with one file name.
 	if recorded && rec.Path != "" && rec.Path != file.Path {
-		return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, m.Repo+"/"+rec.Path)
+		return hf.File{}, "", "", nameClash(a, file.Name(), repo, repo+"/"+rec.Path)
 	}
 	status, sum := "downloaded", ""
 	st, statErr := os.Stat(dest)
@@ -138,16 +160,16 @@ func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model, rem
 			if local, err := hf.HashFile(dest); err != nil {
 				return hf.File{}, "", "", output.Fail(nil, "%v", err)
 			} else if !strings.EqualFold(local, file.SHA256) {
-				return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, "an unknown source")
+				return hf.File{}, "", "", nameClash(a, file.Name(), repo, "an unknown source")
 			}
 		}
 	case statErr == nil && !recorded:
 		// Same name, different size, and pill never downloaded it: do not guess.
-		return hf.File{}, "", "", nameClash(a, file.Name(), m.Repo, "an unknown source")
+		return hf.File{}, "", "", nameClash(a, file.Name(), repo, "an unknown source")
 	default:
 		a.printer.Progress("downloading %s (%s)", file.Name(), humanBytes(file.Size))
 		var err error
-		sum, err = client.Download(ctx, m.Repo, file, a.settings.ModelsDir, a.downloadProgress(file.Name()))
+		sum, err = client.Download(ctx, repo, file, a.settings.ModelsDir, a.downloadProgress(file.Name()))
 		if err != nil {
 			return hf.File{}, "", "", hfFailure(err)
 		}
@@ -155,22 +177,21 @@ func (a *App) pullModel(ctx context.Context, snap *snapshot, m config.Model, rem
 	// Record where the file came from, against the current state on disk.
 	err = a.reg.UpdateResults(ctx, func(res *config.Results) error {
 		cur, ok := res.Files[file.Name()]
-		if ok && cur.Repo != "" && !strings.EqualFold(cur.Repo, m.Repo) {
-			return nameClash(a, file.Name(), m.Repo, cur.Repo)
+		if ok && cur.Repo != "" && !strings.EqualFold(cur.Repo, repo) {
+			return nameClash(a, file.Name(), repo, cur.Repo)
 		}
 		if ok && cur.Path != "" && cur.Path != file.Path {
-			return nameClash(a, file.Name(), m.Repo, m.Repo+"/"+cur.Path)
+			return nameClash(a, file.Name(), repo, repo+"/"+cur.Path)
 		}
 		// A quantisation is only worth recording when it is one: a model made
 		// from a bare file name carries the file stem in its Quant field.
-		quant := m.Quant
 		if strings.EqualFold(quant, strings.TrimSuffix(file.Name(), filepath.Ext(file.Name()))) {
 			quant = ""
 		}
-		if quant == "" && ok && strings.EqualFold(cur.Repo, m.Repo) {
+		if quant == "" && ok && strings.EqualFold(cur.Repo, repo) {
 			quant = cur.Quant // pulling by file name must not forget a known quantisation
 		}
-		res.Files[file.Name()] = config.FileInfo{Repo: m.Repo, Path: file.Path, Quant: quant, Size: file.Size, SHA256: sum}
+		res.Files[file.Name()] = config.FileInfo{Repo: repo, Path: file.Path, Quant: quant, Size: file.Size, SHA256: sum}
 		return nil
 	})
 	if err != nil {

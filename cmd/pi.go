@@ -52,7 +52,7 @@ func launchPi(ctx context.Context, a *App, userArgs []string) error {
 		return output.Fail([]string{"pill add " + name + " --unverified", "or pick another: pill default <name>"}, "default model %s is not in models.toml", name)
 	}
 	if a.reg.FileSize(*m) == 0 {
-		return output.Fail([]string{"download it: pill pull " + name, "or copy the GGUF into " + a.settings.ModelsDir}, "the file for %s (%s) is missing", name, m.File)
+		return output.Fail([]string{"download it: pill pull " + name, "or copy the GGUF into " + a.settings.ModelsDir}, "the file for %s (%s) is missing", name, a.reg.MissingFile(*m))
 	}
 	switch state := a.reg.State(snap, *m); {
 	case state == config.StateFailed:
