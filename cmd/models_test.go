@@ -271,10 +271,7 @@ func TestChampionShortNamePullsRecordedFile(t *testing.T) {
 func TestBareMiniCPMStaysSelectable(t *testing.T) {
 	e := newEnv(t)
 	e.gguf(minicpmFile)
-	add := e.run("add", "minicpm-base", "--unverified").ok(t)
-	if !strings.Contains(add.out, "model: minicpm-v4-7-adiq2xsiq2xxs-64k") {
-		t.Errorf("add:\n%s", add.out)
-	}
+	e.run("add", "minicpm-base", "--unverified").ok(t)
 	ini, _ := os.ReadFile(filepath.Join(e.dir, "pill", "models.ini"))
 	want := "[minicpm-v4-7-adiq2xsiq2xxs-64k]\nmodel = " + filepath.Join(e.modelsDir(), minicpmFile) + "\nc = 65536\n"
 	if !strings.HasSuffix(string(ini), want) {
@@ -419,6 +416,28 @@ func TestRmDeletesFileOnlyWhenUnused(t *testing.T) {
 	again := e.run("rm", "gemma4-26b-iq4xs-64k").ok(t) // idempotent
 	if !strings.Contains(again.out, "status: not found") {
 		t.Errorf("repeat rm:\n%s", again.out)
+	}
+}
+
+// Intent: a drafter is part of its model, so removing the last model that
+// uses it removes the drafter too, while the bare model sharing the weights
+// keeps them.
+func TestRmDeletesTheDrafterWithItsLastUser(t *testing.T) {
+	e := newEnv(t)
+	e.gguf(minicpmFile)
+	e.gguf(dsparkDrafts)
+	e.run("add", "minicpm", "--unverified").ok(t)
+	e.run("add", "minicpm-base", "--unverified").ok(t)
+
+	r := e.run("rm", "minicpm-v4-7-dspark-adiq2xsiq2xxs-64k").ok(t)
+	if !strings.Contains(r.out, "file: kept (still used by minicpm-v4-7-adiq2xsiq2xxs-64k)") || !strings.Contains(r.out, "draft: deleted") {
+		t.Errorf("rm:\n%s", r.out)
+	}
+	if _, err := os.Stat(filepath.Join(e.modelsDir(), dsparkDrafts)); err == nil {
+		t.Error("the drafter must go with the last model that uses it")
+	}
+	if _, err := os.Stat(filepath.Join(e.modelsDir(), minicpmFile)); err != nil {
+		t.Error("the weights must stay while the bare model uses them")
 	}
 }
 

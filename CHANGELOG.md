@@ -8,7 +8,7 @@ All notable changes to pill are documented here. The format follows
 
 ### Changed
 
-- `minicpm` now runs MiniCPM-V 4.7 IQ2 with openbmb's DSpark drafter, 7 tokens ahead, at 64k with thinking off. `pill pull minicpm` downloads the 0.4 GB drafter beside the weights, `pill add minicpm` serves the two together, and a model whose drafter is missing is reported as missing. On the 24 GB M4, pill's speed check read 67.5 to 71.0 tok/s in four of five runs (34.6 in one), against 20.4 to 27.7 tok/s without the drafter in the same batch. Its catalog record is the overnight batch's: Tier 2 22/22 in all five runs, four of five gate passes (one run dipped to 4% free memory). MiniCPM alone stays available as `minicpm-base`, under its old name `minicpm-v4-7-adiq2xsiq2xxs-64k`. See `evals/reports/llama-cpp-overnight-batch.md`.
+- `minicpm` now runs MiniCPM-V 4.7 IQ2 with openbmb's DSpark drafter, 7 tokens ahead, at 64k with thinking off. `pill pull minicpm` downloads the 0.4 GB drafter beside the weights, `pill add minicpm` serves the two together, `pill rm` deletes the drafter with the last model that uses it, and a model whose drafter is missing is reported as missing. On the 24 GB M4, pill's speed check read 67.5 to 71.0 tok/s in four of five runs (34.6 in one), against 20.4 to 27.7 tok/s without the drafter in the same batch. Its catalog record is the overnight batch's: Tier 2 22/22 in all five runs, four of five gate passes (one run dipped to 4% free memory). MiniCPM alone stays available as `minicpm-base`, under its old name `minicpm-v4-7-adiq2xsiq2xxs-64k`. See `evals/reports/llama-cpp-overnight-batch.md`.
 
 ### Added
 
