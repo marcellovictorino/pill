@@ -36,7 +36,7 @@ func TestCatalogRecommendsPerDevice(t *testing.T) {
 	// the footer says how many were left out. Measured runs still show.
 	e.sys.RAM = 16 << 30
 	r = e.run("catalog", "--format", "agent").ok(t)
-	for _, want := range []string{"models[", "catalog models that need more memory than this Mac has: 3", "no catalog model fits"} {
+	for _, want := range []string{"models[", "catalog models that need more memory than this Mac has: 4", "no catalog model fits"} {
 		if !strings.Contains(r.out, want) {
 			t.Errorf("16 GB output lacks %q:\n%s", want, r.out)
 		}
@@ -49,7 +49,7 @@ func TestCatalogRecommendsPerDevice(t *testing.T) {
 	// borrowed. The fitting catalog models list with dashes, nothing is tried.
 	e.sys.RAM, e.sys.Chip = 24<<30, "Apple M3 Max"
 	r = e.run("catalog", "--format", "agent").ok(t)
-	if !strings.Contains(r.out, "models[3]") || !strings.Contains(r.out, `minicpm,Q2,64k,"-","-","-","-","-",`) || strings.Contains(r.out, "22/22") {
+	if !strings.Contains(r.out, "models[4]") || !strings.Contains(r.out, `minicpm,Q2,64k,"-","-","-","-","-",`) || strings.Contains(r.out, "22/22") {
 		t.Errorf("another chip must show dashes, not the M4 result:\n%s", r.out)
 	}
 
@@ -80,8 +80,8 @@ func TestCatalogShowsWhatWasTriedOnThisMac(t *testing.T) {
 		t.Errorf("Tier 3 must read Go|cleaning|insight|Kanban|(nursery,Mars,tax):\n%s", r.out)
 	}
 	// An offered model that failed here shows even when it ranks below the closest five.
-	if !strings.Contains(r.out, "minicpm,Q2,64k,fail (31s),") || !strings.Contains(r.out, ",6%,") {
-		t.Errorf("the failed default must show its M2 Pro result:\n%s", r.out)
+	if !strings.Contains(r.out, "minicpm-base,Q2,64k,fail (31s),") || !strings.Contains(r.out, ",6%,") {
+		t.Errorf("the failed bare MiniCPM must show its M2 Pro result:\n%s", r.out)
 	}
 	// Agents get the source of an offered model; a tried model has none to give.
 	if !strings.Contains(r.out, "hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS") {
@@ -203,7 +203,8 @@ func TestCatalogDefaultsToHumanEvenWhenPiped(t *testing.T) {
 // line up under the heading.
 func TestCatalogMarksTheDefault(t *testing.T) {
 	e := newEnv(t)
-	e.gguf("MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf")
+	e.gguf(minicpmFile)
+	e.gguf(dsparkDrafts)
 	e.run("add", "minicpm", "--unverified").ok(t)
 	e.run("default", "minicpm").ok(t)
 	r := e.run("catalog", "--format", "human").ok(t)
@@ -215,27 +216,78 @@ func TestCatalogMarksTheDefault(t *testing.T) {
 	}
 }
 
+// MiniCPM's files, as the catalog records them.
+const (
+	minicpmRepo  = "AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF"
+	minicpmFile  = "MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf"
+	dsparkRepo   = "openbmb/MiniCPM-V-4.7-35B-A3B-DSpark-gguf"
+	dsparkDrafts = "dspark-MiniCPM-V-4_7-35B-A3B-Q8_0.gguf"
+)
+
 // Intent: the champion is a catalog reference with short commands. Its short
-// name pulls the exact recorded file from the recorded repository, and the
-// binary only ever held the reference.
+// name pulls the exact recorded files from the recorded repositories, and the
+// binary only ever held the references. Since the maintainer adopted MiniCPM
+// with the DSpark drafter as the default, those files are the weights and the
+// drafter, served with the settings the overnight batch measured
+// (evals/reports/llama-cpp-overnight-batch.md): 7 tokens ahead, the drafter on
+// the GPU, 64k context.
 func TestChampionShortNamePullsRecordedFile(t *testing.T) {
 	e := newEnv(t)
-	const file = "MiniCPM-V-4.7-35B-A3B-AD-IQ2_XS-IQ2_XXS.gguf"
 	hub := testutil.NewHub(t, map[string]map[string][]byte{
-		"AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF": {file: []byte("pretend-champion-weights")},
+		minicpmRepo: {minicpmFile: []byte("pretend-champion-weights")},
+		dsparkRepo:  {dsparkDrafts: []byte("pretend-drafter")},
 	})
-	r := e.run("pull", "minicpm").ok(t) // the short ID; "minicpm-v4-7" still works as an alias
-	if !strings.Contains(r.out, "status: downloaded") || !strings.Contains(r.out, "file: "+file) {
+	r := e.run("pull", "minicpm").ok(t)
+	if !strings.Contains(r.out, "status: downloaded") || !strings.Contains(r.out, "file: "+minicpmFile) || !strings.Contains(r.out, "draft: "+dsparkDrafts) {
 		t.Errorf("pull:\n%s", r.out)
 	}
-	if hub.Hits("/resolve/") != 1 {
-		t.Errorf("one download expected, got %d", hub.Hits("/resolve/"))
+	if hub.Hits("/resolve/") != 2 {
+		t.Errorf("two downloads expected (weights and drafter), got %d", hub.Hits("/resolve/"))
 	}
-	// Registering resolves the short name to the same variant and its context.
-	add := e.run("add", "minicpm-v4-7", "--unverified").ok(t)
+	add := e.run("add", "minicpm", "--unverified").ok(t)
+	if !strings.Contains(add.out, "model: minicpm-v4-7-dspark-adiq2xsiq2xxs-64k") {
+		t.Errorf("add:\n%s", add.out)
+	}
+	ini, _ := os.ReadFile(filepath.Join(e.dir, "pill", "models.ini"))
+	want := "[minicpm-v4-7-dspark-adiq2xsiq2xxs-64k]\n" +
+		"model = " + filepath.Join(e.modelsDir(), minicpmFile) + "\n" +
+		"c = 65536\n" +
+		"spec-draft-model = " + filepath.Join(e.modelsDir(), dsparkDrafts) + "\n" +
+		"spec-draft-n-max = 7\n" +
+		"spec-draft-ngl = 99\n" +
+		"spec-type = draft-dspark\n"
+	if !strings.Contains(string(ini), want) {
+		t.Errorf("models.ini must serve the measured DSpark settings:\n%s", ini)
+	}
+	// The drafter belongs to the model: it is not a stray download.
+	if ls := e.run("ls").ok(t).out; strings.Contains(ls, "pulled") {
+		t.Errorf("the drafter must not be listed as an unused file:\n%s", ls)
+	}
+}
+
+// Intent (maintainer): MiniCPM without the drafter stays selectable, under its
+// old name and with its old settings, so existing registrations and results
+// keep applying to it.
+func TestBareMiniCPMStaysSelectable(t *testing.T) {
+	e := newEnv(t)
+	e.gguf(minicpmFile)
+	add := e.run("add", "minicpm-base", "--unverified").ok(t)
 	if !strings.Contains(add.out, "model: minicpm-v4-7-adiq2xsiq2xxs-64k") {
 		t.Errorf("add:\n%s", add.out)
 	}
+	ini, _ := os.ReadFile(filepath.Join(e.dir, "pill", "models.ini"))
+	want := "[minicpm-v4-7-adiq2xsiq2xxs-64k]\nmodel = " + filepath.Join(e.modelsDir(), minicpmFile) + "\nc = 65536\n"
+	if !strings.HasSuffix(string(ini), want) {
+		t.Errorf("the bare model is served alone, with no drafter settings:\n%s", ini)
+	}
+}
+
+// Intent: llama-server cannot load the DSpark setup without its drafter, so
+// registering it with only the weights present says which file is missing.
+func TestDraftedModelNeedsItsDrafter(t *testing.T) {
+	e := newEnv(t)
+	e.gguf(minicpmFile)
+	e.run("add", "minicpm", "--unverified").fails(t, 1, dsparkDrafts+" is not in")
 }
 
 func TestLsEmptyThenPopulated(t *testing.T) {

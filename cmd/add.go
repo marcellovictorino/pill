@@ -58,7 +58,7 @@ func runAdd(ctx context.Context, a *App, arg string, ctxSize int) error {
 			return output.Fail([]string{"see the built-in models: pill catalog", "or name a GGUF in " + a.settings.ModelsDir}, "%v", err)
 		}
 		if m.File == "" || a.reg.FileSize(m) == 0 {
-			file := m.File
+			file := a.reg.MissingFile(m)
 			if file == "" {
 				file = "a GGUF for " + arg
 			}
@@ -123,7 +123,8 @@ func registerEntry(a *App, s *snapshot, m config.Model) bool {
 
 func sameModel(a, b config.Model) bool {
 	if a.Name != b.Name || a.File != b.File || a.Ctx != b.Ctx || a.Repo != b.Repo ||
-		a.Reasoning != b.Reasoning || a.MaxTokens != b.MaxTokens || a.Quant != b.Quant || len(a.Preset) != len(b.Preset) {
+		a.Reasoning != b.Reasoning || a.MaxTokens != b.MaxTokens || a.Quant != b.Quant || len(a.Preset) != len(b.Preset) ||
+		(a.Draft == nil) != (b.Draft == nil) || (a.Draft != nil && *a.Draft != *b.Draft) {
 		return false
 	}
 	for k, v := range a.Preset {

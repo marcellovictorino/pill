@@ -6,6 +6,10 @@ All notable changes to pill are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `minicpm` now runs MiniCPM-V 4.7 IQ2 with openbmb's DSpark drafter, 7 tokens ahead, at 64k with thinking off. `pill pull minicpm` downloads the 0.4 GB drafter beside the weights, `pill add minicpm` serves the two together, and a model whose drafter is missing is reported as missing. On the 24 GB M4, pill's speed check read 67.5 to 71.0 tok/s in four of five runs (34.6 in one), against 20.4 to 27.7 tok/s without the drafter in the same batch. Its catalog record is the overnight batch's: Tier 2 22/22 in all five runs, four of five gate passes (one run dipped to 4% free memory). MiniCPM alone stays available as `minicpm-base`, under its old name `minicpm-v4-7-adiq2xsiq2xxs-64k`. See `evals/reports/llama-cpp-overnight-batch.md`.
+
 ### Added
 
 - `pill catalog` records Kintsugi-27B (CaryPalmer's 2.47-bit repack of Qwen3.8 27B) on the 24 GB M4 as `kintsugi-27b`: stock llama.cpp cannot load it, so it ran on the model's own MLX kit. Tier 1 passed in 186-189 s, but only 1 of 3 Tier 2 runs passed (22/22 at the cap with a tool-call loop, 20/22, 22/22 in 14.1 min) at 10 tok/s with 24% free memory and no swap, so Tier 3 was not run. See `evals/reports/tried-and-rejected.md`.

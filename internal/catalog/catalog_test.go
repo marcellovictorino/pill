@@ -13,7 +13,7 @@ func mustLoad(t *testing.T) *Catalog {
 
 func TestEmbeddedCatalog(t *testing.T) {
 	c := mustLoad(t)
-	if len(c.Families) != 2 || c.Families[0].Name != "gemma4-26b" || len(c.Families[0].Variants) != 2 || c.Families[1].Name != "minicpm-v4-7" {
+	if len(c.Families) != 3 || c.Families[0].Name != "gemma4-26b" || len(c.Families[0].Variants) != 2 || c.Families[1].Name != "minicpm-v4-7" || c.Families[2].Name != "minicpm-v4-7-dspark" {
 		t.Fatalf("unexpected catalog: %+v", c.Families)
 	}
 }
@@ -185,12 +185,15 @@ func TestQuantLabel(t *testing.T) {
 }
 
 // Intent (maintainer): commands take the short ID, id:quant when an ID has two
-// files, and the old long names keep working as aliases.
+// files, and the old long names keep working as aliases. minicpm is MiniCPM
+// with its DSpark drafter (the maintainer's default); minicpm-base and the old
+// long name are MiniCPM alone.
 func TestResolveShortIDs(t *testing.T) {
 	c := mustLoad(t)
 	for _, tc := range []struct{ in, wantName string }{
-		{"minicpm", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
-		{"minicpm:ad-iq2_xs-iq2_xxs", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
+		{"minicpm", "minicpm-v4-7-dspark-adiq2xsiq2xxs-64k"},
+		{"minicpm:ad-iq2_xs-iq2_xxs", "minicpm-v4-7-dspark-adiq2xsiq2xxs-64k"},
+		{"minicpm-base", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
 		{"minicpm-v4-7", "minicpm-v4-7-adiq2xsiq2xxs-64k"},
 		{"gemma4-26b", "gemma4-26b-iq4xs-64k"},
 		{"gemma4-26b:q3kxl", "gemma4-26b-q3kxl-64k"},

@@ -49,7 +49,7 @@ func runDefault(a *App, arg string) error {
 	state := a.reg.State(snap, *m)
 	switch {
 	case a.reg.FileSize(*m) == 0:
-		return output.Fail([]string{"download it: pill pull " + m.Name}, "the file for %s (%s) is missing", m.Name, m.File)
+		return output.Fail([]string{"download it: pill pull " + m.Name}, "the file for %s (%s) is missing", m.Name, a.reg.MissingFile(*m))
 	case state == config.StateFailed:
 		return output.Fail([]string{"override the result: pill add " + m.Name + " --unverified"}, "%s failed its benchmark and cannot be the default", m.Name)
 	case !config.OfferedToPi(state):

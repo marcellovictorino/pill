@@ -106,7 +106,16 @@ type Family struct {
 	Reasoning bool           `toml:"reasoning"`
 	MaxTokens int            `toml:"max_tokens"`
 	Preset    map[string]any `toml:"preset"`
-	Variants  []Variant      `toml:"variant"`
+	// Draft is a speculative-decoding drafter served with every variant, or
+	// nil. Its llama-server options (spec-type and so on) go in Preset.
+	Draft    *Draft    `toml:"draft"`
+	Variants []Variant `toml:"variant"`
+}
+
+// Draft is a drafter GGUF and the Hugging Face repository it comes from.
+type Draft struct {
+	Repo string `toml:"repo"`
+	File string `toml:"file"`
 }
 
 // PublicID is the short model ID shown by `pill catalog` and accepted by the

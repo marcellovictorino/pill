@@ -6,10 +6,10 @@ models[7]{id,quant,ctx,tier_1,tier_2,tier_3,tok_s,free_mem,verdict,source}:
   nemotron3.5-e4b,Q8,32k,pass (28s),20/22 7.1m,"-",25,22%,FAIL,"-"
   daisyrose-27b,IQ2XXS,32k,pass (116s),20/22 15m,"-",9,11%,FAIL,"-"
   qwen3.6-35b-a3b,Q1,16k,pass (27s),19/22 5.0m,"-",43,11%,FAIL,"-"
-  minicpm,Q2,64k,fail (31s),"-","-",30,6%,FAIL,"hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS"
+  minicpm-base,Q2,64k,fail (31s),"-","-",30,6%,FAIL,"hf.co/AtomicChat/MiniCPM-V-4.7-35B-A3B-GGUF:AD-IQ2_XS-IQ2_XXS"
   gemma4-26b,Q3KXL,64k,fail,"-","-","-","-",FAIL,"hf.co/unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q3_K_XL"
 help[1]: no model has passed both standard benchmark tiers on this exact chip and memory yet
 help[2]: test one on this Mac: pill bench run <id> (a Q3KXL style quant goes after a colon: <id>:q3kxl)
 help[3]: make one your default: pill default <id>
 help[4]: 15 more tried results are in the catalog records
-help[5]: catalog models that need more memory than this Mac has: 1
+help[5]: catalog models that need more memory than this Mac has: 2

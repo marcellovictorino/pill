@@ -207,12 +207,14 @@ func attributable(m Measurement) bool {
 }
 
 // Intent: the recorded champion is a recommendation on the tested Mac, and the
-// recorded 16 GB failures never turn into one on a 16 GB Mac.
+// recorded 16 GB failures never turn into one on a 16 GB Mac. MiniCPM with its
+// DSpark drafter, the maintainer's default, comes first; MiniCPM alone stays
+// recommended after it.
 func TestChampionOnTestedMacOnly(t *testing.T) {
 	c := mustLoad(t)
 	got := c.Shortlist(Device{"Apple M4", 24})
-	if len(got) != 1 || got[0].Entry.Name != "minicpm-v4-7-adiq2xsiq2xxs-64k" {
-		t.Fatalf("champion should be the one recommendation on an M4 with 24 GB: %+v", got)
+	if len(got) != 2 || got[0].Entry.Name != "minicpm-v4-7-dspark-adiq2xsiq2xxs-64k" || got[1].Entry.Name != "minicpm-v4-7-adiq2xsiq2xxs-64k" {
+		t.Fatalf("MiniCPM with DSpark, then MiniCPM alone, should be the recommendations on an M4 with 24 GB: %+v", got)
 	}
 	if n := len(c.Shortlist(Device{"Apple M2 Pro", 16})); n != 0 {
 		t.Errorf("a 16 GB M2 Pro has no standard pass, got %d", n)

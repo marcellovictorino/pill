@@ -59,12 +59,13 @@ Chip    Apple M4
 Memory  24GB RAM
 
  ID               QUANT CTX TIER 1      TIER 2     TIER 3                  TOK/S FREE MEM
-*minicpm✓         Q2    64k pass (31s)  22/22 4.9m 88|91|40|90|(93,95,98)  25    22%
+*minicpm✓         Q2    64k pass (31s)  22/22 9.6m -|85|-|-|(-,-,-)        34.6  4%
+ minicpm-base✓    Q2    64k pass (36s)  22/22 3.6m 88|91|40|90|(93,95,98)  25    22%
 ```
 
 On a terminal the facts at the top, the column headings and the verdict marks are in colour; piped output and `NO_COLOR` print plain text.
 
-- **ID** is the short name every command accepts (`pill bench run minicpm`, `pill default minicpm`). `*` to its left marks your default. The last character is the verdict: `✓` passed both tiers, `✗` Tier 1 reads `fail` (including a run that passed only with looser limits than pill's), nothing otherwise. A run with no mark and a Tier 1 `pass` still failed (for example it pushed more than 4 GB to swap, whatever its times say); the agent format's `verdict` reads `FAIL` for it. A variant gets a suffix (`qwen3.5-9b-mtp`). The old long names keep working. `internal/catalog/catalog.toml` maps each ID to its Hugging Face repository and file; the agent format (`--format agent`) also prints that reference as `source`.
+- **ID** is the short name every command accepts (`pill bench run minicpm`, `pill default minicpm`). `*` to its left marks your default. The last character is the verdict: `✓` passed both tiers, `✗` Tier 1 reads `fail` (including a run that passed only with looser limits than pill's), nothing otherwise. A run with no mark and a Tier 1 `pass` still failed (for example it pushed more than 4 GB to swap, whatever its times say); the agent format's `verdict` reads `FAIL` for it. A variant gets a suffix (`qwen3.5-9b-mtp`). The old long names keep working. `minicpm` is MiniCPM with its DSpark drafter, a small model that proposes 7 tokens ahead for MiniCPM to check: `pill pull minicpm` downloads both files and pill serves them together. `minicpm-base` is MiniCPM alone. `internal/catalog/catalog.toml` maps each ID to its Hugging Face repository and file; the agent format (`--format agent`) also prints that reference as `source`.
 - **QUANT** is the bit width (`Q2` to `Q8`). When two files of one model share a bit width, it shows the exact quant (`IQ3S`, `Q3KXL`) and commands take it after a colon: `pill bench run gemma4-26b:q3kxl`.
 - **CTX** is the context window the result was measured at.
 - **TIER 1** is `pass` or `fail`, then the seconds to the first reply in brackets (`pass (48s)`). A run over the Tier 1 time limit (300 s) reads `fail` with its time. A slow model can pass: `pass (157s)` with `22/22 30m` is correct but slow, and the seconds and minutes are how you tell it from a fast one. **TIER 2** is hidden tests passed out of the task's total, then the minutes the run took (`22/22 4.9m`). The agent format (`--format agent`) adds a `verdict` field: `ok`, `FAIL` or `-`.
