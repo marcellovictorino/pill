@@ -753,6 +753,37 @@ task = "web-landing-tax"
 median = 96
 runs = 1
 
+# Kintsugi-27B (CaryPalmer), 28 Nov 2026, from evals/reports/tried-and-rejected.md.
+# Qwen3.8 27B at 2.47 bits per weight; stock llama.cpp cannot load it, so it ran on the model's
+# own MLX kit through evals/engine_compare.py. pill's router cannot serve it.
+[[tried]]
+name = "Kintsugi-27B (Qwen3.8 27B at 2.47 bits/weight, needs its own MLX kit)"
+id = "kintsugi-27b"
+quant = "2.47bpw"
+ctx = 65536
+[[tried.measurement]]
+chip = "Apple M4"
+ram_gb = 24
+ctx = 65536
+tier1 = "pass"
+tier2 = "fail"
+tok_per_s = 9.6
+runs = 3
+date = "2026-11-28"
+llama_cpp = "none: escha-mlx 69f7218 with the Kintsugi kit patch, mlx 0.32.0"
+gate = "tier 1 300 s, tier 2 15 min, free memory floor 5%"
+source = "evals/reports/tried-and-rejected.md"
+source_row = "Kintsugi-27B (Qwen3.8 27B at 2.47 bits per weight, 10.5 GB), 64k, thinking off, own MLX kit"
+note = "1 of 3 runs passed: 22/22 at the cap with a 19-times repeated tool call, 20/22 in 6.6 min, 22/22 in 14.1 min; MTP on"
+tier1_seconds = 189
+tier2_score = 20
+tier2_total = 22
+tier2_minutes = 15.0
+tier2_timed_out = true
+min_free_pct = 24
+swap_mb = 0
+fail_reason = "Tier 2 scored 20/22 in one run and looped at the cap in another"
+
 [[tried]]
 name = "Qwen3.8 Flash Next GSQ-RCO Coder IQ1_M"
 id = "qwen3.8-flash"

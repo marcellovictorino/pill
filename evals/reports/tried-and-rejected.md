@@ -28,6 +28,7 @@ growth), load (the engine cannot open the file), thinking (the model thinks alth
 | Qwen3.8 27B UD-IQ4_XS, 32k, MTP head, 26 Nov | Failed, 1 run, build 12359, 26 Nov (relaxed Tier 1 300 s, free memory floor 5%) | 148 s | 21/22 at the 15-min cap | 14 | 6% | Latency and accuracy; swap up 1686 MB |
 | Qwen3.6 27B UD-IQ3_XXS, 64k | Failed, 3 runs, build 11669, 25 Oct | 130–147 s | Not run at the default limits; one relaxed run 20/22 at the 30-min cap | 6.3–6.6 | 9–10% | Latency; swap up to 2.4 GB; thinking partly on in the relaxed run |
 | Qwen3.8 27B UD-IQ3_XXS, 32k, thinking off, DFlash2 drafter | Passed the repo gate by hand count, 3 runs, build 12359, 25 Nov (Tier 1 300 s, free memory floor 5%); pill 0.6.0 printed failed | 132–144 s | 22/22 at the cap; 22/22 in 8.6 min; 22/22 at the cap | 29 | 8% | Latency: two runs at the cap; swap up 0.6–1.4 GB; Tier 1 answer wrong in 2 of 3 (informational) |
+| Kintsugi-27B (Qwen3.8 27B at 2.47 bits per weight, 10.5 GB), 64k, thinking off, own MLX kit | Failed, 3 runs, 28 Nov (Tier 1 300 s, free memory floor 5%); stock llama.cpp cannot load the file, so it ran on the model's Mac kit (escha-mlx 69f7218 with the kit's patch, mlx 0.32.0, MTP on) | 186–189 s | 22/22 at the cap with one tool call repeated 19 times; 20/22 in 6.6 min; 22/22 in 14.1 min | 9.6–11.1 (prompt 50 tok/s) | 24% | Latency and accuracy: 1 of 3 runs passed; 0 swap; Tier 1 answer wrong in 1 of 3 (informational) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking on | Failed, 3 runs, build 11429, 14 Oct | 130–144 s | Not run; one relaxed run 0/22 | 6.7–6.8 | 13–18% | Thinking: an 8,192-token thinking block and no tool call |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off | Relaxed gate, 3 runs, scratch home, 25 Oct | 133–142 s (limit 300 s) | 22/22 in 4.3 min; 22/22 and 20/22 at the 30-min cap | 6.7 | 12% | Latency; Tier 1 answer wrong in every run (informational) |
 | Qwen3.8 27B UD-IQ3_XXS, 64k, thinking off, MTP, 32k | Failed gate, 3 runs, 25 Oct | 151–159 s (limit 300 s) | 20/22; 22/22 in 11.4 min; 20/22; two runs repeated one shell command 90–105 times | 6.7 without MTP; 14.8 with MTP | 8–10% | Latency; loops; swap up 4.5 GB in run 1 |
@@ -372,3 +373,27 @@ Anbeeld's GGUFs only). Gate: Tier 1 300 s, Tier 2 15 min, free memory floor 5%, 
   runs pass. I counted that by hand from `results.json`; the installed binary predates it.
 - **Tier 1 answer** (informational) was wrong in two of three runs (48 and 58, against 168 in the right run).
 - **Tier 3:** run on 26 November, one run per task; scores and the caveats are in [the Qwen3.8 27B report](qwen38-27b.md#update-tier-3-with-the-dflash2-drafter-26-november).
+
+## Kintsugi-27B (Qwen3.8 27B repack), 2026-11-28
+
+**TLDR:** failed the gate, 1 of 3 runs passed. Tier 1 passed in every run (186–189 s); Tier 2 scored 22/22 at the cap with a
+tool-call loop, 20/22, and 22/22 in 14.1 min. Decode 10 tok/s, lowest free memory 24%, no swap. Not promising, so Tier 3 was
+not run.
+
+- **Model:** CaryPalmer/Kintsugi-27B on Hugging Face (Apache-2.0), Qwen3.8 27B re-quantised to 2.47 bits per weight in one
+  10.5 GB file (`Kintsugi-27B-12G.gguf`). It is a repack of the base model, not a fine-tune. There is no Q3 or Q4 build.
+- **Engine:** stock llama.cpp cannot load the file and the model's own llama.cpp fork has no Metal kernels, so pill's router
+  cannot serve it. On a Mac it runs only on the model's MLX kit (escha-mlx 69f7218 with the kit's patch, mlx 0.32.0), with
+  MTP on, Qwen's sampling (temperature 1.0, top_p 0.95, top_k 20), thinking off and the context capped at 64k. Tier 1 and 2
+  ran through `evals/engine_compare.py kintsugi`, which ports pill's tiers and gate to an outside engine.
+- **Machine load:** 24 GB M4, three cold runs with nothing else loaded (82% free memory at the start). An earlier attempt
+  overlapped another benchmark on the same machine and was discarded.
+- **Speed:** the model loads in 32–41 s and reads the 7,364-token Tier 1 prompt at about 50 tok/s (147–149 s), so Tier 1 took
+  186–189 s against the 300 s limit. Decode 9.6–11.1 tok/s on the speed probe and 12–15 tok/s during Tier 2.
+- **Tier 2:** run 1 reached 22/22 but hit the 15-min cap after repeating one tool call 19 times; run 2 finished in 6.6 min at
+  20/22 (`bestMove takes the win` and `cli --best prints the chosen index` failed); run 3 passed with 22/22 in 14.1 min.
+- **Memory:** lowest free memory 24–29%, swap growth 0 in every run.
+- **Against the alternatives:** faster than Qwen3.8 27B UD-IQ3_XXS on llama.cpp without a drafter (6.7 tok/s) and with MTP
+  (14.8), slower than with the DFlash2 drafter (29 tok/s, 3 of 3 passes). Tier 1 is slower than all three (186–189 s against
+  132–159 s): the kit's prompt reading on the M4 is the bottleneck.
+- **Re-test only on:** a faster kit prefill on M-series chips, or Kintsugi support in stock llama.cpp so pill can serve it.

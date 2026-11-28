@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""One-off engine comparison: mlx-lm against the llama.cpp champion, on pill's own Tier 1 and Tier 2.
+"""Engine comparison on pill's own Tier 1 and Tier 2, for engines pill's router cannot serve.
 
-Throwaway dev tooling under evals/, not part of pill. pill bench cannot target mlx-lm (it unloads
-models through the llama-server router), so this script does the same steps by hand, one engine at
-a time:
+Throwaway dev tooling under evals/, not part of pill. pill bench cannot target mlx-lm or the
+Kintsugi-27B Mac kit (it unloads models through the llama-server router), so this script does the
+same steps by hand, one engine at a time:
 
-  1. refuse to start while any other local model is loaded (the pill router or another run)
+  1. wait for pill's benchmark lock and hold it for every run, then refuse to start while any other
+     local model is loaded (the pill router or another run)
   2. start the one engine it was asked for, on a free port, with the catalog's sampling settings
   3. run Tier 1 (agent-sized request, decode speed, Pi tool-calling turn) and Tier 2 (Pi builds the
      tic-tac-toe task, then the hidden verify.mjs) with the same gates as internal/bench/bench.go
@@ -15,9 +16,15 @@ It never calls `pill stop` and never sends anything to the pill router on port 1
 
   python3 engine_compare.py mlx  --out DIR [--runs 1]
   python3 engine_compare.py gguf --out DIR [--runs 1] [--model-path PATH]
+  python3 engine_compare.py kintsugi --out DIR --kit-dir KIT/mac [--runs 3] [--min-free-pct 5]
   python3 engine_compare.py mlx  --out DIR --check    # guard and prompt only, starts nothing
+
+The kintsugi engine is the Mac kit of Kintsugi-27B (a 2.47-bit repack of Qwen3.8 27B that only its
+own runtimes can load): clone github.com/professorpalmer/Kintsugi-27B, run `mac/run.sh install`,
+then pass its mac folder as --kit-dir. It runs with the kit's own defaults (Qwen's sampling, MTP on).
 """
 import argparse
+import fcntl
 import json
 import os
 import signal
@@ -41,10 +48,14 @@ LLAMA_BIN = "/opt/homebrew/bin/llama-server"
 PI_BIN = "/opt/homebrew/bin/pi"
 NODE_BIN = "node"
 ROUTER_PORT = 11435  # pill's router: read-only status check only
+# pill bench run holds an exclusive flock on this file (internal/config Paths.BenchLock); every
+# benchmark that loads a model takes it, so two overnight runs never share the GPU and memory.
+BENCH_LOCK = Path(os.environ.get("PILL_HOME") or Path.home() / ".pill") / "run" / "bench.lock"
 DEFAULT_GGUF = Path.home() / ".pill" / "models" / "gemma-4-26B-A4B-it-UD-IQ4_XS.gguf"
 
-# Gates from internal/bench/bench.go (DefaultThresholds) and the Tier 2 cap.
-TIER1_MAX_SECONDS = 60
+# Gates from internal/bench/bench.go (DefaultThresholds); --tier1-max-seconds and --min-free-pct
+# override them as pill bench run's flags of the same name do.
+TIER1_MAX_SECONDS = 300
 MIN_FREE_PCT = 10
 TIER2_MAX_MINUTES = 15
 DECODE_TOKENS = 128
@@ -58,11 +69,15 @@ SAMPLING = {"temp": "1.0", "top-p": "0.95", "top-k": "64", "min-p": "0.0"}
 ENGINES = {
     "mlx": {"model_id": "mlx-community/gemma-4-26b-a4b-it-4bit", "port": 8093},
     "gguf": {"model_id": "gemma4-26b-ud-iq4_xs", "port": 8094},
+    "kintsugi": {"model_id": "kintsugi", "port": 8095},
 }
 
 
-def engine_cmd(engine, port, gguf_path):
+def engine_cmd(engine, port, gguf_path, kit_dir=None):
     """The command line that starts one engine by hand, mirroring pill's settings for it."""
+    if engine == "kintsugi":
+        return [str(kit_dir / ".venv" / "bin" / "python"), str(kit_dir / "kit" / "serve.py"),
+                "--host", "127.0.0.1", "--port", str(port)]
     if engine == "mlx":
         return [MLX_BIN, "--model", ENGINES["mlx"]["model_id"], "--host", "127.0.0.1", "--port", str(port),
                 "--temp", SAMPLING["temp"], "--top-p", SAMPLING["top-p"], "--top-k", SAMPLING["top-k"],
@@ -74,12 +89,27 @@ def engine_cmd(engine, port, gguf_path):
             "--min-p", SAMPLING["min-p"], "--alias", ENGINES["gguf"]["model_id"], "--model", str(gguf_path)]
 
 
+def engine_env(engine):
+    """The kit fits its context to the Metal working set; this caps it at pill's context, never raises it."""
+    if engine == "kintsugi":
+        return dict(os.environ, KINTSUGI_MAX_CTX=str(CTX))
+    return None
+
+
 def other_local_models():
     """Anything holding a model right now that this script did not start. Empty means safe to start."""
     found = []
-    routers = set(subprocess.run(["pgrep", "-f", "llama-server --models-dir"], capture_output=True,
-                                 text=True).stdout.split())
-    out = subprocess.run(["pgrep", "-fl", "llama-server|mlx_lm"], capture_output=True, text=True).stdout
+    router_lines = subprocess.run(["pgrep", "-fl", "llama-server --models-dir"], capture_output=True,
+                                  text=True).stdout.splitlines()
+    routers = {line.split(maxsplit=1)[0] for line in router_lines}
+    # A pill router in a scratch home listens on its own port, not 11435; ask each one.
+    ports = {ROUTER_PORT}
+    for line in router_lines:
+        args = line.split()
+        if "--port" in args[:-1]:
+            ports.add(int(args[args.index("--port") + 1]))
+    out = subprocess.run(["pgrep", "-fl", "llama-server|mlx_lm|kit/serve.py"], capture_output=True,
+                         text=True).stdout
     for line in out.splitlines():
         pid = line.split(maxsplit=1)[0]
         if pid in routers:  # pill's router itself: judged by its /models status below
@@ -88,17 +118,42 @@ def other_local_models():
         if ppid in routers:  # a model server the router started: loaded or asleep, so the router's status decides
             continue
         found.append(line.strip())
-    try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{ROUTER_PORT}/models", timeout=5) as r:
-            for m in json.load(r).get("data", []):
-                if m.get("status", {}).get("value") == "loaded":
-                    found.append(f"pill router has {m['id']} loaded")
-    except Exception:
-        pass  # router not answering: nothing is loaded through it
+    for port in sorted(ports):
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/models", timeout=5) as r:
+                for m in json.load(r).get("data", []):
+                    if m.get("status", {}).get("value") == "loaded":
+                        found.append(f"pill router on port {port} has {m['id']} loaded")
+        except Exception:
+            pass  # router not answering: nothing is loaded through it
     return found
 
 
-def engine_version(engine):
+def hold_bench_lock():
+    """Block until pill's benchmark lock is free, then hold it until this process exits."""
+    BENCH_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    f = open(BENCH_LOCK, "a+")
+    waited = False
+    while True:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return f
+        except BlockingIOError:
+            if not waited:
+                print("waiting for another pill benchmark to finish", flush=True)
+                waited = True
+            time.sleep(30)
+
+
+def engine_version(engine, kit_dir=None):
+    if engine == "kintsugi":
+        def head(d):
+            return subprocess.run(["git", "-C", str(d), "rev-parse", "--short", "HEAD"], capture_output=True,
+                                  text=True).stdout.strip()
+        mlx = subprocess.run([str(kit_dir / ".venv" / "bin" / "python"), "-c",
+                              "import importlib.metadata as m; print(m.version('mlx'))"],
+                             capture_output=True, text=True).stdout.strip()
+        return f"Kintsugi-27B Mac kit {head(kit_dir)}, escha-mlx {head(kit_dir / 'escha-mlx')} + kit patch, mlx {mlx}"
     if engine == "mlx":
         out = subprocess.run(["brew", "list", "--versions", "mlx-lm"], capture_output=True, text=True).stdout
         return out.strip()
@@ -126,9 +181,9 @@ def agent_prompt(functions):
 class Engine:
     """One engine process this script started. Stop only this process group."""
 
-    def __init__(self, cmd, log_path, port):
+    def __init__(self, cmd, log_path, port, env=None):
         self.log = open(log_path, "wb")
-        self.proc = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT,
+        self.proc = subprocess.Popen(cmd, stdout=self.log, stderr=subprocess.STDOUT, env=env,
                                      stdin=subprocess.DEVNULL, start_new_session=True)
         self.base = f"http://127.0.0.1:{port}"
 
@@ -217,7 +272,7 @@ def decode_speed(eng, model_id, timeout):
             "decode_tok_per_sec_engine": engine_tps}
 
 
-def write_agent_dir(d, base_url, model_id):
+def write_agent_dir(d, base_url, model_id, ctx=CTX):
     """Same provider block internal/pi/models.go writes for pill, in a scratch Pi config directory."""
     d.mkdir(parents=True, exist_ok=True)
     doc = {"providers": {"pill": {
@@ -226,7 +281,7 @@ def write_agent_dir(d, base_url, model_id):
                    "supportsUsageInStreaming": True, "supportsStrictMode": False,
                    "maxTokensField": "max_tokens", "thinkingFormat": "qwen-chat-template"},
         "models": [{"id": model_id, "name": model_id, "reasoning": True, "input": ["text"],
-                    "contextWindow": CTX, "maxTokens": MAX_TOKENS}]}}}
+                    "contextWindow": ctx, "maxTokens": MAX_TOKENS}]}}}
     (d / "models.json").write_text(json.dumps(doc, indent=2) + "\n")
 
 
@@ -274,21 +329,32 @@ def parse_pi(path):
     return answer.strip(), tool_calls, repeats
 
 
-def run_once(engine_name, n, out_dir, gguf_path):
+def served_context(eng):
+    """The context the engine reports on /v1/models, when it reports one (the Kintsugi kit does)."""
+    try:
+        with urllib.request.urlopen(eng.base + "/v1/models", timeout=5) as r:
+            return (json.load(r).get("data") or [{}])[0].get("context_length")
+    except Exception:  # an engine without the field: pill's context stands
+        return None
+
+
+def run_once(engine_name, n, out_dir, gguf_path, kit_dir=None):
     cfg = ENGINES[engine_name]
     d = out_dir / f"run-{n}"
     d.mkdir(parents=True, exist_ok=True)
-    cmd = engine_cmd(engine_name, cfg["port"], gguf_path)
+    cmd = engine_cmd(engine_name, cfg["port"], gguf_path, kit_dir)
     (d / "engine-command.txt").write_text(" ".join(cmd) + "\n")
     rr = {"run": n, "engine": engine_name, "model": cfg["model_id"]}
 
     sampler = MemorySampler(interval=5.0).start()
     t_launch = time.time()  # pill's first request also pays for the model load, so the clock starts here
-    eng = Engine(cmd, d / "engine.log", cfg["port"])
+    eng = Engine(cmd, d / "engine.log", cfg["port"], engine_env(engine_name))
     try:
-        write_agent_dir(d / "pi-agent", eng.base, cfg["model_id"])
         eng.wait_ready(deadline=t_launch + 3 * TIER1_MAX_SECONDS)
         rr["ready_seconds"] = round(time.time() - t_launch, 1)
+        # Pi must not plan for more context than the engine holds: the kit fits it to the Metal working set.
+        rr["ctx"] = min(served_context(eng) or CTX, CTX)
+        write_agent_dir(d / "pi-agent", eng.base, cfg["model_id"], rr["ctx"])
 
         # --- Tier 1a: agent-sized request, cold start included ---
         prompt, want = agent_prompt(PROMPT_FUNCTIONS)
@@ -387,20 +453,33 @@ def verdict(rr, stats):
 
 
 def main():
+    global TIER1_MAX_SECONDS, MIN_FREE_PCT
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("engine", choices=sorted(ENGINES))
     ap.add_argument("--out", required=True, type=Path, help="result folder (outside the repository)")
     ap.add_argument("--runs", type=int, default=1, help="cold runs; each one starts the engine afresh")
     ap.add_argument("--model-path", type=Path, default=DEFAULT_GGUF, help="GGUF file (gguf engine only)")
+    ap.add_argument("--kit-dir", type=Path, help="the Kintsugi-27B kit's installed mac folder (kintsugi only)")
+    ap.add_argument("--tier1-max-seconds", type=float, default=TIER1_MAX_SECONDS,
+                    help="Tier 1: time limit for the agent-sized request")
+    ap.add_argument("--min-free-pct", type=float, default=MIN_FREE_PCT,
+                    help="free memory must stay at or above this percentage")
     ap.add_argument("--check", action="store_true", help="run the guard and print the plan; start nothing")
     args = ap.parse_args()
+    TIER1_MAX_SECONDS, MIN_FREE_PCT = args.tier1_max_seconds, args.min_free_pct
 
     if args.engine == "gguf" and not args.model_path.exists():
         sys.exit(f"missing GGUF file: {args.model_path}")
+    if args.engine == "kintsugi" and not (args.kit_dir and (args.kit_dir / "models" / "Kintsugi-27B-MLX" /
+                                                            "config.json").exists()):
+        sys.exit("kintsugi needs --kit-dir pointing at an installed kit's mac folder (run.sh install done)")
+    if not args.check:
+        lock = hold_bench_lock()  # the flock lasts as long as this open file
     busy = other_local_models()
     if args.check:
         print(json.dumps({"engine": args.engine, "other_local_models": busy,
-                          "engine_command": engine_cmd(args.engine, ENGINES[args.engine]["port"], args.model_path),
+                          "engine_command": engine_cmd(args.engine, ENGINES[args.engine]["port"], args.model_path,
+                                                       args.kit_dir),
                           "tier1_prompt_chars": len(agent_prompt(PROMPT_FUNCTIONS)[0]),
                           "tier2_task_chars": len((TASKS_DIR / "tictactoe.md").read_text())}, indent=2))
         return
@@ -408,17 +487,22 @@ def main():
         sys.exit("refusing to start: another local model is loaded or running:\n  " + "\n  ".join(busy))
 
     args.out.mkdir(parents=True, exist_ok=True)
-    meta = {"engine": args.engine, "model": ENGINES[args.engine]["model_id"], "engine_version": engine_version(args.engine),
+    if args.engine == "kintsugi":
+        settings = {"ctx_cap": CTX, "max_tokens": MAX_TOKENS, "thinking": "off",
+                    "sampling": "kit defaults: temperature 1.0, top_p 0.95, top_k 20", "mtp": "on"}
+    else:
+        settings = {"ctx": CTX, "max_tokens": MAX_TOKENS, "sampling": SAMPLING, "prompt_cache_size": 1}
+    meta = {"engine": args.engine, "model": ENGINES[args.engine]["model_id"],
+            "engine_version": engine_version(args.engine, args.kit_dir),
             "started": datetime.now(timezone.utc).isoformat(), "gates": {"tier1_max_seconds": TIER1_MAX_SECONDS,
-            "min_free_pct": MIN_FREE_PCT, "tier2_max_minutes": TIER2_MAX_MINUTES},
-            "settings": {"ctx": CTX, "max_tokens": MAX_TOKENS, "sampling": SAMPLING, "prompt_cache_size": 1}}
+            "min_free_pct": MIN_FREE_PCT, "tier2_max_minutes": TIER2_MAX_MINUTES}, "settings": settings}
     runs = []
     for n in range(1, args.runs + 1):
-        rr = run_once(args.engine, n, args.out, args.model_path)
+        rr = run_once(args.engine, n, args.out, args.model_path, args.kit_dir)
         runs.append(rr)
         (args.out / "result.json").write_text(json.dumps({**meta, "runs": runs}, indent=2) + "\n")
         print(json.dumps({k: rr.get(k) for k in ("run", "passed", "reason", "ready_seconds", "tier1_seconds",
-                                                 "decode_tok_per_sec_wall", "tier2_score", "tier2_total",
+                                                 "decode_tok_per_sec", "tier2_score", "tier2_total",
                                                  "tier2_seconds", "min_free_pct_whole_run")}), flush=True)
 
 
